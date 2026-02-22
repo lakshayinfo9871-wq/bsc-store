@@ -1,0 +1,367 @@
+{
+  "settings": {
+    "storeName": "BSC Store",
+    "whatsapp": "",
+    "qrUrl": "",
+    "adminPassword": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9"
+  },
+  "categories": [
+    {
+      "id": "grocery",
+      "name": "Groceries",
+      "emoji": "🧂",
+      "order": 1
+    },
+    {
+      "id": "vegetables",
+      "name": "Vegetables",
+      "emoji": "🥦",
+      "order": 2
+    },
+    {
+      "id": "fruits",
+      "name": "Fruits",
+      "emoji": "🍎",
+      "order": 3
+    },
+    {
+      "id": "dairy",
+      "name": "Dairy",
+      "emoji": "🥛",
+      "order": 4
+    },
+    {
+      "id": "drinks",
+      "name": "Cold Drinks",
+      "emoji": "🥤",
+      "order": 5
+    },
+    {
+      "id": "snacks",
+      "name": "Snacks",
+      "emoji": "🍿",
+      "order": 6
+    },
+    {
+      "id": "cleaning",
+      "name": "Cleaning",
+      "emoji": "🧹",
+      "order": 7
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "Basmati Rice",
+      "emoji": "🍚",
+      "price": 80,
+      "unit": "1 kg",
+      "cat": "grocery",
+      "inStock": true
+    },
+    {
+      "id": 2,
+      "name": "Wheat Flour (Atta)",
+      "emoji": "🌾",
+      "price": 55,
+      "unit": "1 kg",
+      "cat": "grocery",
+      "inStock": true
+    },
+    {
+      "id": 3,
+      "name": "Toor Dal",
+      "emoji": "🫘",
+      "price": 120,
+      "unit": "500 g",
+      "cat": "grocery",
+      "inStock": true
+    },
+    {
+      "id": 4,
+      "name": "Mustard Oil",
+      "emoji": "🫙",
+      "price": 150,
+      "unit": "1 L",
+      "cat": "grocery",
+      "inStock": true
+    },
+    {
+      "id": 5,
+      "name": "Sugar",
+      "emoji": "🍬",
+      "price": 45,
+      "unit": "1 kg",
+      "cat": "grocery",
+      "inStock": true
+    },
+    {
+      "id": 6,
+      "name": "Salt",
+      "emoji": "🧂",
+      "price": 20,
+      "unit": "1 kg",
+      "cat": "grocery",
+      "inStock": true
+    },
+    {
+      "id": 7,
+      "name": "Tomatoes",
+      "emoji": "🍅",
+      "price": 30,
+      "unit": "500 g",
+      "cat": "vegetables",
+      "inStock": true
+    },
+    {
+      "id": 8,
+      "name": "Onions",
+      "emoji": "🧅",
+      "price": 25,
+      "unit": "500 g",
+      "cat": "vegetables",
+      "inStock": true
+    },
+    {
+      "id": 9,
+      "name": "Potatoes",
+      "emoji": "🥔",
+      "price": 30,
+      "unit": "1 kg",
+      "cat": "vegetables",
+      "inStock": true
+    },
+    {
+      "id": 10,
+      "name": "Spinach",
+      "emoji": "🥬",
+      "price": 20,
+      "unit": "1 bunch",
+      "cat": "vegetables",
+      "inStock": true
+    },
+    {
+      "id": 11,
+      "name": "Capsicum",
+      "emoji": "🫑",
+      "price": 40,
+      "unit": "250 g",
+      "cat": "vegetables",
+      "inStock": true
+    },
+    {
+      "id": 12,
+      "name": "Cauliflower",
+      "emoji": "🥦",
+      "price": 35,
+      "unit": "1 pc",
+      "cat": "vegetables",
+      "inStock": true
+    },
+    {
+      "id": 13,
+      "name": "Bananas",
+      "emoji": "🍌",
+      "price": 40,
+      "unit": "1 dozen",
+      "cat": "fruits",
+      "inStock": true
+    },
+    {
+      "id": 14,
+      "name": "Apples",
+      "emoji": "🍎",
+      "price": 120,
+      "unit": "1 kg",
+      "cat": "fruits",
+      "inStock": true
+    },
+    {
+      "id": 15,
+      "name": "Oranges",
+      "emoji": "🍊",
+      "price": 80,
+      "unit": "1 kg",
+      "cat": "fruits",
+      "inStock": true
+    },
+    {
+      "id": 16,
+      "name": "Grapes",
+      "emoji": "🍇",
+      "price": 90,
+      "unit": "500 g",
+      "cat": "fruits",
+      "inStock": true
+    },
+    {
+      "id": 17,
+      "name": "Full Cream Milk",
+      "emoji": "🥛",
+      "price": 60,
+      "unit": "1 L",
+      "cat": "dairy",
+      "inStock": true
+    },
+    {
+      "id": 18,
+      "name": "Paneer",
+      "emoji": "🧀",
+      "price": 80,
+      "unit": "200 g",
+      "cat": "dairy",
+      "inStock": true
+    },
+    {
+      "id": 19,
+      "name": "Curd (Dahi)",
+      "emoji": "🥣",
+      "price": 40,
+      "unit": "400 g",
+      "cat": "dairy",
+      "inStock": true
+    },
+    {
+      "id": 20,
+      "name": "Butter",
+      "emoji": "🧈",
+      "price": 55,
+      "unit": "100 g",
+      "cat": "dairy",
+      "inStock": true
+    },
+    {
+      "id": 21,
+      "name": "Coca-Cola",
+      "emoji": "🥤",
+      "price": 40,
+      "unit": "750 ml",
+      "cat": "drinks",
+      "inStock": true
+    },
+    {
+      "id": 22,
+      "name": "Pepsi",
+      "emoji": "🥤",
+      "price": 40,
+      "unit": "750 ml",
+      "cat": "drinks",
+      "inStock": true
+    },
+    {
+      "id": 23,
+      "name": "Sprite",
+      "emoji": "🥤",
+      "price": 40,
+      "unit": "750 ml",
+      "cat": "drinks",
+      "inStock": true
+    },
+    {
+      "id": 24,
+      "name": "Mineral Water",
+      "emoji": "💧",
+      "price": 20,
+      "unit": "1 L",
+      "cat": "drinks",
+      "inStock": true
+    },
+    {
+      "id": 25,
+      "name": "Frooti",
+      "emoji": "🧃",
+      "price": 15,
+      "unit": "200 ml",
+      "cat": "drinks",
+      "inStock": true
+    },
+    {
+      "id": 26,
+      "name": "Lays Chips",
+      "emoji": "🍟",
+      "price": 20,
+      "unit": "1 pack",
+      "cat": "snacks",
+      "inStock": true
+    },
+    {
+      "id": 27,
+      "name": "Kurkure",
+      "emoji": "🍿",
+      "price": 20,
+      "unit": "1 pack",
+      "cat": "snacks",
+      "inStock": true
+    },
+    {
+      "id": 28,
+      "name": "Parle-G Biscuits",
+      "emoji": "🍪",
+      "price": 10,
+      "unit": "100 g",
+      "cat": "snacks",
+      "inStock": true
+    },
+    {
+      "id": 29,
+      "name": "Maggi Noodles",
+      "emoji": "🍜",
+      "price": 14,
+      "unit": "1 pack",
+      "cat": "snacks",
+      "inStock": true
+    },
+    {
+      "id": 30,
+      "name": "Surf Excel",
+      "emoji": "🧺",
+      "price": 60,
+      "unit": "500 g",
+      "cat": "cleaning",
+      "inStock": true
+    },
+    {
+      "id": 31,
+      "name": "Vim Dish Soap",
+      "emoji": "🧴",
+      "price": 35,
+      "unit": "200 g",
+      "cat": "cleaning",
+      "inStock": true
+    },
+    {
+      "id": 32,
+      "name": "Phenyl",
+      "emoji": "🪣",
+      "price": 80,
+      "unit": "1 L",
+      "cat": "cleaning",
+      "inStock": true
+    },
+    {
+      "name": "checking iteam",
+      "emoji": "🛍️",
+      "imageUrl": "",
+      "cat": "grocery",
+      "unit": "100 gm",
+      "price": 100,
+      "discountPrice": 90,
+      "stock": 100,
+      "featured": true,
+      "inStock": true,
+      "bulkTiers": [
+        {
+          "minQty": 5,
+          "pricePerUnit": 80
+        },
+        {
+          "minQty": 10,
+          "pricePerUnit": 70
+        }
+      ],
+      "id": 33
+    }
+  ],
+  "orders": [],
+  "nextId": 34
+}
