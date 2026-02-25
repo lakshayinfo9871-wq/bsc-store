@@ -1,0 +1,398 @@
+{
+  "settings": {
+    "adminPassword": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+    "whatsapp": "",
+    "upiId": "",
+    "minOrder": 99,
+    "storeName": "BSC Store",
+    "milkPrice": 60,
+    "freeDeliveryMin": 99,
+    "freeGiftMin": 100,
+    "freeGiftLabel": "chips",
+    "upsellProductIds": [
+      3,
+      2,
+      4
+    ],
+    "freeGift": {
+      "threshold": 100,
+      "productId": 3,
+      "qty": 1,
+      "autoAdd": false,
+      "label": "chips",
+      "discountPrice": 5
+    }
+  },
+  "categories": [
+    {
+      "id": 1,
+      "name": "Vegetables & Fruits",
+      "imageUrl": ""
+    },
+    {
+      "id": 2,
+      "name": "Dairy & Eggs",
+      "imageUrl": ""
+    },
+    {
+      "id": 3,
+      "name": "Snacks",
+      "imageUrl": ""
+    },
+    {
+      "id": 4,
+      "name": "Drinks",
+      "imageUrl": ""
+    },
+    {
+      "id": 5,
+      "name": "Grocery",
+      "imageUrl": ""
+    },
+    {
+      "id": 6,
+      "name": "trial",
+      "imageUrl": ""
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "Fresh Tomatoes",
+      "unit": "1 kg",
+      "catId": 1,
+      "imageUrl": "",
+      "inStock": true,
+      "priceTiers": [
+        {
+          "minQty": 1,
+          "price": 40
+        },
+        {
+          "minQty": 3,
+          "price": 35
+        },
+        {
+          "minQty": 5,
+          "price": 30
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Amul Milk 500ml",
+      "unit": "500 ml",
+      "catId": 2,
+      "imageUrl": "",
+      "inStock": true,
+      "priceTiers": [
+        {
+          "minQty": 1,
+          "price": 30
+        },
+        {
+          "minQty": 5,
+          "price": 28
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Lay's Classic",
+      "unit": "52 g",
+      "catId": 3,
+      "imageUrl": "",
+      "inStock": true,
+      "priceTiers": [
+        {
+          "minQty": 1,
+          "price": 20
+        },
+        {
+          "minQty": 3,
+          "price": 18
+        },
+        {
+          "minQty": 6,
+          "price": 15
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "test",
+      "unit": "",
+      "catId": 0,
+      "imageUrl": "",
+      "inStock": true,
+      "featured": false,
+      "isNew": false,
+      "priceTiers": [
+        {
+          "minQty": 1,
+          "price": 100
+        },
+        {
+          "minQty": 5,
+          "price": 70
+        },
+        {
+          "minQty": 10,
+          "price": 50
+        }
+      ]
+    }
+  ],
+  "banners": [
+    {
+      "id": 1,
+      "imageUrl": "",
+      "title": "trail banner",
+      "subtitle": "",
+      "bgColor": "#1a1a2e",
+      "action": {
+        "type": "category",
+        "catId": 2
+      }
+    }
+  ],
+  "orders": [
+    {
+      "id": 1,
+      "customerName": "dhfdhgdhf",
+      "phone": "1231231230",
+      "block": "A",
+      "villa": "14",
+      "note": "",
+      "items": [
+        {
+          "productId": 1,
+          "name": "Fresh Tomatoes",
+          "qty": 3,
+          "price": 35
+        }
+      ],
+      "total": 105,
+      "status": "cancelled",
+      "createdAt": "2026-02-24T09:08:10.751Z"
+    },
+    {
+      "id": 2,
+      "customerName": "test",
+      "phone": "1231231230",
+      "block": "A",
+      "villa": "15",
+      "note": "",
+      "items": [],
+      "total": 0,
+      "freeGift": null,
+      "paymentMethod": "cod",
+      "status": "cancelled",
+      "createdAt": "2026-02-25T12:13:36.549Z"
+    },
+    {
+      "id": 3,
+      "customerName": "test",
+      "phone": "1231231230",
+      "block": "A",
+      "villa": "15",
+      "note": "",
+      "items": [
+        {
+          "productId": 2,
+          "name": "Amul Milk 500ml",
+          "qty": 2,
+          "price": 30
+        },
+        {
+          "productId": 3,
+          "name": "Lay's Classic",
+          "qty": 1,
+          "price": 20
+        },
+        {
+          "productId": 4,
+          "name": "test",
+          "qty": 8,
+          "price": 70
+        },
+        {
+          "productId": 3,
+          "name": "Lay's Classic",
+          "qty": 1,
+          "price": 5,
+          "isFreeGift": true,
+          "isOffer": true
+        }
+      ],
+      "total": 645,
+      "freeGift": "chips",
+      "paymentMethod": "cod",
+      "status": "delivered",
+      "createdAt": "2026-02-25T12:17:40.516Z"
+    },
+    {
+      "id": 4,
+      "customerName": "lakshay",
+      "phone": "1234567890",
+      "block": "A",
+      "villa": "14",
+      "note": "",
+      "items": [
+        {
+          "productId": 1,
+          "name": "Fresh Tomatoes",
+          "qty": 5,
+          "price": 30
+        },
+        {
+          "productId": 2,
+          "name": "Amul Milk 500ml",
+          "qty": 5,
+          "price": 28
+        },
+        {
+          "productId": 3,
+          "name": "Lay's Classic",
+          "qty": 12,
+          "price": 15
+        },
+        {
+          "productId": 3,
+          "name": "Lay's Classic",
+          "qty": 1,
+          "price": 5,
+          "isFreeGift": true,
+          "isOffer": true
+        }
+      ],
+      "total": 475,
+      "freeGift": "chips",
+      "paymentMethod": "cod",
+      "status": "delivered",
+      "createdAt": "2026-02-25T14:40:55.583Z"
+    }
+  ],
+  "milkCustomers": [
+    {
+      "id": 4,
+      "name": "jgjgfjgf",
+      "phone": "1231231230",
+      "address": "b 14",
+      "defaultQty": 0.5,
+      "password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+      "plainPassword": "1234",
+      "active": true,
+      "joinedAt": "2026-02-24T09:06:09.991Z"
+    }
+  ],
+  "milkLogs": [
+    {
+      "id": 1,
+      "customerId": 1,
+      "date": "2026-02-24",
+      "month": "2026-02",
+      "qty": 1,
+      "price": 60,
+      "markedAt": "2026-02-24T05:52:42.831Z"
+    },
+    {
+      "id": 2,
+      "customerId": 2,
+      "date": "2026-02-24",
+      "month": "2026-02",
+      "qty": 0.5,
+      "price": 60,
+      "markedAt": "2026-02-24T07:22:29.304Z"
+    },
+    {
+      "id": 3,
+      "customerId": 1,
+      "date": "2026-02-20",
+      "month": "2026-02",
+      "qty": 5,
+      "price": 60,
+      "markedAt": "2026-02-24T08:07:03.084Z"
+    },
+    {
+      "id": 4,
+      "customerId": 3,
+      "date": "2026-02-24",
+      "month": "2026-02",
+      "qty": 0.5,
+      "price": 60,
+      "markedAt": "2026-02-24T08:07:21.338Z"
+    },
+    {
+      "id": 5,
+      "customerId": 4,
+      "date": "2026-02-24",
+      "month": "2026-02",
+      "qty": 0.5,
+      "price": 60,
+      "markedAt": "2026-02-24T15:59:25.971Z"
+    },
+    {
+      "id": 6,
+      "customerId": 4,
+      "date": "2026-02-25",
+      "month": "2026-02",
+      "qty": 0.5,
+      "price": 60,
+      "markedAt": "2026-02-25T15:53:56.656Z"
+    }
+  ],
+  "milkPayments": [
+    {
+      "customerId": 2,
+      "month": "2026-02",
+      "amount": 30,
+      "note": "Manual",
+      "paidAt": "2026-02-24T07:22:36.744Z"
+    },
+    {
+      "customerId": 1,
+      "month": "2026-02",
+      "amount": 60,
+      "note": "Manual",
+      "paidAt": "2026-02-24T07:22:44.221Z"
+    }
+  ],
+  "nextMilkId": 5,
+  "nextMilkLogId": 7,
+  "nextProductId": 5,
+  "nextCategoryId": 7,
+  "nextBannerId": 2,
+  "nextOrderId": 5,
+  "udharEntries": [
+    {
+      "id": 1,
+      "customerId": 4,
+      "items": [
+        {
+          "name": "test udhar",
+          "qty": 1,
+          "price": 1000
+        }
+      ],
+      "amount": 1000,
+      "date": "2026-02-24",
+      "note": "",
+      "type": "purchase",
+      "createdAt": "2026-02-24T16:22:27.683Z"
+    }
+  ],
+  "nextUdharId": 2,
+  "udharPayments": [
+    {
+      "id": 1,
+      "customerId": 4,
+      "amount": 500,
+      "method": "upi",
+      "note": "",
+      "paidAt": "2026-02-24T16:23:06.860Z",
+      "date": "2026-02-24"
+    }
+  ],
+  "nextUdharPayId": 2
+}

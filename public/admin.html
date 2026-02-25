@@ -3,658 +3,1764 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BSC Store — Admin Panel</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>BSC Store — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--yellow:#f8c200;--dark:#1a1a1a;--green:#0a9e5c;--red:#e23744;--orange:#ff6b35;--border:#f1f5f9;--text:#1e293b;--subtext:#64748b;--light:#f8fafc;--radius:14px;--purple:#7c3aed;}
+:root {
+  --bg:#f5f6fa; --white:#fff; --border:#e8eaed; --text:#1a1a1a; --text2:#6b7280; --text3:#9ca3af;
+  --green:#16a34a; --green-bg:#f0fdf4; --red:#dc2626; --red-bg:#fef2f2;
+  --yellow:#d97706; --yellow-bg:#fffbeb; --blue:#2563eb; --blue-bg:#eff6ff;
+  --sidebar:#0f172a; --r:12px;
+}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Poppins',sans-serif;background:#f1f5f9;color:var(--text);}
-button{font-family:'Poppins',sans-serif;cursor:pointer;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);}
+button{font-family:'Inter',sans-serif;cursor:pointer;border:none;}
+input,select,textarea{font-family:'Inter',sans-serif;}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
 
-/* LOGIN */
-.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);}
-.login-box{background:white;border-radius:20px;padding:2.5rem;width:min(380px,94vw);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
-.login-box .logo{font-size:2.5rem;margin-bottom:.5rem;}
-.login-box h2{font-weight:800;font-size:1.3rem;margin-bottom:.25rem;}
-.login-box p{color:var(--subtext);font-size:.85rem;margin-bottom:1.5rem;}
-.login-box input{width:100%;border:2px solid var(--border);border-radius:12px;padding:.75rem 1rem;font-family:'Poppins',sans-serif;font-size:.9rem;margin-bottom:1rem;transition:border-color .2s;}
-.login-box input:focus{outline:none;border-color:var(--yellow);}
-.login-box button{width:100%;background:var(--yellow);border:none;border-radius:12px;padding:.85rem;font-weight:800;font-size:.95rem;color:var(--dark);}
-.login-err{color:var(--red);font-size:.8rem;margin-top:.5rem;}
+#loginScreen{min-height:100vh;display:none;align-items:center;justify-content:center;background:var(--sidebar);}
+.login-box{background:var(--white);border-radius:20px;padding:2.5rem;width:min(400px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.login-logo{font-size:1.8rem;font-weight:900;margin-bottom:.3rem;}
+.login-logo span{color:var(--green);}
+.login-sub{color:var(--text2);font-size:.9rem;margin-bottom:1.8rem;}
+.login-box input{width:100%;border:2px solid var(--border);border-radius:10px;padding:.7rem 1rem;font-size:.95rem;margin-bottom:.8rem;transition:border-color .2s;}
+.login-box input:focus{outline:none;border-color:var(--green);}
+.login-err{color:var(--red);font-size:.8rem;margin-bottom:.7rem;display:none;}
+.btn-primary{width:100%;background:var(--green);color:#fff;border-radius:10px;padding:.75rem;font-size:.95rem;font-weight:700;}
 
-/* ADMIN LAYOUT */
-.admin-wrap{display:none;min-height:100vh;}
-.sidebar{width:220px;background:var(--dark);position:fixed;top:0;left:0;height:100vh;padding:1.5rem 1rem;display:flex;flex-direction:column;gap:.25rem;z-index:100;overflow-y:auto;}
-.sidebar-logo{color:white;font-weight:900;font-size:1.1rem;padding:.75rem .5rem 1.25rem;border-bottom:1px solid #333;margin-bottom:.75rem;}
-.sidebar-logo span{color:var(--yellow);}
-.nav-item{display:flex;align-items:center;gap:.65rem;padding:.7rem .9rem;border-radius:10px;color:#888;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;border:none;background:none;width:100%;text-align:left;}
-.nav-item:hover{background:#2a2a2a;color:white;}
-.nav-item.active{background:var(--yellow);color:var(--dark);}
-.nav-item .badge{background:var(--red);color:white;border-radius:6px;font-size:.65rem;font-weight:800;padding:.1rem .35rem;margin-left:auto;}
-.sidebar-footer{margin-top:auto;padding-top:1rem;border-top:1px solid #333;}
-.logout-nav{color:#888;font-size:.82rem;cursor:pointer;padding:.5rem .9rem;}
-.logout-nav:hover{color:var(--red);}
+#app{display:none;min-height:100vh;}
+#app.show{display:flex;}
+.sidebar{width:230px;background:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+.sidebar-logo{padding:1.5rem 1.4rem 1rem;font-size:1.1rem;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.08);}
+.sidebar-logo span{color:#4ade80;}
+.sidebar-nav{flex:1;padding:.8rem 0;}
+.nav-link{display:flex;align-items:center;gap:.75rem;padding:.72rem 1.4rem;color:#94a3b8;font-size:.88rem;font-weight:500;cursor:pointer;border-left:3px solid transparent;transition:all .15s;}
+.nav-link:hover{background:rgba(255,255,255,.05);color:#fff;}
+.nav-link.active{color:#fff;background:rgba(255,255,255,.08);border-left-color:#4ade80;}
+.nav-link .icon{font-size:1.1rem;width:20px;text-align:center;}
+.sidebar-footer{padding:1rem 1.4rem;border-top:1px solid rgba(255,255,255,.08);}
+.logout-btn{width:100%;background:rgba(255,255,255,.06);color:#94a3b8;border-radius:8px;padding:.55rem;font-size:.82rem;font-weight:600;}
+.logout-btn:hover{background:rgba(255,255,255,.12);color:#fff;}
 
-.main-content{margin-left:220px;padding:2rem;min-height:100vh;}
-.page{display:none;}
-.page.active{display:block;}
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:gap;}
-.page-title{font-weight:800;font-size:1.3rem;}
-.btn{border:none;border-radius:10px;padding:.6rem 1.2rem;font-weight:700;font-size:.85rem;cursor:pointer;font-family:'Poppins',sans-serif;transition:all .15s;}
-.btn-primary{background:var(--yellow);color:var(--dark);}
-.btn-primary:hover{background:#e6b400;}
-.btn-danger{background:#fee2e2;color:var(--red);}
-.btn-green{background:var(--green);color:white;}
-.btn-sm{padding:.4rem .8rem;font-size:.78rem;}
+.main{flex:1;overflow-y:auto;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:1rem 1.8rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.topbar h1{font-size:1.15rem;font-weight:700;}
+.content{padding:1.8rem;}
 
-/* CARDS */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;}
-.stat-card{background:white;border-radius:var(--radius);padding:1.25rem 1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.06);}
-.stat-label{font-size:.8rem;color:var(--subtext);font-weight:600;margin-bottom:.35rem;}
-.stat-value{font-size:1.7rem;font-weight:900;}
-.stat-sub{font-size:.75rem;color:var(--subtext);margin-top:.2rem;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.8rem;}
+.stat-card{background:var(--white);border-radius:var(--r);padding:1.2rem 1.4rem;border:1px solid var(--border);}
+.stat-val{font-size:1.8rem;font-weight:800;}
+.stat-lbl{font-size:.78rem;color:var(--text2);margin-top:.2rem;font-weight:500;}
 
-/* TABLE */
-.table-wrap{background:white;border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;}
+.card{background:var(--white);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;margin-bottom:1.2rem;}
+.card-header{padding:1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;}
+.card-header h2{font-size:.95rem;font-weight:700;}
+.card-body{padding:1.4rem;}
+
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.52rem 1rem;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.btn-green{background:var(--green);color:#fff;}
+.btn-green:hover{filter:brightness(1.1);}
+.btn-red{background:var(--red-bg);color:var(--red);border:1px solid #fecaca;}
+.btn-red:hover{background:#fecaca;}
+.btn-gray{background:var(--bg);color:var(--text2);border:1px solid var(--border);}
+.btn-gray:hover{background:var(--border);}
+.btn-blue{background:var(--blue-bg);color:var(--blue);border:1px solid #bfdbfe;}
+.btn-blue:hover{background:#dbeafe;}
+
 table{width:100%;border-collapse:collapse;}
-th{background:#f8fafc;padding:.85rem 1rem;text-align:left;font-size:.78rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;}
-td{padding:.85rem 1rem;border-top:1px solid var(--border);font-size:.85rem;}
+th{font-size:.75rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:.75rem 1rem;background:var(--bg);text-align:left;border-bottom:1px solid var(--border);}
+td{padding:.85rem 1rem;border-bottom:1px solid var(--border);font-size:.88rem;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
 tr:hover td{background:#fafafa;}
-.status-badge{display:inline-block;padding:.2rem .65rem;border-radius:6px;font-size:.72rem;font-weight:700;text-transform:capitalize;}
-.status-new{background:#e0f2fe;color:#0369a1;}
-.status-confirmed{background:#fef9c3;color:#854d0e;}
-.status-delivered{background:#dcfce7;color:#16a34a;}
-.status-cancelled{background:#fee2e2;color:#dc2626;}
-.featured-dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:#ddd;}
-.featured-dot.yes{background:var(--yellow);}
-.discount-pill{background:#fef3c7;color:#d97706;font-size:.72rem;font-weight:700;padding:.15rem .45rem;border-radius:5px;}
-.stock-pill{font-size:.75rem;font-weight:700;padding:.15rem .5rem;border-radius:5px;}
-.stock-ok{background:#dcfce7;color:#16a34a;}
-.stock-low{background:#fef3c7;color:#d97706;}
-.stock-out{background:#fee2e2;color:#dc2626;}
+.td-img{width:44px;height:44px;border-radius:8px;object-fit:cover;}
+.td-img-ph{width:44px;height:44px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:1.3rem;border:1px solid var(--border);}
+.actions{display:flex;gap:.4rem;}
+.badge{display:inline-block;padding:.2rem .6rem;border-radius:50px;font-size:.72rem;font-weight:600;}
+.badge-green{background:var(--green-bg);color:var(--green);}
+.badge-red{background:var(--red-bg);color:var(--red);}
+.badge-yellow{background:var(--yellow-bg);color:var(--yellow);}
+.badge-blue{background:var(--blue-bg);color:var(--blue);}
 
-/* PRODUCT IMG THUMB */
-.prod-thumb{width:40px;height:40px;object-fit:contain;border-radius:8px;background:#f8fafc;padding:2px;}
+.form-group{margin-bottom:1rem;}
+.form-group label{display:block;font-size:.78rem;font-weight:600;color:var(--text2);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;}
+.form-group input,.form-group select,.form-group textarea{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:.62rem .9rem;font-size:.9rem;color:var(--text);background:var(--white);transition:border-color .2s;appearance:none;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--green);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;}
+.form-hint{font-size:.74rem;color:var(--text3);margin-top:.3rem;}
 
-/* MODAL / FORM */
-.form-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
-.form-overlay.open{display:flex;}
-.form-box{background:white;border-radius:20px;width:min(560px,95vw);max-height:90vh;overflow-y:auto;}
-.form-head{background:var(--dark);padding:1.2rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-radius:20px 20px 0 0;}
-.form-head h3{color:white;font-weight:800;}
-.form-close{background:none;border:none;color:#888;font-size:1.3rem;cursor:pointer;}
-.form-body{padding:1.5rem;}
-.fg{margin-bottom:1rem;}
-.fg label{display:block;font-weight:600;font-size:.75rem;color:var(--subtext);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;}
-.fg input,.fg select,.fg textarea{width:100%;border:2px solid var(--border);border-radius:10px;padding:.6rem .9rem;font-family:'Poppins',sans-serif;font-size:.88rem;color:var(--text);transition:border-color .2s;}
-.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--yellow);}
-.fg .hint{font-size:.72rem;color:var(--subtext);margin-top:.3rem;}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-.form-row.three{grid-template-columns:1fr 1fr 1fr;}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;}
-.toggle-row label{font-weight:600;font-size:.85rem;}
-.toggle{width:44px;height:24px;background:#ddd;border-radius:12px;position:relative;cursor:pointer;transition:background .2s;border:none;}
-.toggle.on{background:var(--green);}
-.toggle::after{content:'';width:18px;height:18px;background:white;border-radius:50%;position:absolute;top:3px;left:3px;transition:left .2s;}
-.toggle.on::after{left:23px;}
-.form-actions{display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.25rem;}
-.img-preview{width:80px;height:80px;object-fit:contain;border-radius:10px;background:#f8fafc;margin-top:.5rem;border:1.5px solid var(--border);}
+.img-upload-area{border:2px dashed var(--border);border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg);}
+.img-upload-area:hover{border-color:var(--green);background:var(--green-bg);}
+.img-upload-area.has-image{border-color:var(--green);border-style:solid;}
+.img-preview{width:100%;max-height:140px;object-fit:cover;border-radius:8px;display:none;}
 
-/* SETTINGS */
-.settings-card{background:white;border-radius:var(--radius);padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:1.25rem;}
-.settings-card h3{font-weight:700;font-size:.95rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:.5rem;}
-.bulk-tiers{display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;}
-.bulk-tier-row{display:flex;gap:.75rem;align-items:center;}
-.bulk-tier-row input{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:.45rem .75rem;font-family:'Poppins',sans-serif;font-size:.82rem;}
-.bulk-tier-row .rm-btn{background:#fee2e2;color:var(--red);border:none;border-radius:7px;padding:.35rem .65rem;font-size:.8rem;font-weight:700;flex-shrink:0;}
-.add-tier-btn{background:var(--green-light,#e8f5ee);color:var(--green);border:none;border-radius:8px;padding:.45rem 1rem;font-weight:700;font-size:.82rem;margin-top:.5rem;}
+.tiers-list{display:flex;flex-direction:column;gap:.5rem;margin-bottom:.6rem;}
+.tier-row{display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;align-items:center;background:var(--bg);border-radius:8px;padding:.5rem .6rem;border:1px solid var(--border);}
+.tier-row input{border:1.5px solid var(--border);border-radius:7px;padding:.4rem .6rem;font-size:.85rem;background:var(--white);width:100%;}
+.tier-row input:focus{outline:none;border-color:var(--green);}
+.tier-del{background:none;color:var(--red);font-size:1.1rem;padding:.2rem .4rem;border-radius:5px;flex-shrink:0;}
+.tier-del:hover{background:var(--red-bg);}
+.tier-header{display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;padding:0 .6rem;margin-bottom:.2rem;}
+.tier-header span{font-size:.7rem;font-weight:600;color:var(--text3);text-transform:uppercase;}
 
-/* Per-product bulk tiers in product form */
-.prod-bulk-section{border:2px dashed #e2e8f0;border-radius:12px;padding:1rem;margin-top:.5rem;}
-.prod-bulk-section h4{font-size:.8rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.7rem;display:flex;align-items:center;gap:.4rem;}
-.prod-tier-header{display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;font-size:.68rem;font-weight:700;color:var(--subtext);text-transform:uppercase;margin-bottom:.3rem;padding:0 .2rem;}
-.prod-tier-row{display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;align-items:center;margin-bottom:.4rem;}
-.prod-tier-row input{border:1.5px solid var(--border);border-radius:8px;padding:.45rem .75rem;font-family:'Poppins',sans-serif;font-size:.82rem;width:100%;}
-.prod-tier-row input:focus{outline:none;border-color:var(--yellow);}
-.prod-tier-row .rm-btn{background:#fee2e2;color:var(--red);border:none;border-radius:7px;padding:.38rem .6rem;font-size:.8rem;font-weight:700;cursor:pointer;}
-.add-prod-tier-btn{background:#f0fdf4;color:var(--green);border:1.5px dashed var(--green);border-radius:8px;padding:.4rem .9rem;font-weight:700;font-size:.8rem;margin-top:.35rem;cursor:pointer;width:100%;}
-.add-prod-tier-btn:hover{background:#dcfce7;}
-.tier-note{font-size:.72rem;color:var(--subtext);margin-top:.5rem;line-height:1.5;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--white);border-radius:18px;width:min(560px,100%);max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);}
+.modal-head{padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--white);z-index:1;}
+.modal-head h2{font-size:1rem;font-weight:700;}
+.modal-close{background:none;font-size:1.3rem;color:var(--text2);padding:.2rem .4rem;cursor:pointer;}
+.modal-body{padding:1.5rem;}
+.modal-foot{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end;position:sticky;bottom:0;background:var(--white);}
 
-/* SEARCH */
-.search-bar-admin{display:flex;gap:.75rem;margin-bottom:1rem;align-items:center;}
-.search-bar-admin input{flex:1;border:2px solid var(--border);border-radius:10px;padding:.6rem 1rem;font-family:'Poppins',sans-serif;font-size:.85rem;}
-.search-bar-admin input:focus{outline:none;border-color:var(--yellow);}
+.action-picker{border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-top:.5rem;background:var(--bg);}
+.prod-pick-list{max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--white);margin-top:.5rem;}
+.pick-item{display:flex;align-items:center;gap:.6rem;padding:.55rem .8rem;border-bottom:1px solid var(--border);}
+.pick-item:last-child{border:none;}
+.pick-item:hover{background:var(--bg);}
+.pick-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--green);flex-shrink:0;}
+.pick-item .pname{font-size:.83rem;font-weight:600;flex:1;}
+.pick-item .pprice{font-size:.78rem;color:var(--text2);}
+
+.search-input{border:1.5px solid var(--border);border-radius:8px;padding:.48rem .9rem;font-size:.85rem;background:var(--white);min-width:200px;}
+.search-input:focus{outline:none;border-color:var(--green);}
+
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--sidebar);color:#fff;padding:.7rem 1.2rem;border-radius:10px;font-size:.84rem;font-weight:500;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s;box-shadow:0 4px 20px rgba(0,0,0,.3);}
+.toast.show{opacity:1;}
+
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text2);}
+.empty-state .ei{font-size:2.5rem;margin-bottom:.5rem;}
+.empty-state p{font-size:.88rem;line-height:1.6;}
 
 @media(max-width:768px){
-  .sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;padding:.75rem;}
-  .main-content{margin-left:0;}
-  .form-row{grid-template-columns:1fr;}
-  table{font-size:.78rem;}
-  td,th{padding:.65rem .75rem;}
+  .sidebar{width:60px;}
+  .sidebar-logo,.nav-link span:not(.icon),.sidebar-footer{display:none;}
+  .nav-link{justify-content:center;padding:.72rem;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .content{padding:1rem;}
 }
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div class="login-screen" id="loginScreen">
+<div id="loginScreen">
   <div class="login-box">
-    <div class="logo">⚙️</div>
-    <h2>Admin Panel</h2>
-    <p>BSC Store — Dashboard</p>
-    <input type="password" id="adminPass" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
-    <button onclick="doLogin()">Login →</button>
-    <div class="login-err" id="loginErr"></div>
+    <div class="login-logo">🛒 <span>BSC</span> Store</div>
+    <div class="login-sub">Admin Panel — Enter your password</div>
+    <input type="password" id="loginPass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-err" id="loginErr">Wrong password. Try again.</div>
+    <button class="btn-primary" onclick="doLogin()">Login</button>
   </div>
 </div>
 
-<!-- ADMIN WRAP -->
-<div class="admin-wrap" id="adminWrap">
-  <!-- SIDEBAR -->
+<div id="app">
   <div class="sidebar">
     <div class="sidebar-logo">BSC <span>Store</span></div>
-    <button class="nav-item active" onclick="showPage('dashboard',this)">📊 Dashboard</button>
-    <button class="nav-item" onclick="showPage('orders',this)">📦 Orders <span class="badge" id="newOrderBadge" style="display:none">0</span></button>
-    <button class="nav-item" onclick="showPage('products',this)">🛍️ Products</button>
-    <button class="nav-item" onclick="showPage('categories',this)">🏷️ Categories</button>
-    <button class="nav-item" onclick="showPage('customers',this)">👥 Customers</button>
-    <button class="nav-item" onclick="showPage('settings',this)">⚙️ Settings</button>
+    <nav class="sidebar-nav">
+<div class="nav-link" onclick="goTo('orders')">
+  <span class="icon">📦</span>
+  <span>Orders</span>
+</div>
+      <div class="nav-link" onclick="goTo('dashboard')"><span class="icon">📊</span><span>Dashboard</span></div>
+      <div class="nav-link" onclick="goTo('products')"><span class="icon">🛍️</span><span>Products</span></div>
+      <div class="nav-link" onclick="goTo('categories')"><span class="icon">📂</span><span>Categories</span></div>
+      <div class="nav-link" onclick="goTo('banners')"><span class="icon">🖼️</span><span>Banners</span></div>
+      <div class="nav-link" onclick="goTo('milk')"><span class="icon">🥛</span><span>Milk</span></div>
+      <div class="nav-link" onclick="goTo('accounts')"><span class="icon">👤</span><span>Accounts</span></div>
+      <div class="nav-link" onclick="goTo('settings')"><span class="icon">⚙️</span><span>Settings</span></div>
+    </nav>
     <div class="sidebar-footer">
-      <div class="logout-nav" onclick="logout()">🚪 Logout</div>
+      <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
   </div>
+  <div class="main">
+    <div class="topbar">
+      <h1 id="pageTitle">Dashboard</h1>
+      <a href="/" target="_blank"><button class="btn btn-gray">View Store</button></a>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
 
-  <div class="main-content">
-    <!-- DASHBOARD -->
-    <div class="page active" id="page-dashboard">
-      <div class="page-header"><div class="page-title">📊 Dashboard</div></div>
-      <div class="stats-grid" id="statsGrid"></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Order</th><th>Customer</th><th>Address</th><th>Amount</th><th>Status</th><th>Time</th></tr></thead>
-          <tbody id="recentOrdersTbody"></tbody>
-        </table>
+<!-- PRODUCT MODAL -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="productModalTitle">Add Product</h2>
+      <button class="modal-close" onclick="closeModal('productModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pEditId">
+      <div class="form-group">
+        <label>Product Image</label>
+        <div class="img-upload-area" id="pImgArea" onclick="document.getElementById('pImgFile').click()">
+          <div style="font-size:2rem;margin-bottom:.4rem">📷</div>
+          <div style="font-size:.82rem;font-weight:600;color:var(--text2)" id="pImgText">Click to upload image</div>
+          <div style="font-size:.72rem;color:var(--text3);margin-top:.2rem">JPG, PNG, WEBP max 8MB</div>
+          <img class="img-preview" id="pImgPreview">
+        </div>
+        <input type="file" id="pImgFile" accept="image/*" style="display:none" onchange="handleImgUpload('product',this)">
+        <input type="hidden" id="pImgUrl">
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Product Name</label><input type="text" id="pName" placeholder="e.g. Fresh Tomatoes"></div>
+        <div class="form-group"><label>Unit / Weight</label><input type="text" id="pUnit" placeholder="e.g. 1 kg"></div>
+      </div>
+      <div class="form-group"><label>Category</label><select id="pCat"></select></div>
+      <div class="form-group">
+        <label>MRP — Original Price (Rs.) — optional</label>
+        <input type="number" id="pMrp" min="0" step="0.5" placeholder="e.g. 50">
+        <div class="form-hint">Shown as strikethrough with % off badge on product card</div>
+      </div>
+      <div class="form-group">
+        <label>Selling Price Tiers</label>
+        <p class="form-hint" style="margin-bottom:.6rem">First tier must start at qty 1.</p>
+        <div class="tier-header"><span>Min Qty</span><span>Price (Rs.)</span><span></span></div>
+        <div class="tiers-list" id="tiersList"></div>
+        <button class="btn btn-gray" style="font-size:.78rem;padding:.38rem .8rem" onclick="addTierRow()">+ Add Tier</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Stock Status</label>
+          <select id="pInStock">
+            <option value="true">In Stock</option>
+            <option value="false">Out of Stock</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tag</label>
+          <select id="pTag">
+            <option value="">None</option>
+            <option value="featured">Featured</option>
+            <option value="new">New Arrival</option>
+          </select>
+        </div>
       </div>
     </div>
-
-    <!-- ORDERS -->
-    <div class="page" id="page-orders">
-      <div class="page-header"><div class="page-title">📦 All Orders</div></div>
-      <div class="search-bar-admin"><input type="text" id="orderSearch" placeholder="Search by name, phone, address..." oninput="filterOrders(this.value)"></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>ID</th><th>Customer</th><th>Address</th><th>Items</th><th>Discount</th><th>Total</th><th>Status</th><th>Time</th><th>Action</th></tr></thead>
-          <tbody id="ordersTbody"></tbody>
-        </table>
-      </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeModal('productModal')">Cancel</button>
+      <button class="btn btn-green" onclick="saveProduct()">Save Product</button>
     </div>
+  </div>
+</div>
 
-    <!-- PRODUCTS -->
-    <div class="page" id="page-products">
-      <div class="page-header">
-        <div class="page-title">🛍️ Products</div>
-        <button class="btn btn-primary" onclick="openProductForm()">+ Add Product</button>
+<!-- CATEGORY MODAL -->
+<div class="modal-overlay" id="categoryModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="catModalTitle">Add Category</h2>
+      <button class="modal-close" onclick="closeModal('categoryModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cEditId">
+      <div class="form-group">
+        <label>Category Image</label>
+        <div class="img-upload-area" id="cImgArea" onclick="document.getElementById('cImgFile').click()">
+          <div style="font-size:2rem;margin-bottom:.4rem">📷</div>
+          <div style="font-size:.82rem;font-weight:600;color:var(--text2)" id="cImgText">Click to upload image</div>
+          <img class="img-preview" id="cImgPreview">
+        </div>
+        <input type="file" id="cImgFile" accept="image/*" style="display:none" onchange="handleImgUpload('category',this)">
+        <input type="hidden" id="cImgUrl">
       </div>
-      <div class="search-bar-admin">
-        <input type="text" id="prodSearch" placeholder="Search products..." oninput="filterProducts(this.value)">
-        <select id="prodCatFilter" onchange="filterProducts(document.getElementById('prodSearch').value)" style="border:2px solid var(--border);border-radius:10px;padding:.6rem .9rem;font-family:'Poppins',sans-serif;font-size:.85rem;">
-          <option value="">All Categories</option>
+      <div class="form-group"><label>Category Name</label><input type="text" id="cName" placeholder="e.g. Dairy and Eggs"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeModal('categoryModal')">Cancel</button>
+      <button class="btn btn-green" onclick="saveCat()">Save Category</button>
+    </div>
+  </div>
+</div>
+
+<!-- BANNER MODAL -->
+<div class="modal-overlay" id="bannerModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="bannerModalTitle">Add Banner</h2>
+      <button class="modal-close" onclick="closeModal('bannerModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="bEditId">
+      <div class="form-group">
+        <label>Banner Image</label>
+        <div class="img-upload-area" id="bImgArea" onclick="document.getElementById('bImgFile').click()">
+          <div style="font-size:2rem;margin-bottom:.4rem">📷</div>
+          <div style="font-size:.82rem;font-weight:600;color:var(--text2)" id="bImgText">Click to upload banner image</div>
+          <div style="font-size:.72rem;color:var(--text3);margin-top:.2rem">Recommended: 800x400px</div>
+          <img class="img-preview" id="bImgPreview">
+        </div>
+        <input type="file" id="bImgFile" accept="image/*" style="display:none" onchange="handleImgUpload('banner',this)">
+        <input type="hidden" id="bImgUrl">
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Title (optional)</label><input type="text" id="bTitle" placeholder="e.g. Weekend Deals"></div>
+        <div class="form-group"><label>Subtitle (optional)</label><input type="text" id="bSub" placeholder="e.g. Up to 20% off"></div>
+      </div>
+      <div class="form-group">
+        <label>Background Color (if no image)</label>
+        <input type="color" id="bBgColor" value="#1a1a2e" style="height:40px;cursor:pointer;border-radius:8px;padding:4px 6px;width:100%;border:1.5px solid var(--border)">
+      </div>
+      <div class="form-group">
+        <label>When Clicked Opens</label>
+        <select id="bActionType" onchange="onBannerActionChange()">
+          <option value="">Nothing</option>
+          <option value="category">A specific category</option>
+          <option value="products">Hand-picked products</option>
         </select>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Img</th><th>Name</th><th>Category</th><th>Price</th><th>Bulk Tiers</th><th>Stock</th><th>Featured</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="productsTbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- CATEGORIES -->
-    <div class="page" id="page-categories">
-      <div class="page-header">
-        <div class="page-title">🏷️ Categories</div>
-        <button class="btn btn-primary" onclick="openCatForm()">+ Add Category</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Emoji</th><th>Name</th><th>ID</th><th>Actions</th></tr></thead>
-          <tbody id="catsTbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- CUSTOMERS -->
-    <div class="page" id="page-customers">
-      <div class="page-header"><div class="page-title">👥 Customers</div></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Orders</th><th>Joined</th></tr></thead>
-          <tbody id="customersTbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- SETTINGS -->
-    <div class="page" id="page-settings">
-      <div class="page-header"><div class="page-title">⚙️ Settings</div></div>
-      <div class="settings-card">
-        <h3>🏪 Store Info</h3>
-        <div class="form-row">
-          <div class="fg"><label>Store Name</label><input type="text" id="sStoreName" placeholder="BSC Store"></div>
-          <div class="fg"><label>WhatsApp Number</label><input type="text" id="sWhatsapp" placeholder="91XXXXXXXXXX"></div>
+      <div class="action-picker" id="bActionPicker" style="display:none">
+        <div id="bCatPicker" style="display:none">
+          <div class="form-group" style="margin:0"><label>Select Category</label><select id="bCatId"></select></div>
         </div>
-        <div class="fg"><label>QR Code Image URL</label><input type="text" id="sQrUrl" placeholder="https://..."><div class="hint">Paste the URL of your payment QR code image</div></div>
-      </div>
-      <div class="settings-card">
-        <h3>🚚 Delivery Settings</h3>
-        <div class="form-row">
-          <div class="fg"><label>Minimum Order (₹)</label><input type="number" id="sMinOrder" placeholder="99" min="0"></div>
-          <div class="fg"><label>Delivery Radius (km)</label><input type="number" id="sRadius" placeholder="1" step="0.1" min="0.1"></div>
+        <div id="bProdPicker" style="display:none">
+          <label style="font-size:.78rem;font-weight:600;color:var(--text2);text-transform:uppercase;display:block;margin-bottom:.4rem">Pick Products</label>
+          <input type="text" placeholder="Search..." class="search-input" style="width:100%;margin-bottom:.4rem" oninput="filterBannerProds(this.value)">
+          <div class="prod-pick-list" id="bProdList"></div>
+          <div style="font-size:.74rem;color:var(--text2);margin-top:.4rem"><span id="bPickCount">0</span> selected</div>
         </div>
       </div>
-      <div class="settings-card" style="border:2px solid #e2e8f0;background:#fafbfc">
-        <h3>💰 Bulk Pricing</h3>
-        <div style="font-size:.85rem;color:var(--subtext);line-height:1.6">Per-product bulk pricing is now set directly on each product.<br>Go to <strong>Products → Edit</strong> to set bulk tiers for any product.</div>
-      </div>
-      <div class="settings-card">
-        <h3>🔑 Change Admin Password</h3>
-        <div class="form-row">
-          <div class="fg"><label>New Password</label><input type="password" id="sNewPass" placeholder="Leave blank to keep current"></div>
-        </div>
-      </div>
-      <button class="btn btn-primary" onclick="saveSettings()">💾 Save All Settings</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeModal('bannerModal')">Cancel</button>
+      <button class="btn btn-green" onclick="saveBanner()">Save Banner</button>
     </div>
   </div>
 </div>
 
-<!-- PRODUCT FORM MODAL -->
-<div class="form-overlay" id="productModal">
-  <div class="form-box">
-    <div class="form-head"><h3 id="productModalTitle">Add Product</h3><button class="form-close" onclick="closeProductForm()">✕</button></div>
-    <div class="form-body">
-      <div class="form-row">
-        <div class="fg"><label>Product Name</label><input type="text" id="pName" placeholder="e.g. Basmati Rice"></div>
-        <div class="fg"><label>Emoji</label><input type="text" id="pEmoji" placeholder="🍚" maxlength="4"></div>
-      </div>
-      <div class="fg"><label>Product Image URL</label><input type="text" id="pImageUrl" placeholder="https://... or leave blank for default" oninput="previewImg(this.value)">
-        <div class="hint">Enter a direct image URL (jpg, png, webp)</div>
-        <img id="imgPreview" class="img-preview" style="display:none">
-      </div>
-      <div class="form-row">
-        <div class="fg"><label>Category</label><select id="pCat"></select></div>
-        <div class="fg"><label>Unit</label><input type="text" id="pUnit" placeholder="e.g. 1 kg, 500 g"></div>
-      </div>
-      <div class="form-row three">
-        <div class="fg"><label>Price (₹)</label><input type="number" id="pPrice" placeholder="0" min="0"></div>
-        <div class="fg"><label>Sale Price (₹)</label><input type="number" id="pDiscountPrice" placeholder="Leave blank for no sale" min="0"><div class="hint">Must be less than price</div></div>
-        <div class="fg"><label>Stock Qty</label><input type="number" id="pStock" placeholder="0" min="0"></div>
-      </div>
-      <div class="toggle-row"><label>⭐ Featured Product</label><button class="toggle" id="pFeaturedToggle" onclick="toggleBtn(this)"></button></div>
-      <div class="toggle-row"><label>✅ In Stock</label><button class="toggle on" id="pInStockToggle" onclick="toggleBtn(this)"></button></div>
-
-      <!-- Per-product bulk pricing tiers -->
-      <div class="prod-bulk-section">
-        <h4>💰 Bulk Pricing Tiers <span style="font-weight:400;opacity:.6">(optional)</span></h4>
-        <div class="prod-tier-header"><span>Min Qty</span><span>Price / Unit (₹)</span><span></span></div>
-        <div id="prodTiersWrap"></div>
-        <button class="add-prod-tier-btn" type="button" onclick="addProdTier()">+ Add Tier</button>
-        <div class="tier-note">💡 E.g. Qty 1 → ₹10, Qty 5 → ₹9, Qty 10 → ₹8. First tier = base price for 1 unit.</div>
-      </div>
-
-      <div class="form-actions">
-        <button class="btn" onclick="closeProductForm()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- CATEGORY FORM MODAL -->
-<div class="form-overlay" id="catModal">
-  <div class="form-box" style="max-width:380px">
-    <div class="form-head"><h3 id="catModalTitle">Add Category</h3><button class="form-close" onclick="closeCatForm()">✕</button></div>
-    <div class="form-body">
-      <div class="fg"><label>Category Name</label><input type="text" id="cName" placeholder="e.g. Beverages"></div>
-      <div class="fg"><label>Emoji</label><input type="text" id="cEmoji" placeholder="🥤" maxlength="4"></div>
-      <div class="form-actions">
-        <button class="btn" onclick="closeCatForm()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveCat()">Save Category</button>
-      </div>
-    </div>
-  </div>
-</div>
+<div class="toast" id="toast"></div>
 
 <script>
-let token = '', allOrders=[], allProducts=[], allCategories=[], allCustomers=[];
-let editingProductId=null, editingCatId=null;
-let orderFilterVal='', prodFilterVal='', prodCatFilterVal='';
+let token = localStorage.getItem('bsc_token');
+let allProducts = [], allCategories = [], allBanners = [];
+let currentPage = 'dashboard';
+let productSearch = '';
+
+window.onload = function() {
+  if (token) { startApp(); }
+  else { document.getElementById('loginScreen').style.display = 'flex'; }
+};
 
 async function doLogin() {
-  const pw = document.getElementById('adminPass').value;
-  const res = await fetch('/api/admin/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
-  const data = await res.json();
-  if (res.ok) { token=data.token; document.getElementById('loginScreen').style.display='none'; document.getElementById('adminWrap').style.display='block'; loadAll(); }
-  else { document.getElementById('loginErr').textContent=data.error||'Login failed'; }
+  const pass = document.getElementById('loginPass').value;
+  document.getElementById('loginErr').style.display = 'none';
+  try {
+    const r = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pass}) });
+    if (r.ok) { token = (await r.json()).token; localStorage.setItem('bsc_token',token); startApp(); }
+    else { document.getElementById('loginErr').style.display = 'block'; }
+  } catch { document.getElementById('loginErr').textContent='Cannot connect to server.'; document.getElementById('loginErr').style.display='block'; }
 }
-function logout() { token=''; document.getElementById('adminWrap').style.display='none'; document.getElementById('loginScreen').style.display='flex'; }
-function api(url,opts={}) { return fetch(url,{...opts,headers:{...opts.headers,'Authorization':'Bearer '+token,'Content-Type':'application/json'}}); }
 
-function showPage(name,btn) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
-  if(btn) btn.classList.add('active');
-  if(name==='orders') renderOrders();
-  if(name==='products') { renderProducts(); populateCatFilter(); }
-  if(name==='categories') renderCats();
-  if(name==='customers') renderCustomers();
-  if(name==='settings') loadSettings();
-  if(name==='dashboard') renderDashboard();
+async function startApp() {
+  try {
+    const r = await fetch('/api/admin/verify', { headers:{Authorization:'Bearer '+token} });
+    if (!r.ok) { token=null; localStorage.removeItem('bsc_token'); location.reload(); return; }
+  } catch { document.getElementById('loginScreen').style.display='flex'; return; }
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').classList.add('show');
+  await loadAll();
+  goTo('dashboard');
 }
+
+function logout() { localStorage.removeItem('bsc_token'); token=null; location.reload(); }
 
 async function loadAll() {
-  const [ordRes,prodRes,catRes,custRes] = await Promise.all([
-    api('/api/admin/orders'), api('/api/admin/products'), api('/api/admin/categories'), api('/api/admin/customers')
+  const [pR,cR,bR] = await Promise.all([
+    fetch('/api/admin/products',{headers:ah()}),
+    fetch('/api/admin/categories',{headers:ah()}),
+    fetch('/api/admin/banners',{headers:ah()}),
   ]);
-  allOrders = await ordRes.json();
-  allProducts = await prodRes.json();
-  allCategories = await catRes.json();
-  allCustomers = await custRes.json();
-  renderDashboard();
-  const newCount = allOrders.filter(o=>o.status==='new').length;
-  if(newCount>0){ const b=document.getElementById('newOrderBadge'); b.textContent=newCount; b.style.display='inline-block'; }
+  allProducts = await pR.json();
+  allCategories = await cR.json();
+  allBanners = await bR.json();
 }
 
-// ── DASHBOARD ──────────────────────────────────────────────────────────────────
+const ah = () => ({Authorization:'Bearer '+token,'Content-Type':'application/json'});
+
+function goTo(page) 
+{
+  currentPage = page;
+  const pages = [
+  'orders',
+  'dashboard',
+  'products',
+  'categories',
+  'banners',
+  'milk',
+  'accounts',
+  'settings'
+];
+  document.querySelectorAll('.nav-link').forEach((l,i) => l.classList.toggle('active', pages[i]===page));
+  const titles = {dashboard:'Dashboard',products:'Products',categories:'Categories',banners:'Banners',milk:'Milk Delivery',accounts:'Customer Accounts',settings:'Settings'};
+  document.getElementById('pageTitle').textContent = titles[page]||page;
+  const fns = {
+  dashboard: renderDashboard,
+  products: renderProducts,
+  categories: renderCategories,
+  banners: renderBanners,
+  milk: renderMilk,
+  accounts: renderAccounts,
+  settings: renderSettings,
+
+  // ⭐ ADD THIS LINE
+  orders: renderOrders
+};
+  if (fns[page]) fns[page]();
+}
+
 function renderDashboard() {
-  const todayStr = new Date().toDateString();
-  const todayOrders = allOrders.filter(o => new Date(o.createdAt).toDateString()===todayStr);
-  const todayRevenue = todayOrders.reduce((s,o)=>s+(o.finalTotal||o.total||0),0);
-  const totalRevenue = allOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+(o.finalTotal||o.total||0),0);
-  document.getElementById('statsGrid').innerHTML = [
-    {label:'Total Orders',value:allOrders.length,sub:'all time',icon:'📦'},
-    {label:"Today's Orders",value:todayOrders.length,sub:`₹${todayRevenue} revenue`,icon:'📅'},
-    {label:'Total Revenue',value:'₹'+totalRevenue,sub:'excl. cancelled',icon:'💰'},
-    {label:'Products',value:allProducts.length,sub:`${allProducts.filter(p=>!p.inStock||p.stock===0).length} out of stock`,icon:'🛍️'},
-    {label:'Customers',value:allCustomers.length,sub:'registered',icon:'👥'},
-    {label:'New Orders',value:allOrders.filter(o=>o.status==='new').length,sub:'pending action',icon:'🔔'},
-  ].map(s=>`<div class="stat-card"><div class="stat-label">${s.icon} ${s.label}</div><div class="stat-value">${s.value}</div><div class="stat-sub">${s.sub}</div></div>`).join('');
-  document.getElementById('recentOrdersTbody').innerHTML = allOrders.slice(0,5).map(o=>`
-    <tr>
-      <td>#${String(o.id).slice(-6)}</td>
-      <td><strong>${o.name}</strong><br><span style="color:var(--subtext);font-size:.75rem">${o.phone}</span></td>
-      <td>${o.address||''}</td>
-      <td>₹${o.finalTotal||o.total}</td>
-      <td><span class="status-badge status-${o.status}">${o.status}</span></td>
-      <td style="color:var(--subtext);font-size:.78rem">${new Date(o.createdAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
-    </tr>`).join('');
+  document.getElementById('content').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val">${allProducts.length}</div><div class="stat-lbl">Total Products</div></div>
+      <div class="stat-card"><div class="stat-val">${allCategories.length}</div><div class="stat-lbl">Categories</div></div>
+      <div class="stat-card"><div class="stat-val">${allBanners.length}</div><div class="stat-lbl">Banners</div></div>
+      <div class="stat-card"><div class="stat-val">${allProducts.filter(p=>!p.inStock).length}</div><div class="stat-lbl">Out of Stock</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Quick Actions</h2></div>
+      <div class="card-body" style="display:flex;gap:.8rem;flex-wrap:wrap">
+        <button class="btn btn-green" onclick="goTo('products');setTimeout(openProductModal,100)">+ Add Product</button>
+        <button class="btn btn-blue" onclick="goTo('categories');setTimeout(openCatModal,100)">+ Add Category</button>
+        <button class="btn btn-gray" onclick="goTo('banners');setTimeout(openBannerModal,100)">+ Add Banner</button>
+        <a href="/" target="_blank"><button class="btn btn-gray">View Store</button></a>
+      </div>
+    </div>`;
 }
 
-// ── ORDERS ────────────────────────────────────────────────────────────────────
-function renderOrders() {
-  const q = orderFilterVal.toLowerCase();
-  const list = q ? allOrders.filter(o=>(o.name+o.phone+o.address+'').toLowerCase().includes(q)) : allOrders;
-  document.getElementById('ordersTbody').innerHTML = list.map(o=>`
-    <tr>
-      <td style="font-size:.75rem;color:var(--subtext)">#${String(o.id).slice(-6)}</td>
-      <td><strong>${o.name}</strong><br><span style="color:var(--subtext);font-size:.75rem">${o.phone}</span></td>
-      <td>${o.address||''}</td>
-      <td style="font-size:.75rem">${(o.items||[]).map(i=>`${i.emoji||''} ${i.name} ×${i.qty}`).join(', ')}</td>
-      <td>${o.discountAmt>0?`<span class="discount-pill">-₹${o.discountAmt}</span>`:'—'}</td>
-      <td><strong>₹${o.finalTotal||o.total}</strong></td>
-      <td><select onchange="updateOrderStatus(${o.id},this.value)" style="border:1.5px solid var(--border);border-radius:7px;padding:.25rem .5rem;font-family:'Poppins',sans-serif;font-size:.78rem;">
-        ${['new','confirmed','out_for_delivery','delivered','cancelled'].map(s=>`<option value="${s}" ${o.status===s?'selected':''}>${s.replace(/_/g,' ')}</option>`).join('')}
-      </select></td>
-      <td style="color:var(--subtext);font-size:.75rem">${new Date(o.createdAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="deleteOrderConfirm(${o.id})">🗑</button></td>
-    </tr>`).join('');
-}
-function filterOrders(val) { orderFilterVal=val; renderOrders(); }
-async function updateOrderStatus(id,status) {
-  await api(`/api/admin/orders/${id}/status`,{method:'PUT',body:JSON.stringify({status})});
-  const o = allOrders.find(x=>x.id==id); if(o) o.status=status;
-  const newCount = allOrders.filter(o=>o.status==='new').length;
-  const b=document.getElementById('newOrderBadge'); b.textContent=newCount; b.style.display=newCount>0?'inline-block':'none';
-}
-function deleteOrderConfirm(id) { if(confirm('Delete this order?')) { allOrders=allOrders.filter(o=>o.id!=id); renderOrders(); } }
+// ═══════════════════════════════════════
+// ORDERS PAGE
+// ═══════════════════════════════════════
 
-// ── PRODUCTS ──────────────────────────────────────────────────────────────────
-function renderProducts() {
-  const q = prodFilterVal.toLowerCase(), cat = prodCatFilterVal;
-  let list = allProducts;
-  if(q) list = list.filter(p=>p.name.toLowerCase().includes(q));
-  if(cat) list = list.filter(p=>p.cat===cat);
-  document.getElementById('productsTbody').innerHTML = list.map(p=>{
-    const img = p.imageUrl && p.imageUrl.trim() ? p.imageUrl : (FALLBACK_IMGS[p.id]||null);
-    const stockClass = p.stock===0?'stock-out':p.stock<=5?'stock-low':'stock-ok';
-    const stockLabel = p.stock===0?'Out':'Low:'+p.stock;
-    return `<tr>
-      <td>${img?`<img class="prod-thumb" src="${img}" onerror="this.outerHTML='<span style=font-size:1.5rem>${p.emoji}</span>'">`:`<span style="font-size:1.5rem">${p.emoji}</span>`}</td>
-      <td><strong>${p.name}</strong><br><span style="color:var(--subtext);font-size:.75rem">${p.unit}</span></td>
-      <td>${allCategories.find(c=>c.id===p.cat)?.name||p.cat}</td>
-      <td>₹${p.price}</td>
-      <td>${(p.bulkTiers&&p.bulkTiers.length>0)?`<span class="discount-pill">💰 ${p.bulkTiers.length} tier${p.bulkTiers.length>1?'s':''}</span>`:'—'}</td>
-      <td><span class="stock-pill ${stockClass}">${p.stock}${p.stock<=5&&p.stock>0?' (Low)':''}</span></td>
-      <td><span class="featured-dot ${p.featured?'yes':''}" title="${p.featured?'Featured':''}"></span></td>
-      <td><span class="status-badge ${p.inStock&&p.stock>0?'status-delivered':'status-cancelled'}">${p.inStock&&p.stock>0?'In Stock':'Out'}</span></td>
-      <td>
-        <button class="btn btn-sm btn-primary" onclick="openProductForm(${p.id})">✏️</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})" style="margin-left:.3rem">🗑</button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-function filterProducts(val) { prodFilterVal=val; prodCatFilterVal=document.getElementById('prodCatFilter').value; renderProducts(); }
-function populateCatFilter() {
-  const sel = document.getElementById('prodCatFilter');
-  sel.innerHTML = '<option value="">All Categories</option>' + allCategories.map(c=>`<option value="${c.id}" ${prodCatFilterVal===c.id?'selected':''}>${c.name}</option>`).join('');
-}
+// ═══════════════════════════════════════
+// ORDERS PAGE — PRO VERSION
+// ═══════════════════════════════════════
 
-const FALLBACK_IMGS={1:'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=200&q=80',7:'https://images.unsplash.com/photo-1561155707-8f5d27df1e31?w=200&q=80',17:'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=200&q=80'};
+async function renderOrders() {
+  try {
+    const r = await fetch('/api/admin/orders', { headers: ah() });
+    const orders = await r.json();
 
-function openProductForm(id=null) {
-  editingProductId = id;
-  document.getElementById('productModalTitle').textContent = id ? 'Edit Product' : 'Add Product';
-  document.getElementById('pCat').innerHTML = allCategories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  if(id) {
-    const p = allProducts.find(x=>x.id==id);
-    document.getElementById('pName').value = p.name;
-    document.getElementById('pEmoji').value = p.emoji;
-    document.getElementById('pImageUrl').value = p.imageUrl||'';
-    document.getElementById('pCat').value = p.cat;
-    document.getElementById('pUnit').value = p.unit;
-    document.getElementById('pPrice').value = p.price;
-    document.getElementById('pDiscountPrice').value = p.discountPrice||'';
-    document.getElementById('pStock').value = p.stock||0;
-    setToggle('pFeaturedToggle', p.featured);
-    setToggle('pInStockToggle', p.inStock);
-    previewImg(p.imageUrl);
-    renderProdTiers(p.bulkTiers||[]);
-  } else {
-    ['pName','pEmoji','pImageUrl','pUnit','pPrice','pDiscountPrice'].forEach(id=>document.getElementById(id).value='');
-    renderProdTiers([]);
-    document.getElementById('pStock').value = 0;
-    setToggle('pFeaturedToggle', false);
-    setToggle('pInStockToggle', true);
-    document.getElementById('imgPreview').style.display='none';
+    if (!orders.length) {
+      document.getElementById('content').innerHTML = `
+        <div class="empty-state">
+          <div class="ei">📦</div>
+          <p>No orders yet.</p>
+        </div>`;
+      return;
+    }
+
+
+
+
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <h2>📦 Orders (${orders.length})</h2>
+        </div>
+
+        ${orders.map(o => {
+
+          const time = new Date(o.createdAt || Date.now())
+            .toLocaleString('en-IN', {
+              day:'numeric', month:'short',
+              hour:'2-digit', minute:'2-digit'
+            });
+
+          const itemsHtml = (o.items || []).map(i => `
+            <div style="display:flex;justify-content:space-between;font-size:.85rem;padding:3px 0">
+              <span>${i.name} × ${i.qty}</span>
+              <span>₹${i.price * i.qty}</span>
+            </div>
+          `).join('');
+
+          return `
+          <div style="
+            border-bottom:1px solid var(--border);
+            padding:14px 16px;
+          ">
+
+            <!-- TOP ROW -->
+            <div style="display:flex;justify-content:space-between;align-items:center">
+
+              <div>
+                <div style="font-weight:800;font-size:.95rem">
+                  Order #${o.id}
+                </div>
+                <div style="font-size:.75rem;color:var(--text2)">
+                  ${time}
+                </div>
+              </div>
+
+              <div style="text-align:right">
+                <div style="font-weight:800;font-size:1rem;color:var(--green)">
+                  ₹${o.total}
+                </div>
+                <span class="badge badge-yellow">
+                  ${o.status || 'new'}
+                </span>
+              </div>
+
+            </div>
+
+            <!-- CUSTOMER -->
+            <div style="margin-top:6px;font-size:.85rem">
+              <strong>${o.customerName || 'Customer'}</strong>
+              • ${o.phone || ''}
+            </div>
+
+            <div style="font-size:.8rem;color:var(--text2)">
+              ${o.block || ''} ${o.villa || ''}
+            </div>
+
+            <!-- ITEMS -->
+            <div style="
+              margin-top:10px;
+              background:var(--bg);
+              padding:10px;
+              border-radius:8px;
+            ">
+              ${itemsHtml}
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div style="
+              margin-top:10px;
+              display:flex;
+              gap:6px;
+              flex-wrap:wrap;
+            ">
+
+              <button class="btn btn-blue"
+                onclick="updateOrder(${o.id},'accepted')">
+                Accept
+              </button>
+
+              <button class="btn btn-gray"
+                onclick="updateOrder(${o.id},'packed')">
+                Packed
+              </button>
+
+              <button class="btn btn-green"
+                onclick="updateOrder(${o.id},'delivered')">
+                Delivered
+              </button>
+
+              <button class="btn btn-red"
+                onclick="updateOrder(${o.id},'cancelled')">
+                Cancel
+              </button>
+
+            </div>
+
+          </div>`;
+        }).join('')}
+
+      </div>`;
+  } catch {
+    toast('Failed to load orders');
   }
+}
+
+
+async function updateOrder(id, status) {
+  await fetch('/api/admin/orders/' + id, {
+    method: 'PUT',
+    headers: ah(),
+    body: JSON.stringify({ status })
+  });
+
+  toast('Order updated → ' + status);
+  renderOrders();
+}
+
+function renderProducts() {
+  const filtered = allProducts.filter(p=>p.name.toLowerCase().includes(productSearch));
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <h2>Products (${allProducts.length})</h2>
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+          <input class="search-input" placeholder="Search..." value="${productSearch}" oninput="productSearch=this.value.toLowerCase();renderProducts()">
+          <button class="btn btn-green" onclick="openProductModal()">+ Add Product</button>
+        </div>
+      </div>
+      ${filtered.length===0?`<div class="empty-state"><div class="ei">🛍️</div><p>No products yet.</p></div>`:`
+      <table>
+        <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>MRP</th><th>Price</th><th>Tiers</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${filtered.map(p=>{
+          const cat=allCategories.find(c=>c.id===p.catId);
+          const base=p.priceTiers?.[0]?.price??0;
+          const tiers=p.priceTiers?.length??1;
+          const disc=p.mrp&&p.mrp>base?Math.round((p.mrp-base)/p.mrp*100):0;
+          return `<tr>
+            <td>${p.imageUrl?`<img class="td-img" src="${p.imageUrl}">`:`<div class="td-img-ph">📦</div>`}</td>
+            <td><div style="font-weight:600">${p.name}</div><div style="font-size:.75rem;color:var(--text2)">${p.unit||''}</div></td>
+            <td>${cat?cat.name:'—'}</td>
+            <td style="color:var(--text3)">${p.mrp?`<s>Rs.${p.mrp}</s>`:'—'}</td>
+            <td style="font-weight:700">Rs.${base} ${disc>0?`<span class="badge badge-green">${disc}% off</span>`:''}</td>
+            <td><span class="badge badge-blue">${tiers} tier${tiers>1?'s':''}</span></td>
+            <td>${p.inStock?'<span class="badge badge-green">In Stock</span>':'<span class="badge badge-red">Out of Stock</span>'}</td>
+            <td><div class="actions">
+              <button class="btn btn-blue" onclick="openProductModal(${p.id})">Edit</button>
+              <button class="btn btn-red" onclick="deleteProduct(${p.id})">Delete</button>
+            </div></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`}
+    </div>`;
+}
+
+function openProductModal(id) {
+  const p = id?allProducts.find(x=>x.id===id):null;
+  document.getElementById('productModalTitle').textContent = p?'Edit Product':'Add Product';
+  document.getElementById('pEditId').value = p?.id||'';
+  document.getElementById('pName').value = p?.name||'';
+  document.getElementById('pUnit').value = p?.unit||'';
+  document.getElementById('pMrp').value = p?.mrp||'';
+  document.getElementById('pInStock').value = p?.inStock===false?'false':'true';
+  document.getElementById('pTag').value = p?.featured?'featured':p?.isNew?'new':'';
+  document.getElementById('pImgUrl').value = p?.imageUrl||'';
+  setImgPreview('p',p?.imageUrl||'');
+  document.getElementById('pCat').innerHTML = `<option value="">No Category</option>`+
+    allCategories.map(c=>`<option value="${c.id}" ${c.id===p?.catId?'selected':''}>${c.name}</option>`).join('');
+  const tiers = p?.priceTiers||[{minQty:1,price:0}];
+  document.getElementById('tiersList').innerHTML='';
+  tiers.forEach(t=>addTierRow(t.minQty,t.price));
   document.getElementById('productModal').classList.add('open');
 }
-function closeProductForm() { document.getElementById('productModal').classList.remove('open'); }
-async function saveProduct() {
-  const body = {
-    name: document.getElementById('pName').value.trim(),
-    emoji: document.getElementById('pEmoji').value.trim() || '🛍️',
-    imageUrl: document.getElementById('pImageUrl').value.trim(),
-    cat: document.getElementById('pCat').value,
-    unit: document.getElementById('pUnit').value.trim(),
-    price: parseFloat(document.getElementById('pPrice').value)||0,
-    discountPrice: document.getElementById('pDiscountPrice').value ? parseFloat(document.getElementById('pDiscountPrice').value) : null,
-    stock: parseInt(document.getElementById('pStock').value)||0,
-    featured: document.getElementById('pFeaturedToggle').classList.contains('on'),
-    inStock: document.getElementById('pInStockToggle').classList.contains('on'),
-    bulkTiers: getProdTiersFromDOM(),
-  };
-  if(!body.name||!body.price) { alert('Name and price are required'); return; }
-  if(body.discountPrice && body.discountPrice >= body.price) { alert('Sale price must be less than regular price'); return; }
-  if(editingProductId) {
-    const res = await api(`/api/admin/products/${editingProductId}`,{method:'PUT',body:JSON.stringify(body)});
-    const updated = await res.json();
-    const idx = allProducts.findIndex(p=>p.id==editingProductId);
-    if(idx>-1) allProducts[idx]=updated;
-  } else {
-    const res = await api('/api/admin/products',{method:'POST',body:JSON.stringify(body)});
-    const newP = await res.json();
-    allProducts.push(newP);
-  }
-  closeProductForm(); renderProducts();
-}
-async function deleteProduct(id) {
-  if(!confirm('Delete this product?')) return;
-  await api(`/api/admin/products/${id}`,{method:'DELETE'});
-  allProducts = allProducts.filter(p=>p.id!=id); renderProducts();
+
+function addTierRow(minQty='',price='') {
+  const list=document.getElementById('tiersList');
+  const row=document.createElement('div');
+  row.className='tier-row';
+  row.innerHTML=`
+    <div><input type="number" min="1" placeholder="e.g. 1" value="${minQty}" class="tier-min"></div>
+    <div><input type="number" min="0" step="0.5" placeholder="price" value="${price}" class="tier-price"></div>
+    <button class="tier-del" onclick="this.closest('.tier-row').remove()">X</button>`;
+  list.appendChild(row);
 }
 
-// ── CATEGORIES ────────────────────────────────────────────────────────────────
-function renderCats() {
-  document.getElementById('catsTbody').innerHTML = allCategories.map(c=>`
-    <tr>
-      <td style="font-size:1.5rem">${c.emoji}</td>
-      <td><strong>${c.name}</strong></td>
-      <td style="color:var(--subtext);font-size:.8rem">${c.id}</td>
-      <td>
-        <button class="btn btn-sm btn-primary" onclick="openCatForm('${c.id}')">✏️</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteCat('${c.id}')" style="margin-left:.3rem">🗑</button>
-      </td>
-    </tr>`).join('');
-}
-function openCatForm(id=null) {
-  editingCatId=id;
-  document.getElementById('catModalTitle').textContent = id?'Edit Category':'Add Category';
-  if(id) { const c=allCategories.find(x=>x.id===id); document.getElementById('cName').value=c.name; document.getElementById('cEmoji').value=c.emoji; }
-  else { document.getElementById('cName').value=''; document.getElementById('cEmoji').value=''; }
-  document.getElementById('catModal').classList.add('open');
-}
-function closeCatForm() { document.getElementById('catModal').classList.remove('open'); }
-async function saveCat() {
-  const body = {name:document.getElementById('cName').value.trim(), emoji:document.getElementById('cEmoji').value.trim()||'🏷️'};
-  if(!body.name) { alert('Category name is required'); return; }
-  if(editingCatId) {
-    const res=await api(`/api/admin/categories/${editingCatId}`,{method:'PUT',body:JSON.stringify(body)});
-    const updated=await res.json();
-    const idx=allCategories.findIndex(c=>c.id===editingCatId); if(idx>-1) allCategories[idx]=updated;
-  } else {
-    const res=await api('/api/admin/categories',{method:'POST',body:JSON.stringify(body)});
-    allCategories.push(await res.json());
-  }
-  closeCatForm(); renderCats();
-}
-async function deleteCat(id) {
-  if(!confirm('Delete category? Products in this category won\'t be deleted.')) return;
-  await api(`/api/admin/categories/${id}`,{method:'DELETE'});
-  allCategories=allCategories.filter(c=>c.id!==id); renderCats();
-}
-
-// ── CUSTOMERS ─────────────────────────────────────────────────────────────────
-function renderCustomers() {
-  document.getElementById('customersTbody').innerHTML = allCustomers.map(c=>`
-    <tr>
-      <td style="color:var(--subtext)">${c.id}</td>
-      <td><strong>${c.name}</strong></td>
-      <td>${c.phone}</td>
-      <td><span class="status-badge status-new">${c.orderCount} orders</span></td>
-      <td style="color:var(--subtext);font-size:.78rem">${new Date(c.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
-    </tr>`).join('');
-}
-
-// ── SETTINGS ──────────────────────────────────────────────────────────────────
-async function loadSettings() {
-  const res = await api('/api/admin/settings');
-  const s = await res.json();
-  document.getElementById('sStoreName').value = s.storeName||'';
-  document.getElementById('sWhatsapp').value = s.whatsapp||'';
-  document.getElementById('sQrUrl').value = s.qrUrl||'';
-  document.getElementById('sMinOrder').value = s.minOrder||99;
-  document.getElementById('sRadius').value = s.deliveryRadiusKm||1;
-  renderBulkTiers(s.bulkDiscounts||[]);
-}
-function renderBulkTiers(tiers) {
-  document.getElementById('bulkTiersWrap').innerHTML = tiers.map((t,i)=>`
-    <div class="bulk-tier-row">
-      <input type="number" value="${t.minItems}" placeholder="Min items" min="1" id="bt_min_${i}">
-      <input type="number" value="${t.discountPct}" placeholder="% off" min="1" max="100" id="bt_pct_${i}">
-      <input type="text" value="${t.label}" placeholder="Label e.g. '5% off on 3+ items'" id="bt_label_${i}">
-      <button class="rm-btn" onclick="this.parentElement.remove()">✕</button>
-    </div>`).join('');
-}
-function addBulkTier() {
-  const wrap = document.getElementById('bulkTiersWrap');
-  const i = wrap.children.length;
-  const div = document.createElement('div'); div.className='bulk-tier-row';
-  div.innerHTML=`<input type="number" placeholder="Min items" min="1" id="bt_min_${i}"><input type="number" placeholder="% off" min="1" max="100" id="bt_pct_${i}"><input type="text" placeholder="Label" id="bt_label_${i}"><button class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;
-  wrap.appendChild(div);
-}
-function getBulkTiersFromDOM() {
-  const rows = document.querySelectorAll('.bulk-tier-row');
+function getTiers() {
   const tiers=[];
-  rows.forEach(row=>{
-    const inputs = row.querySelectorAll('input');
-    const min=parseInt(inputs[0].value), pct=parseInt(inputs[1].value), label=inputs[2].value.trim();
-    if(min&&pct) tiers.push({minItems:min,discountPct:pct,label:label||`${pct}% off on ${min}+ items`});
-  });
-  return tiers.sort((a,b)=>a.minItems-b.minItems);
-}
-async function saveSettings() {
-  const body = {
-    storeName: document.getElementById('sStoreName').value.trim(),
-    whatsapp: document.getElementById('sWhatsapp').value.trim(),
-    qrUrl: document.getElementById('sQrUrl').value.trim(),
-    minOrder: parseInt(document.getElementById('sMinOrder').value)||99,
-    deliveryRadiusKm: parseFloat(document.getElementById('sRadius').value)||1,
-    bulkDiscounts: getBulkTiersFromDOM(),
-  };
-  const np = document.getElementById('sNewPass').value;
-  if(np) body.newPassword=np;
-  await api('/api/admin/settings',{method:'PUT',body:JSON.stringify(body)});
-  alert('✅ Settings saved!');
-  document.getElementById('sNewPass').value='';
-}
-
-// ── PER-PRODUCT BULK TIERS ───────────────────────────────────────────────────
-function renderProdTiers(tiers) {
-  const wrap = document.getElementById('prodTiersWrap');
-  wrap.innerHTML = '';
-  const sorted = [...tiers].sort((a,b)=>a.minQty-b.minQty);
-  sorted.forEach(t => appendProdTierRow(t.minQty, t.pricePerUnit));
-}
-function appendProdTierRow(minQty='', pricePerUnit='') {
-  const wrap = document.getElementById('prodTiersWrap');
-  const row = document.createElement('div');
-  row.className = 'prod-tier-row';
-  row.innerHTML = `<input type="number" class="pt-qty" placeholder="e.g. 1" min="1" value="${minQty}"><input type="number" class="pt-price" placeholder="e.g. 10" min="0" step="0.5" value="${pricePerUnit}"><button class="rm-btn" type="button" onclick="this.parentElement.remove()">✕</button>`;
-  wrap.appendChild(row);
-}
-function addProdTier() { appendProdTierRow(); }
-function getProdTiersFromDOM() {
-  const rows = document.querySelectorAll('.prod-tier-row');
-  const tiers = [];
-  rows.forEach(row => {
-    const qty = parseInt(row.querySelector('.pt-qty').value);
-    const price = parseFloat(row.querySelector('.pt-price').value);
-    if(qty && !isNaN(price)) tiers.push({minQty:qty, pricePerUnit:price});
+  document.querySelectorAll('#tiersList .tier-row').forEach(r=>{
+    const minQty=parseInt(r.querySelector('.tier-min').value);
+    const price=parseFloat(r.querySelector('.tier-price').value);
+    if(!isNaN(minQty)&&!isNaN(price)) tiers.push({minQty,price});
   });
   return tiers.sort((a,b)=>a.minQty-b.minQty);
 }
 
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-function toggleBtn(btn) { btn.classList.toggle('on'); }
-function setToggle(id, val) { const el=document.getElementById(id); val?el.classList.add('on'):el.classList.remove('on'); }
-function previewImg(url) {
-  const img=document.getElementById('imgPreview');
-  if(url&&url.trim()) { img.src=url; img.style.display='block'; img.onerror=()=>img.style.display='none'; }
-  else { img.style.display='none'; }
+async function saveProduct() {
+  const id=document.getElementById('pEditId').value;
+  const tiers=getTiers();
+  if(!document.getElementById('pName').value.trim()) return toast('Product name is required');
+  if(tiers.length===0) return toast('At least one price tier required');
+  if(tiers[0].minQty!==1) return toast('First tier must start at qty 1');
+  const tag=document.getElementById('pTag').value;
+  const mrpVal=parseFloat(document.getElementById('pMrp').value);
+  const body={
+    name:document.getElementById('pName').value.trim(),
+    unit:document.getElementById('pUnit').value.trim(),
+    catId:parseInt(document.getElementById('pCat').value)||0,
+    imageUrl:document.getElementById('pImgUrl').value,
+    inStock:document.getElementById('pInStock').value==='true',
+    featured:tag==='featured', isNew:tag==='new',
+    mrp:isNaN(mrpVal)?null:mrpVal,
+    priceTiers:tiers,
+  };
+  const url=id?`/api/admin/products/${id}`:'/api/admin/products';
+  await fetch(url,{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
+  await loadAll(); closeModal('productModal'); renderProducts();
+  toast(id?'Product updated!':'Product added!');
 }
+
+async function deleteProduct(id) {
+  if(!confirm('Delete this product?')) return;
+  await fetch(`/api/admin/products/${id}`,{method:'DELETE',headers:ah()});
+  await loadAll(); renderProducts(); toast('Product deleted');
+}
+
+function renderCategories() {
+  document.getElementById('content').innerHTML=`
+    <div class="card">
+      <div class="card-header"><h2>Categories (${allCategories.length})</h2><button class="btn btn-green" onclick="openCatModal()">+ Add Category</button></div>
+      ${allCategories.length===0?`<div class="empty-state"><div class="ei">📂</div><p>No categories yet.</p></div>`:`
+      <table>
+        <thead><tr><th>Image</th><th>Name</th><th>Products</th><th>Actions</th></tr></thead>
+        <tbody>${allCategories.map(c=>{
+          const count=allProducts.filter(p=>p.catId===c.id).length;
+          return `<tr>
+            <td>${c.imageUrl?`<img class="td-img" src="${c.imageUrl}">`:`<div class="td-img-ph">📂</div>`}</td>
+            <td style="font-weight:600">${c.name}</td>
+            <td><span class="badge badge-blue">${count} product${count!==1?'s':''}</span></td>
+            <td><div class="actions">
+              <button class="btn btn-blue" onclick="openCatModal(${c.id})">Edit</button>
+              <button class="btn btn-red" onclick="deleteCat(${c.id})">Delete</button>
+            </div></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`}
+    </div>`;
+}
+
+function openCatModal(id) {
+  const c=id?allCategories.find(x=>x.id===id):null;
+  document.getElementById('catModalTitle').textContent=c?'Edit Category':'Add Category';
+  document.getElementById('cEditId').value=c?.id||'';
+  document.getElementById('cName').value=c?.name||'';
+  document.getElementById('cImgUrl').value=c?.imageUrl||'';
+  setImgPreview('c',c?.imageUrl||'');
+  document.getElementById('categoryModal').classList.add('open');
+}
+
+async function saveCat() {
+  const id=document.getElementById('cEditId').value;
+  if(!document.getElementById('cName').value.trim()) return toast('Category name required');
+  const body={name:document.getElementById('cName').value.trim(),imageUrl:document.getElementById('cImgUrl').value};
+  await fetch(id?`/api/admin/categories/${id}`:'/api/admin/categories',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
+  await loadAll(); closeModal('categoryModal'); renderCategories();
+  toast(id?'Category updated!':'Category added!');
+}
+
+async function deleteCat(id) {
+  const count=allProducts.filter(p=>p.catId===id).length;
+  if(count>0&&!confirm(`Has ${count} product(s). Delete anyway?`)) return;
+  await fetch(`/api/admin/categories/${id}`,{method:'DELETE',headers:ah()});
+  await loadAll(); renderCategories(); toast('Category deleted');
+}
+
+function renderBanners() {
+  document.getElementById('content').innerHTML=`
+    <div class="card">
+      <div class="card-header"><h2>Banners (${allBanners.length})</h2><button class="btn btn-green" onclick="openBannerModal()">+ Add Banner</button></div>
+      <div style="padding:1rem 1.4rem;background:#fffbeb;border-bottom:1px solid var(--border);font-size:.8rem;color:var(--yellow)">
+        Banners appear as a scrollable carousel on the home page.
+      </div>
+      ${allBanners.length===0?`<div class="empty-state"><div class="ei">🖼️</div><p>No banners yet.</p></div>`:`
+      <table>
+        <thead><tr><th>Image</th><th>Title</th><th>Opens</th><th>Actions</th></tr></thead>
+        <tbody>${allBanners.map(b=>{
+          let action='Nothing';
+          if(b.action?.type==='category'){const cat=allCategories.find(c=>c.id===b.action.catId);action='Category: '+(cat?.name||'?');}
+          else if(b.action?.type==='products') action=`${b.action.productIds?.length||0} products`;
+          return `<tr>
+            <td>${b.imageUrl?`<img class="td-img" src="${b.imageUrl}" style="width:80px;height:44px;object-fit:cover;border-radius:6px">`:`<div style="width:80px;height:44px;border-radius:6px;background:${b.bgColor||'#1a1a2e'}"></div>`}</td>
+            <td><div style="font-weight:600">${b.title||'—'}</div><div style="font-size:.75rem;color:var(--text2)">${b.subtitle||''}</div></td>
+            <td><span class="badge badge-blue">${action}</span></td>
+            <td><div class="actions">
+              <button class="btn btn-blue" onclick="openBannerModal(${b.id})">Edit</button>
+              <button class="btn btn-red" onclick="deleteBanner(${b.id})">Delete</button>
+            </div></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`}
+    </div>`;
+}
+
+function openBannerModal(id) {
+  const b=id?allBanners.find(x=>x.id===id):null;
+  document.getElementById('bannerModalTitle').textContent=b?'Edit Banner':'Add Banner';
+  document.getElementById('bEditId').value=b?.id||'';
+  document.getElementById('bTitle').value=b?.title||'';
+  document.getElementById('bSub').value=b?.subtitle||'';
+  document.getElementById('bBgColor').value=b?.bgColor||'#1a1a2e';
+  document.getElementById('bImgUrl').value=b?.imageUrl||'';
+  document.getElementById('bActionType').value=b?.action?.type||'';
+  setImgPreview('b',b?.imageUrl||'');
+  document.getElementById('bCatId').innerHTML=allCategories.map(c=>`<option value="${c.id}" ${b?.action?.catId===c.id?'selected':''}>${c.name}</option>`).join('');
+  onBannerActionChange();
+  if(b?.action?.type==='products'){
+    setTimeout(()=>{
+      (b.action.productIds||[]).forEach(pid=>{
+        const cb=document.querySelector(`#bProdList input[value="${pid}"]`);
+        if(cb) cb.checked=true;
+      });
+      updatePickCount();
+    },50);
+  }
+  document.getElementById('bannerModal').classList.add('open');
+}
+
+function onBannerActionChange() {
+  const type=document.getElementById('bActionType').value;
+  document.getElementById('bActionPicker').style.display=type?'block':'none';
+  document.getElementById('bCatPicker').style.display=type==='category'?'block':'none';
+  document.getElementById('bProdPicker').style.display=type==='products'?'block':'none';
+  if(type==='products') renderBannerProdList('');
+}
+
+function renderBannerProdList(filter) {
+  document.getElementById('bProdList').innerHTML=allProducts
+    .filter(p=>!filter||p.name.toLowerCase().includes(filter.toLowerCase()))
+    .map(p=>`<div class="pick-item">
+      <input type="checkbox" value="${p.id}" onchange="updatePickCount()">
+      <span class="pname">${p.name}</span>
+      <span class="pprice">Rs.${p.priceTiers?.[0]?.price??0}</span>
+    </div>`).join('');
+}
+
+function filterBannerProds(q){renderBannerProdList(q);}
+function updatePickCount(){document.getElementById('bPickCount').textContent=document.querySelectorAll('#bProdList input:checked').length;}
+
+async function saveBanner() {
+  const id=document.getElementById('bEditId').value;
+  const actionType=document.getElementById('bActionType').value;
+  let action=null;
+  if(actionType==='category') action={type:'category',catId:parseInt(document.getElementById('bCatId').value)};
+  else if(actionType==='products'){
+    const picks=[...document.querySelectorAll('#bProdList input:checked')].map(c=>parseInt(c.value));
+    if(!picks.length) return toast('Select at least one product');
+    action={type:'products',productIds:picks};
+  }
+  const body={imageUrl:document.getElementById('bImgUrl').value,title:document.getElementById('bTitle').value.trim(),subtitle:document.getElementById('bSub').value.trim(),bgColor:document.getElementById('bBgColor').value,action};
+  await fetch(id?`/api/admin/banners/${id}`:'/api/admin/banners',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
+  await loadAll(); closeModal('bannerModal'); renderBanners();
+  toast(id?'Banner updated!':'Banner added!');
+}
+
+async function deleteBanner(id) {
+  if(!confirm('Delete this banner?')) return;
+  await fetch(`/api/admin/banners/${id}`,{method:'DELETE',headers:ah()});
+  await loadAll(); renderBanners(); toast('Banner deleted');
+}
+
+// MILK
+let milkCustomers=[],milkLogs=[],milkPayments=[],milkPrice=60;
+let milkMonth=new Date().toISOString().slice(0,7);
+let milkTab='deliveries';
+
+async function renderMilk() {
+  await loadMilkData();
+  renderMilkPage();
+}
+
+async function loadMilkData() {
+  try {
+    const [cR,lR,pR]=await Promise.all([
+      fetch('/api/admin/milk/customers',{headers:ah()}),
+      fetch('/api/admin/milk/logs?month='+milkMonth,{headers:ah()}),
+      fetch('/api/admin/milk/payments?month='+milkMonth,{headers:ah()}),
+    ]);
+    milkCustomers=await cR.json();
+    const ld=await lR.json();
+    milkLogs=ld.logs||[];
+    milkPrice=ld.settings?.milkPrice||60;
+    milkPayments=await pR.json();
+  } catch(e){toast('Could not load milk data');}
+}
+
+function renderMilkPage() {
+  const billed=milkLogs.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
+  const paid=milkPayments.reduce((s,p)=>s+p.amount,0);
+  const active=milkCustomers.filter(c=>c.active).length;
+  const monthLabel=new Date(milkMonth+'-02').toLocaleString('default',{month:'long',year:'numeric'});
+
+  document.getElementById('content').innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val">${active}</div><div class="stat-lbl">Active Customers</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">Rs.${billed.toFixed(0)}</div><div class="stat-lbl">Billed — ${monthLabel}</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue)">Rs.${paid.toFixed(0)}</div><div class="stat-lbl">Collected</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)">Rs.${(billed-paid).toFixed(0)}</div><div class="stat-lbl">Outstanding</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+          <input type="month" value="${milkMonth}" onchange="milkMonth=this.value;renderMilk()" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .8rem;font-family:Inter,sans-serif;font-size:.85rem">
+          <button class="btn ${milkTab==='deliveries'?'btn-green':'btn-gray'}" onclick="milkTab='deliveries';renderMilkPage()">Deliveries</button>
+          <button class="btn ${milkTab==='customers'?'btn-green':'btn-gray'}" onclick="milkTab='customers';renderMilkPage()">Customers</button>
+          <button class="btn ${milkTab==='billing'?'btn-green':'btn-gray'}" onclick="milkTab='billing';renderMilkPage()">Billing</button>
+        </div>
+        <button class="btn btn-blue" onclick="openAddMilkCustomer()">+ Add Customer</button>
+      </div>
+    </div>
+    <div id="milkTabContent"></div>`;
+
+  if(milkTab==='deliveries') renderMilkDeliveries();
+  else if(milkTab==='customers') renderMilkCustomers();
+  else renderMilkBilling();
+}
+
+function renderMilkDeliveries() {
+  const today=new Date().toISOString().slice(0,10);
+  const active=milkCustomers.filter(c=>c.active);
+  const rows=active.map(c=>{
+    const cl=milkLogs.filter(l=>l.customerId===c.id);
+    const totalL=cl.reduce((s,l)=>s+l.qty,0);
+    const totalAmt=cl.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
+    const todayE=cl.find(l=>l.date===today);
+    return `<tr>
+      <td><div style="font-weight:600">${c.name}</div><div style="font-size:.73rem;color:var(--text2)">${c.phone}</div></td>
+      <td>${c.defaultQty}L/day</td>
+      <td><span class="badge badge-blue">${totalL.toFixed(1)}L</span></td>
+      <td style="font-weight:700;color:var(--green)">Rs.${totalAmt.toFixed(0)}</td>
+      <td>${todayE?`<span class="badge badge-green">Done ${todayE.qty}L</span>`:`<span class="badge badge-red">Not marked</span>`}</td>
+      <td><div class="actions">
+        <button class="btn btn-green" style="font-size:.75rem;padding:.35rem .7rem" onclick="markOne(${c.id},'${today}',${c.defaultQty})">Mark Today</button>
+        <button class="btn btn-gray" style="font-size:.75rem;padding:.35rem .7rem" onclick="openDayLog(${c.id})">Edit Log</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('milkTabContent').innerHTML=`
+    <div class="card">
+      <div class="card-header">
+        <h2>Today — ${new Date(today+'T12:00:00').toLocaleDateString('default',{weekday:'long',day:'numeric',month:'short'})}</h2>
+        <button class="btn btn-green" onclick="bulkMark('${today}')">Mark All Delivered</button>
+      </div>
+      ${active.length===0?`<div class="empty-state"><div class="ei">🥛</div><p>No active customers yet.</p></div>`:`
+      <table>
+        <thead><tr><th>Customer</th><th>Default</th><th>This Month</th><th>Amount</th><th>Today</th><th>Actions</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`}
+    </div>`;
+}
+
+function renderMilkCustomers() {
+  document.getElementById('milkTabContent').innerHTML=`
+    <div class="card">
+      <div class="card-header"><h2>All Customers (${milkCustomers.length})</h2></div>
+      ${milkCustomers.length===0?`<div class="empty-state"><div class="ei">👥</div><p>No milk customers yet.</p></div>`:`
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Address</th><th>Qty/day</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${milkCustomers.map(c=>`<tr>
+          <td style="font-weight:600">${c.name}</td>
+          <td>${c.phone}</td>
+          <td style="color:var(--text2)">${c.address||'—'}</td>
+          <td>${c.defaultQty}L</td>
+          <td>${c.active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-red">Paused</span>'}</td>
+          <td><div class="actions">
+            <button class="btn btn-blue" onclick="toggleCustomer(${c.id},${!c.active})">${c.active?'Pause':'Resume'}</button>
+            <button class="btn btn-red" onclick="delMilkCustomer(${c.id})">Delete</button>
+          </div></td>
+        </tr>`).join('')}</tbody>
+      </table>`}
+    </div>`;
+}
+
+function renderMilkBilling() {
+  const monthLabel=new Date(milkMonth+'-02').toLocaleString('default',{month:'long',year:'numeric'});
+  const rows=milkCustomers.filter(c=>c.active).map(c=>{
+    const cl=milkLogs.filter(l=>l.customerId===c.id);
+    const totalL=cl.reduce((s,l)=>s+l.qty,0);
+    const billed=cl.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
+    const paid=milkPayments.filter(p=>p.customerId===c.id).reduce((s,p)=>s+p.amount,0);
+    const due=billed-paid;
+    return `<tr>
+      <td><div style="font-weight:600">${c.name}</div><div style="font-size:.73rem;color:var(--text2)">${c.phone}</div></td>
+      <td>${totalL.toFixed(1)}L</td>
+      <td style="font-weight:700">Rs.${billed.toFixed(0)}</td>
+      <td style="color:var(--green);font-weight:600">Rs.${paid.toFixed(0)}</td>
+      <td style="font-weight:800;color:${due>0?'var(--red)':'var(--green)'}">Rs.${due.toFixed(0)}</td>
+      <td>${due>0?`<button class="btn btn-green" style="font-size:.75rem" onclick="recordPayment(${c.id},'${milkMonth}',${due.toFixed(0)})">Mark Paid Rs.${due.toFixed(0)}</button>`:'<span class="badge badge-green">Settled</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('milkTabContent').innerHTML=`
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-header"><h2>Billing — ${monthLabel}</h2><span style="font-size:.82rem;color:var(--text2)">Rs.${milkPrice}/litre</span></div>
+      <table>
+        <thead><tr><th>Customer</th><th>Litres</th><th>Billed</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="card" style="max-width:340px">
+      <div class="card-header"><h2>Milk Price Setting</h2></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label>Price per Litre (Rs.)</label>
+          <input type="number" id="milkPriceInp" value="${milkPrice}" min="1" step="0.5">
+          <div class="form-hint">Applies to new deliveries only</div>
+        </div>
+        <button class="btn btn-green" onclick="saveMilkPrice()">Save Price</button>
+      </div>
+    </div>`;
+}
+
+async function markOne(customerId,date,qty) {
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty,price:milkPrice})});
+  await loadMilkData(); renderMilkPage(); toast('Marked '+qty+'L delivered');
+}
+
+async function bulkMark(date) {
+  const r=await fetch('/api/admin/milk/bulk-mark',{method:'POST',headers:ah(),body:JSON.stringify({date})});
+  const d=await r.json();
+  await loadMilkData(); renderMilkPage(); toast('Marked '+d.marked+' customers');
+}
+
+async function toggleCustomer(id,active) {
+  await fetch('/api/admin/milk/customers/'+id,{method:'PUT',headers:ah(),body:JSON.stringify({active})});
+  await loadMilkData(); renderMilkPage();
+}
+
+async function delMilkCustomer(id) {
+  if(!confirm('Delete this customer?')) return;
+  await fetch('/api/admin/milk/customers/'+id,{method:'DELETE',headers:ah()});
+  await loadMilkData(); renderMilkPage(); toast('Customer deleted');
+}
+
+async function recordPayment(customerId,month,amount) {
+  await fetch('/api/admin/milk/payment',{method:'POST',headers:ah(),body:JSON.stringify({customerId,month,amount,note:'Manual'})});
+  await loadMilkData(); renderMilkPage(); toast('Payment Rs.'+amount+' recorded');
+}
+
+async function saveMilkPrice() {
+  const price=parseFloat(document.getElementById('milkPriceInp').value);
+  if(!price||price<=0) return toast('Invalid price');
+  await fetch('/api/admin/milk/settings',{method:'PUT',headers:ah(),body:JSON.stringify({milkPrice:price})});
+  milkPrice=price; toast('Price updated to Rs.'+price+'/L');
+}
+
+function openAddMilkCustomer() {
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="mcModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(460px,100%);box-shadow:0 24px 64px rgba(0,0,0,.2)">
+        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <h2 style="font-size:1rem;font-weight:700">Add Milk Customer</h2>
+          <button onclick="document.getElementById('mcModal').remove()" style="background:none;font-size:1.3rem;color:var(--text2);cursor:pointer;border:none">X</button>
+        </div>
+        <div style="padding:1.5rem">
+          <div class="form-group"><label>Full Name</label><input type="text" id="mcName" placeholder="Customer name"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Phone</label><input type="tel" id="mcPhone" placeholder="10-digit" maxlength="10"></div>
+            <div class="form-group"><label>Daily Qty (L)</label><input type="number" id="mcQty" value="0.5" min="0.5" step="0.5"></div>
+          </div>
+          <div class="form-group"><label>Address</label><input type="text" id="mcAddr" placeholder="Villa / Block No."></div>
+        </div>
+        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-gray" onclick="document.getElementById('mcModal').remove()">Cancel</button>
+          <button class="btn btn-green" onclick="saveNewMilkCustomer()">Add Customer</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function saveNewMilkCustomer() {
+  const name=document.getElementById('mcName').value.trim();
+  const phone=document.getElementById('mcPhone').value.trim();
+  const address=document.getElementById('mcAddr').value.trim();
+  const defaultQty=parseFloat(document.getElementById('mcQty').value)||0.5;
+  if(!name) return toast('Name required');
+  if(phone.length<10) return toast('Valid phone required');
+  const r=await fetch('/api/milk/register',{method:'POST',headers:ah(),body:JSON.stringify({name,phone,address,defaultQty})});
+  if(!r.ok){const d=await r.json();return toast(d.error||'Error');}
+  document.getElementById('mcModal')?.remove();
+  await loadMilkData(); renderMilkPage(); toast('Customer added!');
+}
+
+function openDayLog(customerId) {
+  const c=milkCustomers.find(x=>x.id===customerId);
+  const cl=milkLogs.filter(l=>l.customerId===customerId);
+  const [yr,mo]=milkMonth.split('-').map(Number);
+  const days=new Date(yr,mo,0).getDate();
+  let rows='';
+  for(let d=days;d>=1;d--){
+    const ds=milkMonth+'-'+String(d).padStart(2,'0');
+    if(new Date(ds)>new Date()) continue;
+    const entry=cl.find(l=>l.date===ds);
+    rows+=`<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
+      <div style="width:32px;text-align:center;font-weight:700;font-size:.82rem;color:var(--text2)">${d}</div>
+      <input type="number" value="${entry?.qty||''}" min="0" max="10" step="0.5" placeholder="—"
+        style="width:80px;border:1.5px solid var(--border);border-radius:8px;padding:.3rem .5rem;font-size:.85rem"
+        onchange="saveLogEntry(${customerId},'${ds}',this.value)">
+      <span style="font-size:.75rem;color:var(--text2)">litres</span>
+      ${entry?`<span style="font-size:.72rem;color:var(--green)">saved</span>`:''}
+    </div>`;
+  }
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="dlModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(360px,100%);max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)">
+        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
+          <div><div style="font-weight:700">${c?.name}</div><div style="font-size:.75rem;color:var(--text2)">Edit delivery log</div></div>
+          <button onclick="document.getElementById('dlModal').remove();renderMilk()" style="background:none;font-size:1.3rem;color:var(--text2);cursor:pointer;border:none">X</button>
+        </div>
+        <div style="padding:1rem 1.5rem">${rows}</div>
+      </div>
+    </div>`);
+}
+
+async function saveLogEntry(customerId,date,qty) {
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(qty)||0,price:milkPrice})});
+  await loadMilkData();
+}
+
+async function renderSettings() {
+  const [sr, pr] = await Promise.all([
+    fetch('/api/admin/settings',{headers:ah()}),
+    fetch('/api/admin/products',{headers:ah()})
+  ]);
+  const s = await sr.json();
+  const allProds = await pr.json();
+  const upsellIds = s.upsellProductIds || [];
+  window._upsellIds = new Set(upsellIds.map(Number));
+
+  const prodCheckboxes = allProds.length ? allProds.map(p => `
+    <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);cursor:pointer;margin-bottom:6px;transition:background .12s">
+      <input type="checkbox" value="${p.id}" ${upsellIds.map(Number).includes(p.id)?'checked':''} 
+        onchange="window._upsellIds[this.checked?'add':'delete'](Number(this.value))"
+        style="width:15px;height:15px;accent-color:var(--green);flex-shrink:0">
+      <span style="flex:1;font-size:.85rem;font-weight:600">${p.name}</span>
+      <span style="font-size:.75rem;color:var(--text2)">${p.unit||''}</span>
+      <span style="font-size:.78rem;font-weight:700;color:var(--green)">₹${p.priceTiers?.[0]?.price||0}</span>
+    </label>`).join('') 
+    : '<div style="color:var(--text2);font-size:.85rem;padding:10px 0">No products yet. Add products first.</div>';
+
+  document.getElementById('content').innerHTML=`
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.2rem;max-width:1000px;align-items:start">
+
+      <!-- LEFT COL: store basics -->
+      <div style="display:flex;flex-direction:column;gap:1.2rem">
+        <div class="card">
+          <div class="card-header"><h2>⚙️ Store Settings</h2></div>
+          <div class="card-body">
+            <div class="form-group"><label>Store Name</label><input type="text" id="sName" value="${s.storeName||''}"></div>
+            <div class="form-group">
+              <label>WhatsApp Number</label>
+              <input type="text" id="sWA" value="${s.whatsapp||''}" placeholder="e.g. 919876543210">
+              <div class="form-hint">Country code, no + sign</div>
+            </div>
+            <div class="form-group"><label>UPI ID</label><input type="text" id="sUPI" value="${s.upiId||''}" placeholder="e.g. yourname@okaxis"></div>
+            <div class="form-group">
+              <label>Minimum Order (₹) — enables Checkout button</label>
+              <input type="number" id="sMin" value="${s.minOrder||99}" min="0">
+            </div>
+            <div class="form-group">
+              <label>Free Delivery Threshold (₹)</label>
+              <input type="number" id="sFD" value="${s.freeDeliveryMin||s.minOrder||99}" min="0">
+              <div class="form-hint">Progress bar fills towards this. Same as min order is fine.</div>
+            </div>
+            <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0">
+            <div class="form-group"><label>New Admin Password</label><input type="password" id="sPass" placeholder="Leave blank to keep current"></div>
+            <button class="btn btn-green" style="width:100%;justify-content:center;padding:.72rem" onclick="saveSettings()">💾 Save Settings</button>
+          </div>
+        </div>
+
+        <!-- FREE GIFT -->
+        <div class="card">
+          <div class="card-header">
+            <h2>🎁 Offer / Free Gift</h2>
+            <span class="badge" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a">Conversion Booster</span>
+          </div>
+          <div class="card-body">
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:.8rem;color:#92400e;line-height:1.5">
+              💡 When cart total reaches the threshold, the offer product is locked into the cart at the <strong>Offer Price</strong> you set. Set ₹0 for a completely free gift, or ₹5/₹10 for a flash-sale style deal (e.g. "Get 1kg Potatoes at just ₹5 on orders above ₹299").
+            </div>
+
+            <div class="form-group">
+              <label>Cart Total Threshold (₹) <span style="color:var(--text2);font-weight:400">(0 = off)</span></label>
+              <input type="number" id="sGiftThreshold" value="${(s.freeGift&&s.freeGift.threshold)||s.freeGiftMin||0}" min="0" placeholder="e.g. 299">
+            </div>
+
+            <div class="form-group">
+              <label>Offer Product</label>
+              <select id="sGiftProductId" style="width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;padding:.58rem .8rem;font-size:.88rem;color:var(--text);outline:none;-webkit-appearance:none">
+                <option value="">— No product selected —</option>
+                ${allProds.map(p => {
+                  const selected = (s.freeGift?.productId == p.id) ? 'selected' : '';
+                  return `<option value="${p.id}" ${selected}>${p.name}${p.unit ? ' ('+p.unit+')' : ''} · Regular ₹${p.priceTiers?.[0]?.price||0}</option>`;
+                }).join('')}
+              </select>
+              <div class="form-hint">This product gets added to the cart at the Offer Price below</div>
+            </div>
+
+            <div class="form-group">
+              <label>Gift Label / Display Name</label>
+              <input type="text" id="sGiftLabel" value="${(s.freeGift&&s.freeGift.label)||s.freeGiftLabel||''}" placeholder="e.g. 1kg Potatoes · Free Tomatoes 🍅">
+              <div class="form-hint">Shown on the unlock banner and in WhatsApp order</div>
+            </div>
+
+            <div class="form-group">
+              <label>Quantity</label>
+              <input type="number" id="sGiftQty" value="${(s.freeGift&&s.freeGift.qty)||1}" min="1" max="10" placeholder="1">
+            </div>
+
+            <div class="form-group">
+              <label>Offer Price (₹) <span style="color:var(--text2);font-weight:400">— 0 = completely free</span></label>
+              <input type="number" id="sGiftPrice" value="${(s.freeGift&&s.freeGift.discountPrice!=null)?s.freeGift.discountPrice:0}" min="0" step="1" placeholder="0 = free, 5 = ₹5 offer price">
+              <div class="form-hint">₹0 = completely free. ₹5 = customer pays ₹5 for it. Works like a flash deal — "Get 1kg Potatoes at just ₹5 on orders above ₹299".</div>
+            </div>
+
+            <!-- standalone toggle — NOT inside .form-group to avoid display:block label override -->
+            <div style="margin-bottom:0">
+              <div style="font-size:.67rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Add to Cart Mode</div>
+              <label for="sGiftAutoAdd" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 13px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;transition:border-color .18s;user-select:none">
+                <input type="checkbox" id="sGiftAutoAdd" ${(s.freeGift?.autoAdd!==false) ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
+                <div>
+                  <div style="font-size:.84rem;font-weight:700;color:var(--text);line-height:1.3">Auto-add to cart</div>
+                  <div style="font-size:.71rem;color:var(--text2);margin-top:3px">Unchecked → customer sees a "Claim" button instead of auto-inject</div>
+                </div>
+              </label>
+            </div>
+
+            <button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" onclick="saveSettings()">💾 Save Gift Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COL: upsell -->
+      <div class="card" style="align-self:start">
+        <div class="card-header">
+          <h2>⚡ Upsell Strip</h2>
+          <span class="badge" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe">In-Cart Widget</span>
+        </div>
+        <div class="card-body">
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:.8rem;color:#1e3a8a;line-height:1.5">
+            💡 Checked products appear as <strong>"You may also need"</strong> cards inside the cart. Only shows products <em>not already in cart</em>.
+          </div>
+          <div id="upsellList" style="max-height:420px;overflow-y:auto">
+            ${prodCheckboxes}
+          </div>
+          <button class="btn btn-green" style="width:100%;justify-content:center;margin-top:12px" onclick="saveSettings()">💾 Save Upsell</button>
+        </div>
+      </div>
+
+    </div>`;
+}
+
+async function saveSettings() {
+  const giftThreshold    = parseInt(document.getElementById('sGiftThreshold')?.value) || 0;
+  const giftProductId    = document.getElementById('sGiftProductId')?.value;
+  const giftLabel        = (document.getElementById('sGiftLabel')?.value || '').trim();
+  const giftQty          = parseInt(document.getElementById('sGiftQty')?.value) || 1;
+  const giftAutoAdd      = document.getElementById('sGiftAutoAdd')?.checked === true;
+  const giftDiscountPrice= parseFloat(document.getElementById('sGiftPrice')?.value) || 0;
+
+  const body = {
+    storeName:  (document.getElementById('sName')?.value||'').trim(),
+    whatsapp:   (document.getElementById('sWA')?.value||'').trim(),
+    upiId:      (document.getElementById('sUPI')?.value||'').trim(),
+    minOrder:   parseInt(document.getElementById('sMin')?.value)||99,
+    freeDeliveryMin: parseInt(document.getElementById('sFD')?.value)||0,
+    // legacy flat fields (kept for compat)
+    freeGiftMin:   giftThreshold,
+    freeGiftLabel: giftLabel,
+    // new structured object
+    freeGift: {
+      threshold:     giftThreshold,
+      productId:     giftProductId ? parseInt(giftProductId) : null,
+      qty:           giftQty,
+      autoAdd:       giftAutoAdd,
+      label:         giftLabel,
+      discountPrice: giftDiscountPrice,  // 0 = free, >0 = offer price
+    },
+    upsellProductIds: window._upsellIds ? [...window._upsellIds] : [],
+  };
+  const pass = document.getElementById('sPass')?.value;
+  if (pass) body.newPassword = pass;
+  await fetch('/api/admin/settings',{method:'PUT',headers:ah(),body:JSON.stringify(body)});
+  toast('✅ Settings saved!');
+}
+
+async function handleImgUpload(type,input) {
+  const file=input.files[0]; if(!file) return;
+  const prefix=type==='product'?'p':type==='category'?'c':'b';
+  document.getElementById(prefix+'ImgText').textContent='Uploading...';
+  const form=new FormData(); form.append('image',file);
+  const r=await fetch('/api/admin/upload',{method:'POST',headers:{Authorization:'Bearer '+token},body:form});
+  if(r.ok){const d=await r.json();document.getElementById(prefix+'ImgUrl').value=d.url;setImgPreview(prefix,d.url);toast('Image uploaded!');}
+  else{document.getElementById(prefix+'ImgText').textContent='Upload failed';toast('Upload failed');}
+}
+
+function setImgPreview(prefix,url) {
+  const area=document.getElementById(prefix+'ImgArea');
+  const preview=document.getElementById(prefix+'ImgPreview');
+  const text=document.getElementById(prefix+'ImgText');
+  if(url){preview.src=url;preview.style.display='block';area.classList.add('has-image');text.textContent='Click to replace';}
+  else{preview.style.display='none';area.classList.remove('has-image');text.textContent=prefix==='b'?'Click to upload banner':'Click to upload image';}
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m) m.classList.remove('open');});
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// UDHAR — Full credit management system
+// ══════════════════════════════════════════════════════════════════════════════
+
+let udharCustomers=[], udharSummaries=[], udharSelectedId=null;
+let udharEntries=[], udharPayments=[], udharMilkLogs=[], udharAppOrders=[];
+
+async function renderAccounts() {
+  await loadUdharData();
+  renderUdharOverview();
+}
+
+async function loadUdharData() {
+  const [sR, cR, oR] = await Promise.all([
+    fetch('/api/admin/udhar-summary', {headers:ah()}),
+    fetch('/api/admin/milk/customers', {headers:ah()}),
+    fetch('/api/orders', {headers:ah()}).catch(()=>({ok:false}))
+  ]);
+  udharSummaries = sR.ok ? await sR.json() : [];
+  udharCustomers = cR.ok ? await cR.json() : [];
+  try { const d = await oR.json(); udharAppOrders = Array.isArray(d)?d:(d.orders||[]); } catch { udharAppOrders=[]; }
+}
+
+function renderUdharOverview() {
+  const totalOutstanding = udharSummaries.reduce((s,x)=>s+(x.balance>0?x.balance:0), 0);
+  const totalReceived    = udharSummaries.reduce((s,x)=>s+x.totalPaid, 0);
+  const totalUdharGiven  = udharSummaries.reduce((s,x)=>s+x.totalUdhar, 0);
+
+  const rows = udharSummaries.length === 0
+    ? `<div class="empty-state"><div class="ei">📒</div><p>No customers with udhar yet.</p></div>`
+    : udharSummaries.map(s => {
+        const bal = s.balance;
+        const badgeStyle = bal > 0
+          ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca'
+          : 'background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0';
+        return `<tr onclick="openUdharDetail(${s.customer.id})" style="cursor:pointer">
+          <td><div style="font-weight:600">${s.customer.name}</div><div style="font-size:.73rem;color:var(--text2)">${s.customer.phone}</div></td>
+          <td style="color:var(--text2);font-size:.84rem">${s.customer.address||'—'}</td>
+          <td style="font-weight:700;color:var(--red)">Rs.${s.totalUdhar.toFixed(0)}</td>
+          <td style="font-weight:600;color:var(--green)">Rs.${s.totalPaid.toFixed(0)}</td>
+          <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:700;${badgeStyle}">${bal>0?'Rs.'+bal.toFixed(0)+' due':bal<0?'Advance':' Settled'}</span></td>
+          <td><div class="actions">
+            <button class="btn btn-blue" onclick="event.stopPropagation();openUdharDetail(${s.customer.id})">Manage</button>
+            <button class="btn btn-green" onclick="event.stopPropagation();quickAddUdhar(${s.customer.id},'${s.customer.name}')">+ Udhar</button>
+            ${bal>0?`<button class="btn btn-gray" onclick="event.stopPropagation();quickPayment(${s.customer.id},'${s.customer.name}',${bal.toFixed(0)})">Mark Paid</button>`:''}
+          </div></td>
+        </tr>`;
+      }).join('');
+
+  document.getElementById('content').innerHTML = `
+    <!-- OVERVIEW STATS -->
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.2rem">
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)">Rs.${totalOutstanding.toFixed(0)}</div><div class="stat-lbl">Total Outstanding</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">Rs.${totalReceived.toFixed(0)}</div><div class="stat-lbl">Total Received</div></div>
+      <div class="stat-card"><div class="stat-val">Rs.${totalUdharGiven.toFixed(0)}</div><div class="stat-lbl">Total Udhar Given</div></div>
+    </div>
+
+    <!-- CUSTOMER TABLE -->
+    <div class="card">
+      <div class="card-header">
+        <h2>📒 Udhar Accounts (${udharSummaries.length} customers)</h2>
+        <button class="btn btn-green" onclick="openAddUdharCustomer()">+ Add Customer</button>
+      </div>
+      ${udharSummaries.length===0
+        ? `<div class="empty-state"><div class="ei">📒</div><p>No customers yet. Add one to start tracking udhar.</p></div>`
+        : `<table>
+            <thead><tr><th>Customer</th><th>Address</th><th>Total Udhar</th><th>Total Paid</th><th>Balance</th><th>Actions</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`}
+    </div>
+    <div id="udharDetail"></div>`;
+}
+
+async function openUdharDetail(customerId) {
+  udharSelectedId = customerId;
+  const c = udharCustomers.find(x=>x.id===customerId);
+  if(!c) return;
+
+  const [eR, pR, lR] = await Promise.all([
+    fetch('/api/admin/udhar?customerId='+customerId, {headers:ah()}),
+    fetch('/api/admin/udhar-payments?customerId='+customerId, {headers:ah()}),
+    fetch('/api/admin/milk/logs?month='+new Date().toISOString().slice(0,7), {headers:ah()})
+  ]);
+  udharEntries = eR.ok ? await eR.json() : [];
+  udharPayments = pR.ok ? await pR.json() : [];
+  const ld = lR.ok ? await lR.json() : {};
+  udharMilkLogs = (ld.logs||[]).filter(l=>l.customerId===customerId);
+  const milkPrice = ld.settings?.milkPrice || 60;
+  const custOrders = udharAppOrders.filter(o=>o.phone===c.phone);
+
+  const totalUdhar = udharEntries.reduce((s,e)=>s+(e.amount||0),0);
+  const totalPaid  = udharPayments.reduce((s,p)=>s+(p.amount||0),0);
+  const balance    = totalUdhar - totalPaid;
+  const milkAmt    = udharMilkLogs.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
+  const totalL     = udharMilkLogs.reduce((s,l)=>s+l.qty,0);
+
+  // Build combined ledger (entries + payments interleaved, newest first)
+  const ledger = [
+    ...udharEntries.map(e=>({...e, _type:'debit', _date:e.date})),
+    ...udharPayments.map(p=>({...p, _type:'credit', _date:p.date||p.paidAt?.slice(0,10)}))
+  ].sort((a,b)=>b._date.localeCompare(a._date));
+
+  const ledgerRows = ledger.length===0
+    ? `<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:1.5rem">No transactions yet</td></tr>`
+    : ledger.map(r=>{
+        if(r._type==='debit'){
+          const items=(r.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')||r.note||'Purchase';
+          return `<tr>
+            <td>${new Date(r._date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
+            <td><div style="font-weight:600">${items}</div>${r.note&&r.items?.length?`<div style="font-size:.74rem;color:var(--text2)">${r.note}</div>`:''}  </td>
+            <td style="color:var(--red);font-weight:700">+Rs.${r.amount.toFixed(0)}</td>
+            <td><div class="actions">
+              <button class="btn btn-blue" style="font-size:.72rem;padding:.25rem .6rem" onclick="editUdharEntry(${r.id})">Edit</button>
+              <button class="btn btn-red" style="font-size:.72rem;padding:.25rem .6rem" onclick="delUdharEntry(${r.id})">Del</button>
+            </div></td>
+          </tr>`;
+        } else {
+          return `<tr style="background:#f0fdf4">
+            <td>${new Date(r._date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
+            <td><div style="font-weight:600;color:var(--green)">✓ Payment — ${r.method||'Cash'}</div>${r.note?`<div style="font-size:.74rem;color:var(--text2)">${r.note}</div>`:''}</td>
+            <td style="color:var(--green);font-weight:700">-Rs.${r.amount.toFixed(0)}</td>
+            <td><button class="btn btn-red" style="font-size:.72rem;padding:.25rem .6rem" onclick="delUdharPayment(${r.id})">Del</button></td>
+          </tr>`;
+        }
+      }).join('');
+
+  const milkRows = udharMilkLogs.length===0
+    ? '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:1rem">No deliveries this month</td></tr>'
+    : [...udharMilkLogs].sort((a,b)=>b.date.localeCompare(a.date)).map(l=>`
+        <tr>
+          <td>${new Date(l.date+'T12:00:00').toLocaleDateString('default',{weekday:'short',day:'numeric',month:'short'})}</td>
+          <td>${l.qty}L</td>
+          <td>Rs.${(l.qty*(l.price||milkPrice)).toFixed(0)}</td>
+          <td><button class="btn btn-gray" style="font-size:.72rem;padding:.2rem .5rem" onclick="editMilkEntry(${customerId},'${l.date}',${l.qty})">Edit</button></td>
+        </tr>`).join('');
+
+  document.getElementById('udharDetail').innerHTML=`
+    <div class="card" style="margin-top:1.2rem">
+
+      <!-- HEADER -->
+      <div class="card-header" style="background:linear-gradient(135deg,#f0fdf4,#fff)">
+        <div>
+          <div style="font-size:1.05rem;font-weight:800">${c.name}</div>
+          <div style="font-size:.8rem;color:var(--text2)">${c.phone}${c.address?' · '+c.address:''} · ${c.defaultQty}L/day</div>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <button class="btn btn-green" onclick="quickAddUdhar(${customerId},'${c.name}')">+ Add Udhar</button>
+          <button class="btn btn-blue" onclick="quickPayment(${customerId},'${c.name}',${balance.toFixed(0)})">Record Payment</button>
+          <button class="btn btn-gray" onclick="openBillPreview(${customerId})">📄 Bill</button>
+          <button class="btn btn-gray" onclick="document.getElementById('udharDetail').innerHTML=''">Close</button>
+        </div>
+      </div>
+
+      <!-- SUMMARY STATS -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.8rem;padding:1rem 1.4rem;background:var(--bg);border-bottom:1px solid var(--border)">
+        <div class="stat-card" style="margin:0"><div class="stat-val" style="font-size:1.2rem;color:var(--red)">Rs.${totalUdhar.toFixed(0)}</div><div class="stat-lbl">Total Udhar</div></div>
+        <div class="stat-card" style="margin:0"><div class="stat-val" style="font-size:1.2rem;color:var(--green)">Rs.${totalPaid.toFixed(0)}</div><div class="stat-lbl">Paid</div></div>
+        <div class="stat-card" style="margin:0"><div class="stat-val" style="font-size:1.2rem;color:${balance>0?'var(--red)':'var(--green)'}">${balance>0?'Rs.'+balance.toFixed(0)+'due':'Settled'}</div><div class="stat-lbl">Balance</div></div>
+        <div class="stat-card" style="margin:0"><div class="stat-val" style="font-size:1.2rem">${totalL.toFixed(1)}L</div><div class="stat-lbl">Milk This Month</div></div>
+        <div class="stat-card" style="margin:0"><div class="stat-val" style="font-size:1.2rem">Rs.${milkAmt.toFixed(0)}</div><div class="stat-lbl">Milk Bill</div></div>
+      </div>
+
+      <!-- ADD UDHAR ENTRY FORM (inline) -->
+      <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border);background:#fffbeb">
+        <div style="font-size:.82rem;font-weight:700;margin-bottom:.8rem;color:var(--text)">+ Add Udhar Entry (offline purchase)</div>
+        <div id="udharItemsContainer">
+          <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.5rem;margin-bottom:.5rem">
+            <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
+            <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
+            <input type="number" placeholder="Price" class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
+            <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca;border-radius:8px;padding:.42rem .7rem;font-size:.9rem;cursor:pointer">✕</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-top:.4rem">
+          <button class="btn btn-gray" onclick="addUdharItemRow()">+ Add item</button>
+          <input type="date" id="ud_date" value="${new Date().toISOString().slice(0,10)}" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .7rem;font-size:.82rem;font-family:inherit">
+          <input type="text" id="ud_note" placeholder="Note (optional)" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.82rem;font-family:inherit;flex:1;min-width:120px">
+          <input type="number" id="ud_manual_total" placeholder="Or enter total Rs." style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.82rem;font-family:inherit;width:140px">
+          <button class="btn btn-red" style="font-weight:700" onclick="saveUdharEntry(${customerId})">Save Udhar</button>
+        </div>
+      </div>
+
+      <!-- UDHAR LEDGER -->
+      <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border)">
+        <div style="font-size:.82rem;font-weight:700;margin-bottom:.7rem">📒 Transaction Ledger</div>
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th></th></tr></thead>
+          <tbody>${ledgerRows}</tbody>
+        </table>
+      </div>
+
+      <!-- MILK LOG -->
+      <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem">
+          <div style="font-size:.82rem;font-weight:700">🥛 Milk Log (this month)</div>
+          <button class="btn btn-green" style="font-size:.75rem" onclick="editMilkEntry(${customerId},'${new Date().toISOString().slice(0,10)}',${c.defaultQty})">Mark Today</button>
+        </div>
+        <table><thead><tr><th>Date</th><th>Qty</th><th>Amount</th><th></th></tr></thead><tbody>${milkRows}</tbody></table>
+      </div>
+
+      <!-- APP ORDERS -->
+      <div style="padding:1rem 1.4rem">
+        <div style="font-size:.82rem;font-weight:700;margin-bottom:.7rem">🛒 App Orders (phone match)</div>
+        ${custOrders.length===0
+          ? '<div style="color:var(--text2);font-size:.84rem">No app orders for this phone number.</div>'
+          : `<table><thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th></tr></thead><tbody>
+             ${custOrders.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(o=>`
+              <tr>
+                <td>#${o.id}</td>
+                <td>${new Date(o.createdAt).toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
+                <td style="font-size:.8rem;color:var(--text2)">${(o.items||[]).map(i=>i.name+'×'+i.qty).join(', ')}</td>
+                <td style="font-weight:700;color:var(--green)">Rs.${o.total}</td>
+              </tr>`).join('')}
+             </tbody></table>`}
+      </div>
+    </div>`;
+
+  document.getElementById('udharDetail').scrollIntoView({behavior:'smooth'});
+}
+
+function addUdharItemRow() {
+  document.getElementById('udharItemsContainer').insertAdjacentHTML('beforeend',`
+    <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.5rem;margin-bottom:.5rem">
+      <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
+      <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
+      <input type="number" placeholder="Price" class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
+      <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca;border-radius:8px;padding:.42rem .7rem;font-size:.9rem;cursor:pointer">✕</button>
+    </div>`);
+}
+
+async function saveUdharEntry(customerId) {
+  const rows = document.querySelectorAll('.udhar-item-row');
+  const items = [];
+  let computedTotal = 0;
+  rows.forEach(row => {
+    const name  = row.querySelector('.ui_name')?.value.trim();
+    const qty   = parseFloat(row.querySelector('.ui_qty')?.value) || 1;
+    const price = parseFloat(row.querySelector('.ui_price')?.value) || 0;
+    if (name) { items.push({name, qty, price}); computedTotal += qty * price; }
+  });
+  const manualTotal = parseFloat(document.getElementById('ud_manual_total')?.value) || 0;
+  const amount = manualTotal || computedTotal;
+  const date = document.getElementById('ud_date')?.value;
+  const note = document.getElementById('ud_note')?.value.trim();
+  if (!amount) return toast('Enter items with prices or a manual total');
+  const r = await fetch('/api/admin/udhar', {method:'POST', headers:ah(), body:JSON.stringify({customerId, items, amount, date, note})});
+  if (!r.ok) return toast('Failed to save');
+  toast('Udhar entry saved! Rs.' + amount);
+  await loadUdharData();
+  openUdharDetail(customerId);
+}
+
+async function editUdharEntry(id) {
+  const e = udharEntries.find(x=>x.id===id);
+  if (!e) return;
+  const newAmt = prompt('Edit amount (Rs.):', e.amount);
+  if (newAmt === null) return;
+  const newNote = prompt('Note:', e.note||'');
+  await fetch('/api/admin/udhar/'+id, {method:'PUT', headers:ah(), body:JSON.stringify({amount:parseFloat(newAmt)||e.amount, note:newNote||''})});
+  toast('Updated!'); await loadUdharData(); openUdharDetail(udharSelectedId);
+}
+
+async function delUdharEntry(id) {
+  if (!confirm('Delete this udhar entry? This will reduce the balance.')) return;
+  await fetch('/api/admin/udhar/'+id, {method:'DELETE', headers:ah()});
+  toast('Entry deleted'); await loadUdharData(); openUdharDetail(udharSelectedId);
+}
+
+async function delUdharPayment(id) {
+  if (!confirm('Delete this payment record?')) return;
+  await fetch('/api/admin/udhar-payments/'+id, {method:'DELETE', headers:ah()});
+  toast('Payment deleted'); await loadUdharData(); openUdharDetail(udharSelectedId);
+}
+
+function quickAddUdhar(customerId, name) {
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="qaModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(480px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
+        <div style="padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div><div style="font-weight:700">Add Udhar — ${name}</div><div style="font-size:.75rem;color:var(--text2)">Offline purchase / credit entry</div></div>
+          <button onclick="document.getElementById('qaModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
+        </div>
+        <div style="padding:1.2rem 1.4rem">
+          <div id="qaItems">
+            <div class="qa-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.5rem;margin-bottom:.5rem">
+              <input type="text" placeholder="Item name (e.g. Rice)" class="qi_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;font-family:inherit;width:100%">
+              <input type="number" placeholder="Qty" class="qi_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-size:.88rem;font-family:inherit;width:100%">
+              <input type="number" placeholder="Rs." class="qi_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-size:.88rem;font-family:inherit;width:100%">
+              <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca;border-radius:8px;padding:.5rem .7rem;cursor:pointer;border:none">✕</button>
+            </div>
+          </div>
+          <div id="qa_total_preview" style="font-size:.8rem;color:var(--green);font-weight:700;margin:.3rem 0 .6rem"></div>
+          <button class="btn btn-gray" onclick="addQARow()" style="margin-bottom:.8rem">+ Add more items</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+            <div class="form-group" style="margin:0"><label>Date</label><input type="date" id="qa_date" value="${new Date().toISOString().slice(0,10)}"></div>
+            <div class="form-group" style="margin:0"><label>Manual total (optional)</label><input type="number" id="qa_manual" placeholder="Rs. if no itemwise price"></div>
+          </div>
+          <div class="form-group" style="margin-top:.6rem;margin-bottom:0"><label>Note</label><input type="text" id="qa_note" placeholder="e.g. bought on credit, door delivery"></div>
+        </div>
+        <div style="padding:1rem 1.4rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-gray" onclick="document.getElementById('qaModal').remove()">Cancel</button>
+          <button class="btn btn-red" style="font-weight:800" onclick="submitQuickUdhar(${customerId})">Save Udhar Entry</button>
+        </div>
+      </div>
+    </div>`);
+  // live total preview
+  document.getElementById('qaItems').addEventListener('input', updateQATotal);
+}
+
+function addQARow() {
+  document.getElementById('qaItems').insertAdjacentHTML('beforeend',`
+    <div class="qa-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.5rem;margin-bottom:.5rem">
+      <input type="text" placeholder="Item name" class="qi_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;font-family:inherit;width:100%">
+      <input type="number" placeholder="Qty" class="qi_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-size:.88rem;font-family:inherit;width:100%">
+      <input type="number" placeholder="Rs." class="qi_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-size:.88rem;font-family:inherit;width:100%">
+      <button onclick="this.parentElement.remove();updateQATotal()" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca;border-radius:8px;padding:.5rem .7rem;cursor:pointer;border:none">✕</button>
+    </div>`);
+}
+
+function updateQATotal() {
+  let t=0;
+  document.querySelectorAll('.qa-row').forEach(r=>{
+    const q=parseFloat(r.querySelector('.qi_qty')?.value)||1;
+    const p=parseFloat(r.querySelector('.qi_price')?.value)||0;
+    t+=q*p;
+  });
+  document.getElementById('qa_total_preview').textContent = t>0 ? 'Total: Rs.'+t.toFixed(0) : '';
+}
+
+async function submitQuickUdhar(customerId) {
+  const items=[]; let total=0;
+  document.querySelectorAll('.qa-row').forEach(r=>{
+    const name=r.querySelector('.qi_name')?.value.trim();
+    const qty=parseFloat(r.querySelector('.qi_qty')?.value)||1;
+    const price=parseFloat(r.querySelector('.qi_price')?.value)||0;
+    if(name){items.push({name,qty,price});total+=qty*price;}
+  });
+  const manual=parseFloat(document.getElementById('qa_manual')?.value)||0;
+  const amount=manual||total;
+  if(!amount) return toast('Enter item prices or a manual total');
+  const date=document.getElementById('qa_date')?.value;
+  const note=document.getElementById('qa_note')?.value.trim();
+  const r=await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId,items,amount,date,note})});
+  if(!r.ok) return toast('Failed');
+  document.getElementById('qaModal')?.remove();
+  toast('Udhar Rs.'+amount+' added to '+((udharCustomers.find(x=>x.id===customerId)||{}).name||'account'));
+  await loadUdharData();
+  renderUdharOverview();
+  if(udharSelectedId===customerId) openUdharDetail(customerId);
+}
+
+async function quickPayment(customerId, name, balance) {
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="qpModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(400px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
+        <div style="padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div><div style="font-weight:700">Record Payment — ${name}</div><div style="font-size:.75rem;color:var(--text2)">Outstanding: Rs.${balance}</div></div>
+          <button onclick="document.getElementById('qpModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
+        </div>
+        <div style="padding:1.2rem 1.4rem">
+          <div class="form-group"><label>Amount Received (Rs.)</label><input type="number" id="qp_amount" value="${balance}" placeholder="Rs."></div>
+          <div class="form-group"><label>Payment Method</label>
+            <select id="qp_method"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank Transfer</option><option value="other">Other</option></select>
+          </div>
+          <div class="form-group" style="margin-bottom:0"><label>Note (optional)</label><input type="text" id="qp_note" placeholder="e.g. paid full balance"></div>
+        </div>
+        <div style="padding:1rem 1.4rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-gray" onclick="document.getElementById('qpModal').remove()">Cancel</button>
+          <button class="btn btn-green" style="font-weight:800" onclick="submitPayment(${customerId})">Mark as Paid</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function submitPayment(customerId) {
+  const amount=parseFloat(document.getElementById('qp_amount')?.value)||0;
+  const method=document.getElementById('qp_method')?.value||'cash';
+  const note=document.getElementById('qp_note')?.value.trim();
+  if(!amount) return toast('Enter amount');
+  const r=await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId,amount,method,note})});
+  if(!r.ok) return toast('Failed');
+  document.getElementById('qpModal')?.remove();
+  toast('Payment Rs.'+amount+' recorded!');
+  await loadUdharData();
+  renderUdharOverview();
+  if(udharSelectedId===customerId) openUdharDetail(customerId);
+}
+
+async function openBillPreview(customerId) {
+  // Build and open bill for admin to send via WhatsApp/print
+  const c=udharCustomers.find(x=>x.id===customerId); if(!c) return;
+  const db_s=udharSummaries.find(x=>x.customer.id===customerId)||{};
+  const totalUdhar=db_s.totalUdhar||0, totalPaid=db_s.totalPaid||0, balance=db_s.balance||0;
+  const milkAmt=udharMilkLogs.reduce((s,l)=>s+l.qty*60,0);
+  const monthLabel=new Date().toLocaleString('default',{month:'long',year:'numeric'});
+  const today=new Date().toLocaleDateString('default',{day:'numeric',month:'long',year:'numeric'});
+
+  const entryRows=udharEntries.map(e=>`
+    <tr><td>${new Date(e.date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
+    <td>${(e.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')||e.note||'Purchase'}</td>
+    <td style="text-align:right;color:#dc2626;font-weight:600">Rs.${e.amount.toFixed(0)}</td></tr>`).join('');
+
+  const payRows=udharPayments.map(p=>`
+    <tr><td>${new Date(p.paidAt).toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
+    <td>Payment (${p.method||'cash'})${p.note?' — '+p.note:''}</td>
+    <td style="text-align:right;color:#16a34a;font-weight:600">-Rs.${p.amount.toFixed(0)}</td></tr>`).join('');
+
+  const milkRowsHTML=udharMilkLogs.map(l=>`
+    <tr><td>${new Date(l.date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
+    <td>${l.qty}L @ Rs.${l.price||60}/L</td>
+    <td style="text-align:right">Rs.${(l.qty*(l.price||60)).toFixed(0)}</td></tr>`).join('');
+
+  const billHTML=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bill — ${c.name}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;}
+.page{max-width:680px;margin:0 auto;padding:32px 28px;}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #f0f0f0;}
+.store-name{font-size:1.5rem;font-weight:900;}.store-name span{color:#16a34a;}
+.store-sub{font-size:.78rem;color:#888;margin-top:3px;}
+.bill-meta{text-align:right;}.bill-title{font-size:1.1rem;font-weight:800;}
+.bill-date{font-size:.75rem;color:#888;margin-top:3px;}
+.customer-box{background:#f9fafb;border-radius:10px;padding:14px 18px;margin-bottom:24px;border:1px solid #e8eaed;}
+.customer-name{font-size:1rem;font-weight:700;}.customer-meta{font-size:.78rem;color:#666;margin-top:3px;}
+.section{margin-bottom:22px;}.section-title{font-size:.72rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
+table{width:100%;border-collapse:collapse;}th{font-size:.72rem;font-weight:600;color:#888;text-transform:uppercase;padding:7px 10px;background:#f9fafb;text-align:left;border-bottom:1px solid #e8eaed;}
+td{padding:9px 10px;border-bottom:1px solid #f0f0f0;font-size:.85rem;}tr:last-child td{border:none;}
+.summary-box{background:#f9fafb;border-radius:12px;padding:18px;margin-top:20px;border:1px solid #e8eaed;}
+.sum-row{display:flex;justify-content:space-between;font-size:.88rem;padding:5px 0;}
+.sum-row.total{border-top:2px solid #e8eaed;margin-top:8px;padding-top:12px;font-size:1.1rem;font-weight:800;}
+.due-banner{background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;padding:18px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;}
+.due-label{font-size:.88rem;font-weight:700;color:#dc2626;}.due-amt{font-size:1.8rem;font-weight:900;color:#dc2626;}
+.settled{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:16px;margin-top:16px;text-align:center;color:#16a34a;font-weight:700;}
+.footer{margin-top:32px;padding-top:16px;border-top:1px solid #f0f0f0;font-size:.72rem;color:#aaa;text-align:center;}
+.print-btn{position:fixed;top:20px;right:20px;background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;}
+@media print{.print-btn{display:none;}.page{max-width:100%;padding:20px;}}
+</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+<div class="page">
+  <div class="header">
+    <div><div class="store-name">BSC <span>Store</span></div><div class="store-sub">Local Grocery &amp; Milk Delivery</div></div>
+    <div class="bill-meta"><div class="bill-title">Monthly Statement</div><div class="bill-date">${monthLabel} · Generated ${today}</div></div>
+  </div>
+  <div class="customer-box">
+    <div class="customer-name">${c.name}</div>
+    <div class="customer-meta">${c.phone}${c.address?' · '+c.address:''}</div>
+  </div>
+  ${udharEntries.length>0||udharPayments.length>0?`
+  <div class="section">
+    <div class="section-title">📒 Udhar Ledger</div>
+    <table><thead><tr><th>Date</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+    <tbody>${entryRows}${payRows}</tbody></table>
+  </div>`:''}
+  ${udharMilkLogs.length>0?`
+  <div class="section">
+    <div class="section-title">🥛 Milk Deliveries — ${monthLabel}</div>
+    <table><thead><tr><th>Date</th><th>Details</th><th style="text-align:right">Amount</th></tr></thead>
+    <tbody>${milkRowsHTML}</tbody></table>
+  </div>`:''}
+  <div class="summary-box">
+    <div class="sum-row"><span>Total Udhar</span><span>Rs.${totalUdhar.toFixed(0)}</span></div>
+    <div class="sum-row"><span>Payments Received</span><span style="color:#16a34a">-Rs.${totalPaid.toFixed(0)}</span></div>
+    <div class="sum-row"><span>Milk Bill (${monthLabel})</span><span>Rs.${milkAmt.toFixed(0)}</span></div>
+    <div class="sum-row total"><span>Total Outstanding</span><span style="color:#dc2626">Rs.${(balance+milkAmt).toFixed(0)}</span></div>
+  </div>
+  ${(balance+milkAmt)>0
+    ?`<div class="due-banner"><div><div class="due-label">Amount Due</div><div style="font-size:.75rem;color:#dc2626;margin-top:3px">Please pay at earliest</div></div><div class="due-amt">Rs.${(balance+milkAmt).toFixed(0)}</div></div>`
+    :`<div class="settled">✅ All Settled — No outstanding balance. Thank you!</div>`}
+  <div class="footer">BSC Store · ${monthLabel} statement · Thank you for your business!</div>
+</div></body></html>`;
+
+  const win=window.open('','_blank');
+  win.document.write(billHTML);
+  win.document.close();
+}
+
+function openAddUdharCustomer() {
+  // Reuse existing milk customer add modal
+  if(typeof openAddMilkCustomer === 'function') openAddMilkCustomer();
+  else toast('Go to Milk section to add customers');
+}
+
+async function editMilkEntry(customerId, date, defaultQty) {
+  const newQty=prompt('Enter litres delivered on '+date+':',defaultQty);
+  if(newQty===null) return;
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(newQty)||0,price:60})});
+  toast('Milk log updated!');
+  if(udharSelectedId===customerId) openUdharDetail(customerId);
+}
+
+let toastTimer;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
 </script>
 </body>
 </html>
