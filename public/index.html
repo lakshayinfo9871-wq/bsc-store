@@ -420,6 +420,21 @@ select.ck-inp option{background:var(--bg2);}
 /* Udhar rows */
 .su2,.su3,.su4{margin-bottom:12px;}
 
+/* ══════════════════════ PIN INPUT ══════════════════════ */
+.pin-input-row{display:flex;gap:10px;justify-content:center;margin:6px 0;}
+.pin-box{width:56px;height:60px;border-radius:14px;background:var(--bg3);border:2px solid var(--border);text-align:center;font-size:1.4rem;font-weight:900;color:var(--text);outline:none;transition:border-color .2s;-webkit-text-security:disc;}
+.pin-box:focus{border-color:var(--green);}
+
+/* ══════════════════════ ACCOUNT QUICK BUTTONS ══════════════════════ */
+.acc-quick-btn{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;transition:all .18s;}
+.acc-quick-btn:active{transform:scale(.94);border-color:var(--green);}
+.aqb-icon{font-size:1.5rem;line-height:1;}
+.aqb-label{font-size:.72rem;font-weight:700;color:var(--text2);text-align:center;}
+
+/* stat card variant */
+.ds-num-card{background:var(--bg2);border-radius:14px;border:1px solid var(--border);padding:13px 8px;text-align:center;}
+
+
 /* ══════════════════════ CALENDAR LEDGER ══════════════════════ */
 /* Month list */
 .month-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
@@ -523,19 +538,9 @@ select.ck-inp option{background:var(--bg2);}
 <div class="acc-page" id="milkPage">
   <div class="acc-topbar">
     <button class="acc-back" onclick="closeMilkPage()">&#8592;</button>
-    <div><div class="acc-topbar-title">My Account</div><div class="acc-topbar-sub">Orders &amp; Milk Delivery</div></div>
+    <div><div class="acc-topbar-title" id="accTopTitle">My Account</div><div class="acc-topbar-sub" id="accTopSub">BSC Store</div></div>
   </div>
-  <div class="acc-tabs">
-    <div class="acc-tab active" id="mtab0" onclick="switchMilkTab(0)">My Record</div>
-    <div class="acc-tab" id="mtab2" onclick="switchMilkTab(2)">📅 Khata</div>
-    <div class="acc-tab" id="mtab1" onclick="switchMilkTab(1)">Register</div>
-  </div>
-  <div class="acc-body" id="milkBody"></div>
-</div>
-
-<!-- CALENDAR LEDGER PAGE (full page overlay) -->
-<div class="acc-page" id="calLedgerPage">
-  <div id="calLedgerInner" style="display:flex;flex-direction:column;height:100%;overflow:hidden;"></div>
+  <div class="acc-body" id="milkBody" style="padding:0"></div>
 </div>
 
 <!-- MAIN SCROLL -->
@@ -1540,14 +1545,15 @@ function _doPlaceOrder(method) {
 
 function closeSuccess() { document.getElementById('success').classList.remove('show'); }
 
-// ── ACCOUNT / MILK PAGE ───────────────────────────────────────────────────────
-function openMilkPage() { setNav('bn3'); document.getElementById('milkPage').classList.add('open'); switchMilkTab(0); }
-function closeMilkPage() { document.getElementById('milkPage').classList.remove('open'); setNav('bn0'); }
-function switchMilkTab(n) {
-  [0,1,2].forEach(i => { document.getElementById('mtab'+i)?.classList.toggle('active',i===n); });
-  if (n===0) renderMilkDash();
-  else if (n===1) renderMilkReg();
-  else if (n===2) renderKhataView();
+// ── ACCOUNT PAGE ─────────────────────────────────────────────────────────────
+function openMilkPage() {
+  setNav('bn3');
+  document.getElementById('milkPage').classList.add('open');
+  renderAccount();
+}
+function closeMilkPage() {
+  document.getElementById('milkPage').classList.remove('open');
+  setNav('bn0');
 }
 
 const MILK_KEY='bsc_milk_tok';
@@ -1555,216 +1561,354 @@ function getMilkToken() { try{return localStorage.getItem(MILK_KEY);}catch{retur
 function setMilkToken(t) { try{localStorage.setItem(MILK_KEY,t);}catch{} }
 function clearMilkToken() { try{localStorage.removeItem(MILK_KEY);}catch{} }
 
-async function renderMilkDash() {
-  const tok=getMilkToken();
-  if (!tok) { renderMilkLogin(); return; }
-  const body=document.getElementById('milkBody');
-  body.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Loading...</div>';
+// Central entry point
+async function renderAccount() {
+  const tok = getMilkToken();
+  if (!tok) { renderAccountAuth(); return; }
+  // Verify token and load profile
+  const body = document.getElementById('milkBody');
+  body.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text3)">Loading...</div>';
   try {
-    const r=await fetch('/api/customer/dashboard',{headers:{Authorization:'Bearer '+tok}});
-    if (!r.ok) { clearMilkToken(); renderMilkLogin(); return; }
-    const data=await r.json();
-    renderMilkDashData(data);
-  } catch { body.innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot load data</p></div>'; }
+    const r = await fetch('/api/customer/dashboard', { headers: { Authorization: 'Bearer ' + tok } });
+    if (!r.ok) { clearMilkToken(); renderAccountAuth(); return; }
+    const data = await r.json();
+    renderAccountHome(data);
+  } catch { body.innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot connect to server</p></div>'; }
 }
 
-function renderMilkLogin() {
-  document.getElementById('milkBody').innerHTML=`
-    <div class="acc-card">
-      <div class="acc-card-hero"><span class="acc-hero-emoji">🥛</span><div class="acc-hero-title">Milk Delivery Login</div><div class="acc-hero-sub">Track your deliveries & orders</div></div>
-      <div class="acc-form-body">
-        <div class="acc-field"><label class="acc-label">Phone Number</label><input class="acc-inp" type="tel" id="mlPhone" placeholder="10-digit number" maxlength="10"></div>
-        <div class="acc-field"><label class="acc-label">Password</label><input class="acc-inp" type="password" id="mlPass" placeholder="Your password" onkeydown="if(event.key==='Enter')doMilkLogin()"></div>
-        <button class="acc-btn acc-btn-green" onclick="doMilkLogin()">Login</button>
-        <button class="acc-btn acc-btn-outline" onclick="switchMilkTab(1)">Register New Account</button>
+// ── AUTH SCREEN (Login + Create Account) ─────────────────────────────────────
+let _authMode = 'login'; // 'login' | 'create'
+
+function renderAccountAuth() {
+  document.getElementById('accTopTitle').textContent = 'My Account';
+  document.getElementById('accTopSub').textContent = 'BSC Store';
+  _authMode = 'login';
+  renderAuthScreen();
+}
+
+function renderAuthScreen() {
+  const isCreate = _authMode === 'create';
+  document.getElementById('milkBody').innerHTML = `
+    <div style="min-height:100vh;display:flex;flex-direction:column;padding:0 0 80px">
+
+      <!-- Hero -->
+      <div style="background:linear-gradient(160deg,#0d2218 0%,#0a0a0a 60%);padding:40px 24px 32px;position:relative;overflow:hidden;flex-shrink:0">
+        <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(45,211,111,.12),transparent 70%);pointer-events:none"></div>
+        <div style="position:absolute;bottom:-20px;left:-20px;width:120px;height:120px;background:radial-gradient(circle,rgba(45,211,111,.06),transparent 70%);pointer-events:none"></div>
+        <div style="width:64px;height:64px;border-radius:20px;background:rgba(45,211,111,.12);border:1px solid rgba(45,211,111,.2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:16px">👤</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#fff;margin-bottom:6px">${isCreate ? 'Create Account' : 'Welcome Back'}</div>
+        <div style="font-size:.8rem;color:rgba(255,255,255,.4);line-height:1.6">${isCreate ? 'Set up your BSC Store account\nto track orders & balance' : 'Login with your phone & 4-digit PIN\nto view your account'}</div>
       </div>
-    </div>`;
-}
 
-async function doMilkLogin() {
-  const phone=document.getElementById('mlPhone')?.value.trim();
-  const pass=document.getElementById('mlPass')?.value;
-  if (!phone||phone.length<10) {showToast('Enter valid phone');return;}
-  if (!pass) {showToast('Enter password');return;}
-  try {
-    const r=await fetch('/api/milk/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password:pass})});
-    if (!r.ok) {showToast('Wrong credentials');return;}
-    const d=await r.json();
-    setMilkToken(d.token);
-    renderMilkDash();
-  } catch {showToast('Error. Try again.');}
-}
+      <!-- Toggle tabs -->
+      <div style="display:flex;gap:0;margin:0;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div onclick="_authMode='login';renderAuthScreen()" style="flex:1;padding:13px;text-align:center;font-size:.85rem;font-weight:700;cursor:pointer;color:${!isCreate?'var(--green)':'var(--text3)'};border-bottom:2.5px solid ${!isCreate?'var(--green)':'transparent'};transition:all .18s">Login</div>
+        <div onclick="_authMode='create';renderAuthScreen()" style="flex:1;padding:13px;text-align:center;font-size:.85rem;font-weight:700;cursor:pointer;color:${isCreate?'var(--green)':'var(--text3)'};border-bottom:2.5px solid ${isCreate?'var(--green)':'transparent'};transition:all .18s">Create Account</div>
+      </div>
 
-function renderMilkReg() {
-  document.getElementById('milkBody').innerHTML=`
-    <div class="acc-card">
-      <div class="acc-card-hero"><span class="acc-hero-emoji">✨</span><div class="acc-hero-title">Register for Milk Delivery</div><div class="acc-hero-sub">Get daily milk delivered to your door</div></div>
-      <div class="acc-form-body">
-        <div class="acc-field"><label class="acc-label">Full Name</label><input class="acc-inp" id="rnName" placeholder="Your name"></div>
-        <div class="acc-field"><label class="acc-label">Phone</label><input class="acc-inp" type="tel" id="rnPhone" placeholder="10-digit" maxlength="10"></div>
-        <div class="acc-field"><label class="acc-label">Address</label><input class="acc-inp" id="rnAddr" placeholder="Block & Villa number"></div>
-        <div class="acc-field"><label class="acc-label">Default Daily Qty (litres)</label>
-          <div class="qty-grid">
-            ${[0.5,1,1.5,2,2.5,3].map(q=>`<div class="qty-opt ${q===1?'selected':''}" onclick="selQty(this,${q})">${q}L</div>`).join('')}
+      <!-- Form -->
+      <div style="padding:24px 20px;flex:1">
+        ${isCreate ? `
+          <div class="acc-field"><label class="acc-label">Full Name</label><input class="acc-inp" id="afName" placeholder="Your name" autocomplete="name"></div>
+          <div class="acc-field"><label class="acc-label">Phone Number</label><input class="acc-inp" type="tel" id="afPhone" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric"></div>
+          <div class="acc-field"><label class="acc-label">Address (optional)</label><input class="acc-inp" id="afAddr" placeholder="Block & Villa e.g. A-14"></div>
+          <div class="acc-field">
+            <label class="acc-label">Set 4-Digit PIN</label>
+            <div class="pin-input-row" id="pinCreateRow">
+              <input class="pin-box" type="password" inputmode="numeric" maxlength="1" id="cp0" oninput="pinNext('cp',0,4)">
+              <input class="pin-box" type="password" inputmode="numeric" maxlength="1" id="cp1" oninput="pinNext('cp',1,4)">
+              <input class="pin-box" type="password" inputmode="numeric" maxlength="1" id="cp2" oninput="pinNext('cp',2,4)">
+              <input class="pin-box" type="password" inputmode="numeric" maxlength="1" id="cp3" oninput="pinNext('cp',3,4)">
+            </div>
+            <div style="font-size:.68rem;color:var(--text3);margin-top:6px">This PIN is used to login. Admin can view it.</div>
           </div>
-          <input type="hidden" id="rnQty" value="1">
-        </div>
-        <button class="acc-btn acc-btn-green" onclick="doMilkReg()">Register</button>
+          <button class="acc-btn acc-btn-green" onclick="doCreateAccount()" style="margin-top:8px">Create Account</button>
+        ` : `
+          <div class="acc-field"><label class="acc-label">Phone Number</label><input class="acc-inp" type="tel" id="afPhone" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric"></div>
+          <div class="acc-field">
+            <label class="acc-label">4-Digit PIN</label>
+            <div class="pin-input-row" id="pinLoginRow">
+              <input class="pin-box" type="password" inputmode="numeric" maxlength="1" id="lp0" oninput="pinNext('lp',0,4)">
+              <input class="pin-box" type="password" inputmode="numeric" maxlength="1" id="lp1" oninput="pinNext('lp',1,4)">
+              <input class="pin-box" type="password" inputmode="numeric" maxlength="1" id="lp2" oninput="pinNext('lp',2,4)">
+              <input class="pin-box" type="password" inputmode="numeric" maxlength="1" id="lp3" oninput="pinNext('lp',3,4)">
+            </div>
+          </div>
+          <button class="acc-btn acc-btn-green" onclick="doLogin()" style="margin-top:8px">Login</button>
+        `}
       </div>
     </div>`;
 }
 
-function selQty(el, q) {
-  document.querySelectorAll('.qty-opt').forEach(x=>x.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('rnQty').value=q;
+function pinNext(prefix, idx, total) {
+  const el = document.getElementById(prefix + idx);
+  if (!el) return;
+  const v = el.value.replace(/\D/g,'');
+  el.value = v.slice(-1);
+  if (v && idx < total-1) document.getElementById(prefix+(idx+1))?.focus();
 }
 
-async function doMilkReg() {
-  const name=(document.getElementById('rnName')?.value||'').trim();
-  const phone=(document.getElementById('rnPhone')?.value||'').trim();
-  const address=(document.getElementById('rnAddr')?.value||'').trim();
-  const qty=parseFloat(document.getElementById('rnQty')?.value)||1;
-  if (!name){showToast('Enter name');return;}
-  if (!phone||phone.length<10){showToast('Valid phone required');return;}
+function getPinValue(prefix, total) {
+  let pin = '';
+  for (let i=0;i<total;i++) pin += (document.getElementById(prefix+i)?.value||'');
+  return pin;
+}
+
+async function doLogin() {
+  const phone = (document.getElementById('afPhone')?.value||'').trim();
+  const pin = getPinValue('lp', 4);
+  if (!phone || phone.length < 10) { showToast('Enter valid phone number'); return; }
+  if (pin.length < 4) { showToast('Enter your 4-digit PIN'); return; }
   try {
-    const r=await fetch('/api/milk/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone,address,defaultQty:qty})});
-    if (!r.ok){const d=await r.json();showToast(d.error||'Error');return;}
-    const d=await r.json();
-    showToast('✓ Registered! Password: '+d.password);
-    setTimeout(()=>switchMilkTab(0),2000);
-  } catch {showToast('Error. Try again.');}
+    const r = await fetch('/api/milk/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone, pin }) });
+    if (!r.ok) { showToast('Wrong phone or PIN'); return; }
+    const d = await r.json();
+    setMilkToken(d.token);
+    renderAccount();
+  } catch { showToast('Connection error. Try again.'); }
 }
 
-function renderMilkDashData(data) {
-  const { customer:c, log, totalLitres, milkAmt, milkPaid, pricePerLitre, month, orders, udharEntries, udharPayments, totalUdhar, totalUdharPaid, udharBalance } = data;
-  const milkDue=Math.max(0,milkAmt-milkPaid), monthLabel=new Date(month+'-01').toLocaleString('default',{month:'long',year:'numeric'});
-
-  const milkRows=log.length>0?log.sort((a,b)=>b.date.localeCompare(a.date)).map(l=>{
-    const d=new Date(l.date+'T12:00:00'); return `<div class="milk-log-row">
-      <div class="mlog-day"><div class="mlog-day-num">${d.getDate()}</div><div class="mlog-day-name">${d.toLocaleString('default',{weekday:'short'})}</div></div>
-      <div class="mlog-divider"></div>
-      <div class="mlog-info"><div class="mlog-qty">${l.qty}L delivered</div><div class="mlog-amt">₹${(l.qty*(l.price||pricePerLitre)).toFixed(0)}</div></div>
-      <span class="mlog-pill">✓</span>
-    </div>`;}).join(''):`<div class="milk-log-empty">No deliveries yet</div>`;
-
-  const udharRows=udharEntries.length>0?udharEntries.map(e=>`<div class="grocery-item-card">
-    <div class="gi-icon">📒</div>
-    <div class="gi-info"><div class="gi-name">${(e.items||[]).map(i=>i.name).join(', ')||e.note||'Purchase'}</div><div class="gi-sub">${new Date(e.date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</div></div>
-    <div class="gi-amt" style="color:var(--red)">-₹${e.amount.toFixed(0)}</div>
-  </div>`).join(''):`<div style="text-align:center;padding:16px;color:var(--text3);font-size:.82rem">No entries</div>`;
-
-  const payRows=udharPayments.length>0?`<div style="margin-top:8px">${udharPayments.map(p=>`<div class="grocery-item-card">
-    <div class="gi-icon">💚</div>
-    <div class="gi-info"><div class="gi-name">Payment — ${p.method||'Cash'}</div><div class="gi-sub">${new Date(p.paidAt).toLocaleDateString('default',{day:'numeric',month:'short'})}</div></div>
-    <div class="gi-amt">+₹${p.amount.toFixed(0)}</div>
-  </div>`).join('')}</div>`:'' ;
-
-  const orderRows=orders.length>0?orders.slice(0,5).map(o=>`<div class="grocery-item-card">
-    <div class="gi-icon">🛒</div>
-    <div class="gi-info"><div class="gi-name">${(o.items||[]).slice(0,2).map(i=>i.name).join(', ')||'Order'}</div><div class="gi-sub">${new Date(o.createdAt).toLocaleDateString('default',{day:'numeric',month:'short'})} · ${o.status||'pending'}</div></div>
-    <div class="gi-amt">₹${o.total}</div>
-  </div>`).join(''):`<div style="text-align:center;padding:16px;color:var(--text3);font-size:.82rem">No orders</div>`;
-
-  document.getElementById('milkBody').innerHTML=`
-    <div class="dash-profile">
-      <div class="dash-avatar-row">
-        <div class="dash-avatar">👤</div>
-        <div><div class="dash-name">${c.name}</div><div class="dash-phone">${c.phone}${c.address?' · '+c.address:''}</div></div>
-      </div>
-      <div class="dash-chips">
-        <span class="dash-chip g">✓ Active</span>
-        ${c.defaultQty>0?`<span class="dash-chip">${c.defaultQty}L/day</span>`:''}
-      </div>
-    </div>
-    <div class="dash-stats">
-      <div class="dash-stat"><div class="ds-num g">₹${milkDue.toFixed(0)}</div><div class="ds-lbl">Milk Due</div></div>
-      <div class="dash-stat"><div class="ds-num b">${totalLitres}L</div><div class="ds-lbl">This Month</div></div>
-      <div class="dash-stat"><div class="ds-num y">₹${udharBalance.toFixed(0)}</div><div class="ds-lbl">Udhar</div></div>
-    </div>
-    <div class="su2">
-      <div class="sec-row"><div class="sec-label">📒 Udhar Ledger</div><div class="sec-count">${udharEntries.length} entries</div></div>
-      <div class="milk-log-wrap">${udharRows}</div>${payRows}
-    </div>
-    ${c.defaultQty>0?`<div class="su3"><div class="sec-row"><div class="sec-label">🥛 Milk — ${monthLabel}</div><div class="sec-count">${totalLitres}L</div></div><div class="milk-log-wrap">${milkRows}</div></div>`:''}
-    <div class="su4">
-      <div class="sec-row"><div class="sec-label">🛒 Recent Orders</div><div class="sec-count">${orders.length}</div></div>
-      <div class="milk-log-wrap">${orderRows}</div>
-    </div>
-    <button class="acc-btn acc-btn-danger" onclick="logoutMilk()" style="margin-top:8px">Logout</button>`;
+async function doCreateAccount() {
+  const name = (document.getElementById('afName')?.value||'').trim();
+  const phone = (document.getElementById('afPhone')?.value||'').trim();
+  const address = (document.getElementById('afAddr')?.value||'').trim();
+  const pin = getPinValue('cp', 4);
+  if (!name) { showToast('Enter your name'); return; }
+  if (!phone || phone.length < 10) { showToast('Enter valid phone number'); return; }
+  if (pin.length < 4) { showToast('Set a 4-digit PIN'); return; }
+  try {
+    const r = await fetch('/api/milk/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, phone, address, defaultQty: 0, pin }) });
+    if (!r.ok) { const d=await r.json(); showToast(d.error||'Registration failed'); return; }
+    showToast('✓ Account created! Please login');
+    _authMode = 'login';
+    setTimeout(renderAuthScreen, 600);
+  } catch { showToast('Connection error. Try again.'); }
 }
 
-function logoutMilk() { clearMilkToken(); renderMilkLogin(); showToast('Logged out'); }
+// ── ACCOUNT HOME (Blinkit-style profile) ─────────────────────────────────────
+let _accData = null;
+let _accSection = 'home'; // 'home'|'orders'|'passbook'
 
-// ══════════════════════ CALENDAR LEDGER (KHATA) ══════════════════════
+function renderAccountHome(data) {
+  _accData = data;
+  _accSection = 'home';
+  const { customer: c, orders, udharBalance, milkAmt, milkPaid, totalLitres } = data;
+  const milkDue = Math.max(0, milkAmt - milkPaid);
+  const totalBalance = udharBalance + milkDue;
 
-// State
+  document.getElementById('accTopTitle').textContent = c.name;
+  document.getElementById('accTopSub').textContent = c.phone;
+
+  const recentOrders = (orders||[]).slice(0,3);
+
+  document.getElementById('milkBody').innerHTML = `
+    <div style="overflow-y:auto;height:100%;padding-bottom:80px">
+
+      <!-- Profile hero -->
+      <div style="background:linear-gradient(160deg,#101c14 0%,#0a0a0a 55%);padding:24px 20px 20px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(45,211,111,.1),transparent 70%)"></div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;position:relative">
+          <div style="width:60px;height:60px;border-radius:18px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">👤</div>
+          <div>
+            <div style="font-size:1.15rem;font-weight:900;color:#fff">${c.name}</div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-top:2px">${c.phone}${c.address?' · '+c.address:''}</div>
+          </div>
+        </div>
+        <!-- Balance chip -->
+        ${totalBalance > 0 ? `
+        <div style="background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.18);border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:.65rem;color:rgba(255,255,255,.4);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Outstanding Balance</div>
+            <div style="font-size:1.3rem;font-weight:900;color:#ff6b6b">₹${totalBalance.toFixed(0)}</div>
+          </div>
+          <button onclick="openPassbook()" style="background:rgba(255,71,87,.15);color:#ff9090;border:1px solid rgba(255,71,87,.25);border-radius:9px;padding:7px 14px;font-size:.72rem;font-weight:800;cursor:pointer">View Passbook ›</button>
+        </div>` : `
+        <div style="background:rgba(45,211,111,.06);border:1px solid rgba(45,211,111,.15);border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:.65rem;color:rgba(255,255,255,.4);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Outstanding Balance</div>
+            <div style="font-size:1.1rem;font-weight:900;color:var(--green)">All Clear ✓</div>
+          </div>
+          <button onclick="openPassbook()" style="background:rgba(45,211,111,.12);color:var(--green);border:1px solid rgba(45,211,111,.2);border-radius:9px;padding:7px 14px;font-size:.72rem;font-weight:800;cursor:pointer">View Passbook ›</button>
+        </div>`}
+      </div>
+
+      <!-- Quick action grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:16px 16px 0">
+        <div class="acc-quick-btn" onclick="openOrdersSection()">
+          <div class="aqb-icon">🛒</div>
+          <div class="aqb-label">Your Orders</div>
+        </div>
+        <div class="acc-quick-btn" onclick="openPassbook()">
+          <div class="aqb-icon">📒</div>
+          <div class="aqb-label">Passbook</div>
+        </div>
+        <div class="acc-quick-btn" onclick="openMilkSection()">
+          <div class="aqb-icon">🥛</div>
+          <div class="aqb-label">Milk Log</div>
+        </div>
+      </div>
+
+      <!-- Recent orders preview -->
+      <div style="padding:16px 16px 0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:.7rem;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">Recent Orders</div>
+          ${(orders||[]).length > 3 ? `<div style="font-size:.72rem;color:var(--green);font-weight:700;cursor:pointer" onclick="openOrdersSection()">See all →</div>` : ''}
+        </div>
+        ${recentOrders.length ? recentOrders.map(o => {
+          const statusColor = {delivered:'var(--green)',pending:'#f59e0b',cancelled:'var(--red)'}[o.status]||'var(--text3)';
+          const statusEmoji = {delivered:'✓',pending:'⏳',cancelled:'✗'}[o.status]||'·';
+          return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">🛒</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(o.items||[]).slice(0,2).map(i=>i.name).join(', ')||'Order #'+o.id}</div>
+              <div style="font-size:.68rem;color:var(--text3);margin-top:2px">${new Date(o.createdAt).toLocaleDateString('default',{day:'numeric',month:'short'})} · <span style="color:${statusColor}">${statusEmoji} ${o.status}</span></div>
+            </div>
+            <div style="font-size:.9rem;font-weight:900;color:var(--text);flex-shrink:0">₹${o.total}</div>
+          </div>`;
+        }).join('') : '<div style="text-align:center;padding:20px;color:var(--text3);font-size:.82rem">No orders yet</div>'}
+      </div>
+
+      <!-- Your information section -->
+      <div style="padding:16px 16px 0">
+        <div style="font-size:.7rem;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Your Information</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+          ${[
+            {icon:'📍',label:'Address',val:c.address||'Not set'},
+            {icon:'📱',label:'Phone',val:c.phone},
+            {icon:'📅',label:'Member since',val:new Date(c.joinedAt||Date.now()).toLocaleDateString('default',{month:'long',year:'numeric'})},
+          ].map((row,i,arr) => `<div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:${i<arr.length-1?'1px solid var(--border)':'none'}">
+            <div style="font-size:1rem;width:24px;text-align:center">${row.icon}</div>
+            <div style="flex:1"><div style="font-size:.72rem;color:var(--text3);font-weight:600">${row.label}</div><div style="font-size:.84rem;font-weight:600;margin-top:1px">${row.val}</div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Logout -->
+      <div style="padding:16px 16px 0">
+        <button class="acc-btn acc-btn-danger" onclick="logoutAccount()">Logout</button>
+      </div>
+    </div>`;
+}
+
+function logoutAccount() {
+  clearMilkToken();
+  renderAccountAuth();
+  showToast('Logged out');
+}
+
+// ── ORDERS SECTION ────────────────────────────────────────────────────────────
+function openOrdersSection() {
+  if (!_accData) return;
+  const orders = _accData.orders || [];
+  document.getElementById('accTopTitle').textContent = 'Your Orders';
+  document.getElementById('accTopSub').textContent = orders.length + ' orders';
+  document.getElementById('milkBody').innerHTML = `
+    <div style="overflow-y:auto;height:100%;padding:16px 16px 80px">
+      <button onclick="renderAccountHome(_accData)" style="display:flex;align-items:center;gap:6px;color:var(--text2);font-size:.82rem;font-weight:600;margin-bottom:14px;background:none;border:none;cursor:pointer">&#8592; Back</button>
+      ${orders.length ? orders.map(o => {
+        const statusColor = {delivered:'var(--green)',pending:'#f59e0b',cancelled:'var(--red)'}[o.status]||'var(--text3)';
+        const statusBg = {delivered:'rgba(45,211,111,.08)',pending:'rgba(245,158,11,.08)',cancelled:'rgba(255,71,87,.08)'}[o.status]||'var(--bg3)';
+        const statusEmoji = {delivered:'✅',pending:'⏳',cancelled:'❌'}[o.status]||'📦';
+        return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:.72rem;color:var(--text3);font-weight:600">Order #${o.id} · ${new Date(o.createdAt).toLocaleDateString('default',{day:'numeric',month:'short',year:'numeric'})}</div>
+            <span style="font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px;background:${statusBg};color:${statusColor}">${statusEmoji} ${o.status}</span>
+          </div>
+          ${(o.items||[]).map(item => `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
+            <div style="font-size:.8rem;font-weight:600">${item.name} <span style="color:var(--text3)">×${item.qty}</span></div>
+            <div style="font-size:.8rem;font-weight:700">₹${(item.price*item.qty).toFixed(0)}</div>
+          </div>`).join('')}
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+            <div style="font-size:.7rem;color:var(--text3)">${o.paymentMethod==='upi'?'💳 UPI':'💵 Cash on Delivery'}</div>
+            <div style="font-size:.95rem;font-weight:900">₹${o.total}</div>
+          </div>
+        </div>`;
+      }).join('') : '<div class="empty-state"><div class="ei">🛒</div><p>No orders yet</p></div>'}
+    </div>`;
+}
+
+// ── MILK LOG SECTION ──────────────────────────────────────────────────────────
+function openMilkSection() {
+  if (!_accData) return;
+  const { log, totalLitres, milkAmt, milkPaid, pricePerLitre, month } = _accData;
+  const milkDue = Math.max(0, milkAmt - milkPaid);
+  const monthLabel = new Date(month+'-02').toLocaleString('default',{month:'long',year:'numeric'});
+  document.getElementById('accTopTitle').textContent = 'Milk Deliveries';
+  document.getElementById('accTopSub').textContent = monthLabel;
+  document.getElementById('milkBody').innerHTML = `
+    <div style="overflow-y:auto;height:100%;padding:16px 16px 80px">
+      <button onclick="renderAccountHome(_accData)" style="display:flex;align-items:center;gap:6px;color:var(--text2);font-size:.82rem;font-weight:600;margin-bottom:14px;background:none;border:none;cursor:pointer">&#8592; Back</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+        <div class="dash-stat"><div class="ds-num b">${totalLitres}L</div><div class="ds-lbl">Delivered</div></div>
+        <div class="ds-num-card"><div class="ds-num" style="color:var(--red)">₹${milkDue.toFixed(0)}</div><div class="ds-lbl">Due</div></div>
+        <div class="dash-stat"><div class="ds-num g">₹${milkPaid.toFixed(0)}</div><div class="ds-lbl">Paid</div></div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        ${log.length ? log.sort((a,b)=>b.date.localeCompare(a.date)).map(l => {
+          const d = new Date(l.date+'T12:00:00');
+          return `<div class="milk-log-row">
+            <div class="mlog-day"><div class="mlog-day-num">${d.getDate()}</div><div class="mlog-day-name">${d.toLocaleString('default',{weekday:'short'})}</div></div>
+            <div class="mlog-divider"></div>
+            <div class="mlog-info"><div class="mlog-qty">${l.qty}L delivered</div><div class="mlog-amt">₹${(l.qty*(l.price||pricePerLitre)).toFixed(0)}</div></div>
+            <span class="mlog-pill">✓</span>
+          </div>`;
+        }).join('') : '<div class="milk-log-empty">No deliveries this month</div>'}
+      </div>
+    </div>`;
+}
+
+// ── PASSBOOK (calendar ledger) ────────────────────────────────────────────────
 let _cal = {
-  months: [],
-  selMonth: null,
-  entries: [],
-  summary: {},
-  selDate: null,
-  view: 'months'   // 'months' | 'calendar' | 'day'
+  months: [], selMonth: null, entries: [], summary: {}, selDate: null
 };
 
-async function renderKhataView() {
-  const tok = getMilkToken();
-  if (!tok) {
-    document.getElementById('milkBody').innerHTML = `
-      <div class="acc-card">
-        <div class="acc-card-hero"><span class="acc-hero-emoji">📒</span><div class="acc-hero-title">Khata Book</div><div class="acc-hero-sub">Login to view your account ledger</div></div>
-        <div class="acc-form-body"><button class="acc-btn acc-btn-green" onclick="switchMilkTab(0)">Login First</button></div>
-      </div>`;
-    return;
-  }
-  document.getElementById('milkBody').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Loading...</div>';
+async function openPassbook() {
+  document.getElementById('accTopTitle').textContent = 'Passbook';
+  document.getElementById('accTopSub').textContent = 'Your account ledger';
+  document.getElementById('milkBody').innerHTML = '<div style="text-align:center;padding:60px;color:var(--text3)">Loading...</div>';
   try {
+    const tok = getMilkToken();
     const r = await fetch('/api/customer/ledger/months', { headers: { Authorization: 'Bearer ' + tok } });
-    if (!r.ok) { clearMilkToken(); switchMilkTab(0); return; }
+    if (!r.ok) throw new Error('Failed');
     const d = await r.json();
     _cal.months = d.months || [];
-    _cal.view = 'months';
     _cal.selMonth = null;
-    renderKhataMonthList();
-  } catch { document.getElementById('milkBody').innerHTML = '<div class="empty-state"><div class="ei">⚠️</div><p>Cannot load ledger</p></div>'; }
+    renderPassbookMonthList();
+  } catch { document.getElementById('milkBody').innerHTML = '<div class="empty-state"><div class="ei">⚠️</div><p>Cannot load passbook</p></div>'; }
 }
 
-function renderKhataMonthList() {
-  _cal.view = 'months';
+function renderPassbookMonthList() {
   const curMonth = new Date().toISOString().slice(0, 7);
   document.getElementById('milkBody').innerHTML = `
-    <div style="padding:8px 0 4px">
-      <div style="padding:0 2px 10px;display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:.7rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">📅 Monthly History</div>
-        <div class="legend-row">
+    <div style="overflow-y:auto;height:100%;padding:16px 16px 80px">
+      <button onclick="renderAccountHome(_accData)" style="display:flex;align-items:center;gap:6px;color:var(--text2);font-size:.82rem;font-weight:600;margin-bottom:14px;background:none;border:none;cursor:pointer">&#8592; Back to Account</button>
+      <div style="margin-bottom:10px">
+        <div class="legend-row" style="flex-wrap:wrap;gap:10px;padding:0 0 8px">
           <span class="legend-item"><span class="cal-dot dot-milk" style="display:inline-block"></span>Milk</span>
           <span class="legend-item"><span class="cal-dot dot-order" style="display:inline-block"></span>Order</span>
           <span class="legend-item"><span class="cal-dot dot-udhar" style="display:inline-block"></span>Store</span>
           <span class="legend-item"><span class="cal-dot dot-payment" style="display:inline-block"></span>Payment</span>
         </div>
       </div>
-      <div class="month-list" id="khataMonthList">
+      <div class="month-list">
         ${_cal.months.length ? _cal.months.map(m => {
-          const label = new Date(m + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
+          const label = new Date(m+'-02').toLocaleString('default',{month:'long',year:'numeric'});
           const isCur = m === curMonth;
-          return `<div class="month-card ${isCur ? 'current' : ''}" onclick="openKhataMonth('${m}')">
+          return `<div class="month-card ${isCur?'current':''}" onclick="openPassbookMonth('${m}')">
             <div class="month-card-left">
-              <div class="month-card-name">${label}${isCur ? ' <span style="font-size:.6rem;background:rgba(45,211,111,.15);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:800">Current</span>' : ''}</div>
-              <div class="month-card-meta">Tap to view calendar</div>
+              <div class="month-card-name">${label}${isCur?` <span style="font-size:.6rem;background:rgba(45,211,111,.15);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:800">Current</span>`:''}  </div>
+              <div class="month-card-meta">Tap to view details</div>
             </div>
-            <div class="month-card-right">
-              <span class="month-card-arr">›</span>
-            </div>
+            <div class="month-card-right"><span class="month-card-arr">›</span></div>
           </div>`;
-        }).join('') : '<div class="empty-state"><div class="ei">📒</div><p>No activity recorded yet</p></div>'}
+        }).join('') : '<div class="empty-state"><div class="ei">📒</div><p>No activity yet</p></div>'}
       </div>
     </div>`;
 }
 
-async function openKhataMonth(month) {
+async function openPassbookMonth(month) {
   _cal.selMonth = month;
-  document.getElementById('milkBody').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Loading calendar...</div>';
+  document.getElementById('milkBody').innerHTML = '<div style="text-align:center;padding:60px;color:var(--text3)">Loading...</div>';
   try {
     const tok = getMilkToken();
     const r = await fetch('/api/customer/ledger?month=' + month, { headers: { Authorization: 'Bearer ' + tok } });
@@ -1773,211 +1917,159 @@ async function openKhataMonth(month) {
     _cal.entries = d.entries || [];
     _cal.summary = d.summary || {};
     _cal.selDate = null;
-    _cal.view = 'calendar';
-    renderKhataCalendar();
-  } catch { showToast('Failed to load month'); renderKhataMonthList(); }
+    renderPassbookCalendar();
+  } catch { showToast('Failed to load'); renderPassbookMonthList(); }
 }
 
-function renderKhataCalendar() {
-  _cal.view = 'calendar';
+function renderPassbookCalendar() {
   const month = _cal.selMonth;
   const summary = _cal.summary;
-  const label = new Date(month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
-
-  // Build date → event types map
+  const label = new Date(month+'-02').toLocaleString('default',{month:'long',year:'numeric'});
   const dateMap = {};
   _cal.entries.forEach(e => {
-    if (!dateMap[e.date]) dateMap[e.date] = { milk: 0, order: 0, udhar: 0, payment: 0, total: 0 };
+    if (!dateMap[e.date]) dateMap[e.date] = { milk:0,order:0,udhar:0,payment:0,total:0 };
     const dm = dateMap[e.date];
-    if (e.type === 'milk') dm.milk++;
-    else if (e.type === 'order') dm.order++;
-    else if (e.type === 'udhar') dm.udhar++;
-    else if (e.type === 'payment' || e.type === 'udhar_payment') dm.payment++;
-    if (e.debit) dm.total += e.amount;
-    else dm.total -= e.amount;
+    if (e.type==='milk') dm.milk++;
+    else if (e.type==='order') dm.order++;
+    else if (e.type==='udhar') dm.udhar++;
+    else if (e.type==='payment'||e.type==='udhar_payment') dm.payment++;
+    if (e.debit) dm.total += e.amount; else dm.total -= e.amount;
   });
-
-  // Build calendar grid
-  const firstDay = new Date(month + '-01');
-  const daysInMonth = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0).getDate();
-  const startDow = firstDay.getDay(); // 0=Sun
-  const today = new Date().toISOString().slice(0, 10);
-
+  const firstDay = new Date(month+'-01');
+  const daysInMonth = new Date(firstDay.getFullYear(),firstDay.getMonth()+1,0).getDate();
+  const startDow = firstDay.getDay();
+  const today = new Date().toISOString().slice(0,10);
   let cells = '';
-  // empty cells before first day
-  for (let i = 0; i < startDow; i++) cells += '<div class="cal-cell empty"><div class="cal-cell-day"></div></div>';
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = month + '-' + String(d).padStart(2, '0');
-    const dm = dateMap[dateStr];
-    const isToday = dateStr === today;
-    const isSel = dateStr === _cal.selDate;
+  for (let i=0;i<startDow;i++) cells += '<div class="cal-cell empty"><div class="cal-cell-day"></div></div>';
+  for (let d=1;d<=daysInMonth;d++) {
+    const ds = month+'-'+String(d).padStart(2,'0');
+    const dm = dateMap[ds];
+    const isToday = ds===today, isSel = ds===_cal.selDate;
     let dots = '';
     if (dm) {
-      if (dm.milk > 0) dots += '<span class="cal-dot dot-milk"></span>';
-      if (dm.order > 0) dots += '<span class="cal-dot dot-order"></span>';
-      if (dm.udhar > 0) dots += '<span class="cal-dot dot-udhar"></span>';
-      if (dm.payment > 0) dots += '<span class="cal-dot dot-payment"></span>';
+      if (dm.milk>0) dots+='<span class="cal-dot dot-milk"></span>';
+      if (dm.order>0) dots+='<span class="cal-dot dot-order"></span>';
+      if (dm.udhar>0) dots+='<span class="cal-dot dot-udhar"></span>';
+      if (dm.payment>0) dots+='<span class="cal-dot dot-payment"></span>';
     }
-    const totalText = dm ? (dm.total > 0 ? '+₹' + Math.abs(dm.total).toFixed(0) : dm.total < 0 ? '-₹' + Math.abs(dm.total).toFixed(0) : '') : '';
-    cells += `<div class="cal-cell ${isToday ? 'today' : ''} ${isSel ? 'selected' : ''}" onclick="openKhataDay('${dateStr}')">
+    const tt = dm ? (dm.total>0?'+₹'+Math.abs(dm.total).toFixed(0):dm.total<0?'-₹'+Math.abs(dm.total).toFixed(0):'') : '';
+    cells += `<div class="cal-cell ${isToday?'today':''} ${isSel?'selected':''}" onclick="openPassbookDay('${ds}')">
       <div class="cal-cell-day">${d}</div>
       <div class="cal-cell-dots">${dots}</div>
-      ${totalText ? `<div class="cal-cell-total">${totalText}</div>` : ''}
+      ${tt?`<div class="cal-cell-total">${tt}</div>`:''}
     </div>`;
   }
-
-  const outstanding = summary.outstanding || 0;
-
+  const outstanding = summary.outstanding||0;
   document.getElementById('milkBody').innerHTML = `
-    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;margin:-16px;">
-
-      <!-- Header -->
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
       <div class="cal-header">
-        <button class="cal-nav-btn" onclick="renderKhataMonthList()">&#8592;</button>
+        <button class="cal-nav-btn" onclick="renderPassbookMonthList()">&#8592;</button>
         <div class="cal-header-title">${label}</div>
-        <button class="cal-nav-btn" onclick="showAllEntries()">≡</button>
+        <button class="cal-nav-btn" onclick="showPassbookAllEntries()" title="All entries">≡</button>
       </div>
-
-      <!-- Outstanding banner -->
-      <div style="padding:10px 12px 0;flex-shrink:0">
+      <div style="padding:10px 12px;flex-shrink:0">
         <div class="outstanding-banner">
-          <div>
-            <div class="ob-label">Outstanding Balance</div>
-            <div class="ob-amount ${outstanding <= 0 ? 'clear' : ''}">${outstanding <= 0 ? '✓ Cleared' : '₹' + outstanding.toFixed(0)}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:.68rem;color:var(--text3)">Total charged: ₹${(summary.totalDebits || 0).toFixed(0)}</div>
-            <div style="font-size:.68rem;color:var(--green)">Paid: ₹${(summary.paymentsTotal || 0).toFixed(0)}</div>
-          </div>
+          <div><div class="ob-label">Outstanding Balance</div><div class="ob-amount ${outstanding<=0?'clear':''}">${outstanding<=0?'✓ Cleared':'₹'+outstanding.toFixed(0)}</div></div>
+          <div style="text-align:right"><div style="font-size:.66rem;color:var(--text3)">Charged: ₹${(summary.totalDebits||0).toFixed(0)}</div><div style="font-size:.66rem;color:var(--green)">Paid: ₹${(summary.paymentsTotal||0).toFixed(0)}</div></div>
         </div>
       </div>
-
-      <!-- Summary bar -->
       <div class="cal-summary-bar">
-        <div class="cs-item"><div class="cs-val" style="color:#60a5fa">₹${(summary.milkTotal || 0).toFixed(0)}</div><div class="cs-lbl">🥛 Milk</div></div>
-        <div class="cs-item"><div class="cs-val" style="color:#a78bfa">₹${(summary.orderTotal || 0).toFixed(0)}</div><div class="cs-lbl">🛒 Orders</div></div>
-        <div class="cs-item"><div class="cs-val" style="color:#f59e0b">₹${(summary.udharTotal || 0).toFixed(0)}</div><div class="cs-lbl">📒 Udhar</div></div>
-        <div class="cs-item"><div class="cs-val grn">₹${(summary.paymentsTotal || 0).toFixed(0)}</div><div class="cs-lbl">💚 Paid</div></div>
+        <div class="cs-item"><div class="cs-val" style="color:#60a5fa">₹${(summary.milkTotal||0).toFixed(0)}</div><div class="cs-lbl">🥛 Milk</div></div>
+        <div class="cs-item"><div class="cs-val" style="color:#a78bfa">₹${(summary.orderTotal||0).toFixed(0)}</div><div class="cs-lbl">🛒 Orders</div></div>
+        <div class="cs-item"><div class="cs-val" style="color:#f59e0b">₹${(summary.udharTotal||0).toFixed(0)}</div><div class="cs-lbl">📒 Store</div></div>
+        <div class="cs-item"><div class="cs-val grn">₹${(summary.paymentsTotal||0).toFixed(0)}</div><div class="cs-lbl">💚 Paid</div></div>
       </div>
-
-      <!-- Calendar grid -->
       <div class="cal-grid-wrap" style="flex-shrink:0">
-        <div class="cal-dow-row">
-          ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-dow">${d}</div>`).join('')}
-        </div>
+        <div class="cal-dow-row">${['S','M','T','W','T','F','S'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}</div>
         <div class="cal-cells">${cells}</div>
       </div>
-
-      <!-- Spacer / tap hint -->
-      <div style="flex:1;overflow-y:auto;padding:10px 12px 80px">
-        <div id="calDayDetail">
-          <div style="text-align:center;padding:20px;color:var(--text3);font-size:.8rem">Tap a date to see details</div>
-          <div class="legend-row" style="justify-content:center">
-            <span class="legend-item"><span class="cal-dot dot-milk" style="display:inline-block"></span>Milk delivery</span>
-            <span class="legend-item"><span class="cal-dot dot-order" style="display:inline-block"></span>App order</span>
-            <span class="legend-item"><span class="cal-dot dot-udhar" style="display:inline-block"></span>Store credit</span>
-            <span class="legend-item"><span class="cal-dot dot-payment" style="display:inline-block"></span>Payment</span>
-          </div>
-        </div>
+      <div style="flex:1;overflow-y:auto;padding:10px 12px 20px" id="calDayDetail">
+        <div style="text-align:center;padding:16px;color:var(--text3);font-size:.78rem">Tap a date to see transactions</div>
       </div>
     </div>`;
 }
 
-function openKhataDay(dateStr) {
-  // Mark selected on grid
-  document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('selected'));
-  const allCells = document.querySelectorAll('.cal-cell:not(.empty)');
-  const dayNum = parseInt(dateStr.slice(-2));
-  // Find cell by day number text
-  allCells.forEach(c => { if (parseInt(c.querySelector('.cal-cell-day')?.textContent) === dayNum) c.classList.add('selected'); });
-
+function openPassbookDay(dateStr) {
+  document.querySelectorAll('.cal-cell:not(.empty)').forEach(c => {
+    const dn = parseInt(c.querySelector('.cal-cell-day')?.textContent);
+    const ds2 = _cal.selMonth+'-'+String(dn).padStart(2,'0');
+    c.classList.toggle('selected', ds2===dateStr);
+  });
   _cal.selDate = dateStr;
-  const dayEntries = _cal.entries.filter(e => e.date === dateStr);
-  const d = new Date(dateStr + 'T12:00:00');
-  const dateLabel = d.toLocaleDateString('default', { weekday: 'long', day: 'numeric', month: 'long' });
-  const dayDebit = dayEntries.filter(e => e.debit).reduce((s, e) => s + e.amount, 0);
-  const dayCredit = dayEntries.filter(e => !e.debit).reduce((s, e) => s + e.amount, 0);
+  const dayEntries = _cal.entries.filter(e=>e.date===dateStr);
+  const d = new Date(dateStr+'T12:00:00');
+  const dateLabel = d.toLocaleDateString('default',{weekday:'long',day:'numeric',month:'long'});
+  const dayDebit = dayEntries.filter(e=>e.debit).reduce((s,e)=>s+e.amount,0);
+  const dayCredit = dayEntries.filter(e=>!e.debit).reduce((s,e)=>s+e.amount,0);
   const dayNet = dayDebit - dayCredit;
-
-  const entryHTML = dayEntries.length ? dayEntries.map(e => {
-    const icons = { milk: '🥛', order: '🛒', udhar: '📒', payment: '💚', udhar_payment: '💚' };
-    const srcClass = { APP: 'src-app', STORE: 'src-store', SUBSCRIPTION: 'src-sub', PAYMENT: 'src-pay' };
-    const timeStr = e.time ? new Date(e.time).toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' }) : '';
-    return `<div class="ledger-entry">
-      <div class="le-icon-wrap">${icons[e.type] || '📄'}</div>
-      <div class="le-body">
-        <div class="le-source-row">
-          <span class="le-source ${srcClass[e.source] || ''}">${e.source}</span>
-          ${timeStr ? `<span class="le-time">${timeStr}</span>` : ''}
-        </div>
-        <div class="le-desc">${e.description}</div>
-        ${e.note ? `<div class="le-note">${e.note}</div>` : ''}
-      </div>
-      <div class="le-amt">
-        <div class="le-amt-val ${e.debit ? 'debit' : 'credit'}">${e.debit ? '-' : '+'}₹${e.amount.toFixed(0)}</div>
-        <div class="le-amt-type">${e.debit ? 'DEBIT' : 'CREDIT'}</div>
-      </div>
-    </div>`;
-  }).join('') : `<div style="text-align:center;padding:20px;color:var(--text3);font-size:.8rem">No activity on this day</div>`;
-
-  const chip = dayNet === 0
-    ? `<div class="day-total-chip zero">No charges</div>`
-    : (dayNet > 0 ? `<div class="day-total-chip">₹${dayNet.toFixed(0)} due</div>` : `<div class="day-total-chip zero">₹${Math.abs(dayNet).toFixed(0)} credit</div>`);
-
+  const icons = {milk:'🥛',order:'🛒',udhar:'📒',payment:'💚',udhar_payment:'💚'};
+  const srcClass = {APP:'src-app',STORE:'src-store',SUBSCRIPTION:'src-sub',PAYMENT:'src-pay'};
+  const chip = dayNet===0?`<div class="day-total-chip zero">No charges</div>`
+    :(dayNet>0?`<div class="day-total-chip">₹${dayNet.toFixed(0)} due</div>`
+    :`<div class="day-total-chip zero">₹${Math.abs(dayNet).toFixed(0)} credit</div>`);
   document.getElementById('calDayDetail').innerHTML = `
-    <div class="day-header">
-      <div class="day-date-title">${dateLabel}</div>
-      ${chip}
-    </div>
-    ${entryHTML}`;
+    <div class="day-header"><div class="day-date-title">${dateLabel}</div>${chip}</div>
+    ${dayEntries.length ? dayEntries.map(e=>{
+      const ts = e.time?new Date(e.time).toLocaleTimeString('default',{hour:'2-digit',minute:'2-digit'}):'';
+      return `<div class="ledger-entry">
+        <div class="le-icon-wrap">${icons[e.type]||'📄'}</div>
+        <div class="le-body">
+          <div class="le-source-row"><span class="le-source ${srcClass[e.source]||''}">${e.source}</span>${ts?`<span class="le-time">${ts}</span>`:''}</div>
+          <div class="le-desc">${e.description}</div>
+          ${e.note?`<div class="le-note">${e.note}</div>`:''}
+        </div>
+        <div class="le-amt"><div class="le-amt-val ${e.debit?'debit':'credit'}">${e.debit?'-':'+'}₹${e.amount.toFixed(0)}</div><div class="le-amt-type">${e.debit?'DEBIT':'CREDIT'}</div></div>
+      </div>`;
+    }).join('') : '<div style="text-align:center;padding:16px;color:var(--text3);font-size:.78rem">No activity on this date</div>'}`;
 }
 
-function showAllEntries() {
-  // Show full ledger list for month
+function showPassbookAllEntries() {
   const month = _cal.selMonth;
-  const label = new Date(month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
+  const label = new Date(month+'-02').toLocaleString('default',{month:'long',year:'numeric'});
   const summary = _cal.summary;
-  const icons = { milk: '🥛', order: '🛒', udhar: '📒', payment: '💚', udhar_payment: '💚' };
-  const srcClass = { APP: 'src-app', STORE: 'src-store', SUBSCRIPTION: 'src-sub', PAYMENT: 'src-pay' };
-
-  const entryHTML = _cal.entries.length ? _cal.entries.map(e => {
-    const d = new Date(e.date + 'T12:00:00');
-    const dateLabel = d.toLocaleDateString('default', { day: 'numeric', month: 'short' });
-    const timeStr = e.time ? new Date(e.time).toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' }) : '';
+  const icons = {milk:'🥛',order:'🛒',udhar:'📒',payment:'💚',udhar_payment:'💚'};
+  const srcClass = {APP:'src-app',STORE:'src-store',SUBSCRIPTION:'src-sub',PAYMENT:'src-pay'};
+  const entryHTML = _cal.entries.length ? _cal.entries.map(e=>{
+    const d2 = new Date(e.date+'T12:00:00');
+    const dl = d2.toLocaleDateString('default',{day:'numeric',month:'short'});
+    const ts = e.time?new Date(e.time).toLocaleTimeString('default',{hour:'2-digit',minute:'2-digit'}):'';
     return `<div class="ledger-entry">
-      <div class="le-icon-wrap">${icons[e.type] || '📄'}</div>
+      <div class="le-icon-wrap">${icons[e.type]||'📄'}</div>
       <div class="le-body">
-        <div class="le-source-row">
-          <span class="le-source ${srcClass[e.source] || ''}">${e.source}</span>
-          <span class="le-time">${dateLabel}${timeStr ? ' · ' + timeStr : ''}</span>
-        </div>
+        <div class="le-source-row"><span class="le-source ${srcClass[e.source]||''}">${e.source}</span><span class="le-time">${dl}${ts?' · '+ts:''}</span></div>
         <div class="le-desc">${e.description}</div>
-        ${e.note ? `<div class="le-note">${e.note}</div>` : ''}
+        ${e.note?`<div class="le-note">${e.note}</div>`:''}
       </div>
-      <div class="le-amt">
-        <div class="le-amt-val ${e.debit ? 'debit' : 'credit'}">${e.debit ? '-' : '+'}₹${e.amount.toFixed(0)}</div>
-        <div class="le-amt-type">${e.debit ? 'DEBIT' : 'CREDIT'}</div>
-      </div>
+      <div class="le-amt"><div class="le-amt-val ${e.debit?'debit':'credit'}">${e.debit?'-':'+'}₹${e.amount.toFixed(0)}</div><div class="le-amt-type">${e.debit?'DEBIT':'CREDIT'}</div></div>
     </div>`;
   }).join('') : '<div class="empty-state"><div class="ei">📒</div><p>No entries this month</p></div>';
-
   document.getElementById('milkBody').innerHTML = `
-    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;margin:-16px;">
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
       <div class="cal-header">
-        <button class="cal-nav-btn" onclick="renderKhataCalendar()">&#8592;</button>
+        <button class="cal-nav-btn" onclick="renderPassbookCalendar()">&#8592;</button>
         <div class="cal-header-title">${label} — All Entries</div>
         <div></div>
       </div>
       <div class="cal-summary-bar">
         <div class="cs-item"><div class="cs-val red">₹${(summary.totalDebits||0).toFixed(0)}</div><div class="cs-lbl">Total Due</div></div>
         <div class="cs-item"><div class="cs-val grn">₹${(summary.paymentsTotal||0).toFixed(0)}</div><div class="cs-lbl">Paid</div></div>
-        <div class="cs-item"><div class="cs-val ${(summary.outstanding||0) > 0 ? 'red' : 'grn'}">₹${Math.abs(summary.outstanding||0).toFixed(0)}</div><div class="cs-lbl">${(summary.outstanding||0) > 0 ? 'Balance' : 'Cleared'}</div></div>
+        <div class="cs-item"><div class="cs-val ${(summary.outstanding||0)>0?'red':'grn'}">₹${Math.abs(summary.outstanding||0).toFixed(0)}</div><div class="cs-lbl">${(summary.outstanding||0)>0?'Balance':'Cleared'}</div></div>
         <div class="cs-item"><div class="cs-val">${_cal.entries.length}</div><div class="cs-lbl">Entries</div></div>
       </div>
       <div style="flex:1;overflow-y:auto;padding:10px 12px 80px">${entryHTML}</div>
     </div>`;
 }
+
+// Legacy stubs kept for compatibility
+function switchMilkTab(n) {
+  if (n===0) renderAccount();
+  else if (n===1) { _authMode='create'; renderAuthScreen(); }
+  else if (n===2) openPassbook();
+}
+function renderMilkDash() { renderAccount(); }
+function renderMilkReg() { _authMode='create'; renderAuthScreen(); }
+function renderKhataView() { openPassbook(); }
+function logoutMilk() { logoutAccount(); }
 
 // ── BANNER ────────────────────────────────────────────────────────────────────
 function startBanner() {

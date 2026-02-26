@@ -261,18 +261,26 @@ app.post('/api/milk/register', (req, res) => {
   const db = readDB();
   if (!db.milkCustomers) db.milkCustomers = [];
   if (!db.nextMilkId) db.nextMilkId = 1;
-  const { name, phone, address, defaultQty, password } = req.body;
+  const { name, phone, address, defaultQty, pin } = req.body;
   if (!name || !phone) return res.status(400).json({ error: 'Name and phone required' });
+  if (!pin || !/^\d{4}$/.test(pin)) return res.status(400).json({ error: '4-digit PIN required' });
   if (db.milkCustomers.find(c => c.phone===phone)) return res.status(409).json({ error: 'Phone already registered' });
-  const plainPwd = password || Math.floor(1000+Math.random()*9000).toString();
-  const c = { id: db.nextMilkId++, name, phone, address: address||'', defaultQty: parseFloat(defaultQty)||0.5, password: sha256(plainPwd), plainPassword: plainPwd, active: true, joinedAt: new Date().toISOString() };
-  db.milkCustomers.push(c); writeDB(db); res.json({ ok: true, password: plainPwd });
+  const c = {
+    id: db.nextMilkId++, name, phone, address: address||'',
+    defaultQty: parseFloat(defaultQty)||0,
+    pin: pin,
+    password: sha256(pin),
+    plainPassword: pin,
+    active: true, joinedAt: new Date().toISOString()
+  };
+  db.milkCustomers.push(c); writeDB(db); res.json({ ok: true });
 });
 app.post('/api/milk/login', (req, res) => {
   const db = readDB();
-  const { phone, password } = req.body;
+  const { phone, password, pin } = req.body;
   const c = (db.milkCustomers||[]).find(x => x.phone===phone);
-  if (!c || sha256(password) !== c.password) return res.status(401).json({ error: 'Wrong credentials' });
+  const attempt = pin || password;
+  if (!c || sha256(attempt) !== c.password) return res.status(401).json({ error: 'Wrong phone or PIN' });
   const token = jwt.sign({ cid: c.id, phone: c.phone }, SECRET, { expiresIn: '90d' });
   res.json({ token, customer: { id: c.id, name: c.name, phone: c.phone, address: c.address, defaultQty: c.defaultQty } });
 });
