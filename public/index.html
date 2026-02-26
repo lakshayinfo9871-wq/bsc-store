@@ -32,20 +32,23 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 
 /* ══════════════════════ TOPBAR ══════════════════════ */
 .topbar{flex-shrink:0;background:var(--bg);padding:0 16px;padding-top:max(env(safe-area-inset-top),0px);position:sticky;top:0;z-index:90;border-bottom:1px solid var(--border);}
-.top-row{display:flex;align-items:center;justify-content:space-between;height:48px;}
+.top-row{display:flex;align-items:center;justify-content:space-between;overflow:hidden;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .25s,margin .28s cubic-bezier(.4,0,.2,1);max-height:56px;opacity:1;margin-bottom:0;}
+.top-row.hidden{max-height:0;opacity:0;}
 .logo{font-size:1.2rem;font-weight:900;letter-spacing:-.5px;}
 .logo span{color:var(--green);}
 .icon-btn{width:38px;height:38px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;position:relative;}
 .cart-badge{position:absolute;top:-5px;right:-5px;background:var(--green);color:#000;font-size:.55rem;font-weight:900;min-width:17px;height:17px;border-radius:50%;display:none;align-items:center;justify-content:center;border:2px solid var(--bg);}
 
-/* Search bar — collapses on scroll */
-.search-wrap{overflow:hidden;transition:max-height .3s cubic-bezier(.4,0,.2,1),opacity .25s,margin .3s cubic-bezier(.4,0,.2,1);max-height:60px;opacity:1;margin-bottom:8px;}
-.search-wrap.hidden{max-height:0;opacity:0;margin-bottom:0;}
+/* Search bar — always visible */
+.search-wrap{padding:8px 0;margin-bottom:0;}
 .search-bar{background:var(--bg2);border-radius:12px;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);}
 .search-bar:focus-within{border-color:var(--green);}
 .search-bar input{flex:1;background:none;border:none;outline:none;font-size:13.5px;color:var(--text);}
 .search-bar input::placeholder{color:var(--text3);}
 .search-icon{color:var(--text3);font-size:.95rem;}
+/* Animated placeholder shimmer */
+@keyframes phFade{0%,100%{opacity:0;transform:translateY(4px)}10%,85%{opacity:1;transform:translateY(0)}}
+.ph-anim{animation:phFade 3s ease forwards;}
 
 .cat-tabs{display:flex;overflow-x:auto;gap:0;border-top:1px solid var(--border);}
 .ctab{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 14px 8px;cursor:pointer;border-bottom:2.5px solid transparent;transition:all .15s;}
@@ -527,15 +530,15 @@ select.ck-inp option{background:var(--bg2);}
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <div class="top-row">
+  <div class="top-row" id="topRow">
     <div class="logo">🛒 <span>BSC</span></div>
     <div class="icon-btn" onclick="openCart()">🛒<div class="cart-badge" id="cartBadge">0</div></div>
   </div>
-  <div class="search-wrap" id="searchWrap">
+  <div class="search-wrap">
     <div class="search-bar">
       <span class="search-icon">🔍</span>
-      <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value)">
-      <span style="color:var(--text3);cursor:pointer;font-size:.8rem" onclick="clearSearch()">✕</span>
+      <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value)" onfocus="clearAnimatedPH()" onblur="startAnimatedPH()">
+      <span id="searchClear" style="color:var(--text3);cursor:pointer;font-size:.8rem;display:none" onclick="clearSearch()">✕</span>
     </div>
   </div>
   <div class="cat-tabs" id="catTabs"></div>
@@ -678,11 +681,36 @@ async function init() {
   let _lastScrollY = 0;
   scroller.addEventListener('scroll', () => {
     const y = scroller.scrollTop;
-    const searchWrap = document.getElementById('searchWrap');
-    // Hide search bar after scrolling down 40px
-    if (searchWrap) searchWrap.classList.toggle('hidden', y > 40);
+    const topRow = document.getElementById('topRow');
+    // Hide logo+cart after scrolling down 50px, keep search always visible
+    if (topRow) topRow.classList.toggle('hidden', y > 50);
     _lastScrollY = y;
   }, { passive:true });
+
+  // Animated placeholder
+  startAnimatedPH();
+}
+
+const _phTerms = ['Search onion…','Search milk…','Search bread…','Search potato…','Search tomato…','Search eggs…','Search butter…','Search chips…','Search rice…','Search dal…'];
+let _phIdx = 0, _phTimer = null;
+
+function startAnimatedPH() {
+  const inp = document.getElementById('searchInput');
+  if (!inp || inp.value) return;
+  clearTimeout(_phTimer);
+  function cycle() {
+    if (!inp || document.activeElement === inp || inp.value) return;
+    inp.setAttribute('placeholder', _phTerms[_phIdx % _phTerms.length]);
+    _phIdx++;
+    _phTimer = setTimeout(cycle, 2400);
+  }
+  cycle();
+}
+
+function clearAnimatedPH() {
+  clearTimeout(_phTimer);
+  const inp = document.getElementById('searchInput');
+  if (inp) inp.setAttribute('placeholder', 'Search products…');
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
@@ -964,6 +992,8 @@ function renderFPContent(catId) {
 // ── SEARCH ────────────────────────────────────────────────────────────────────
 let searchTimer = null;
 function onSearch(q) {
+  const clearBtn = document.getElementById('searchClear');
+  if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
   clearTimeout(searchTimer);
   if (!q.trim()) { closeSearch(); return; }
   searchTimer = setTimeout(() => {
@@ -976,8 +1006,12 @@ function onSearch(q) {
   }, 200);
 }
 function clearSearch() {
-  document.getElementById('searchInput').value = '';
+  const inp = document.getElementById('searchInput');
+  if (inp) inp.value = '';
+  const clearBtn = document.getElementById('searchClear');
+  if (clearBtn) clearBtn.style.display = 'none';
   closeSearch();
+  startAnimatedPH();
 }
 
 // ── PRODUCT DETAIL MODAL ──────────────────────────────────────────────────────
@@ -1412,19 +1446,31 @@ function renderCkoPage() {
     <div class="ck-dlv-form"><div class="ck-dlv-form-inner">${_ckDlvFields(ud)}</div></div>
   </div>`;
 
-  // Payment methods
-  const selPay = window._payMethod || 'cod';
+  // Payment methods — no COD, login required
   const acctTok = getMilkToken();
+  if (!acctTok) {
+    document.getElementById('ckoBody').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 24px;text-align:center;gap:16px">
+        <div style="font-size:2.5rem">🔒</div>
+        <div style="font-size:1rem;font-weight:800">Login Required</div>
+        <div style="font-size:.82rem;color:var(--text3);line-height:1.6">You need to be logged in to place an order.<br>Login or create your BSC account to continue.</div>
+        <button onclick="closeCkoPage();openMilkPage()" style="background:var(--green);color:#000;border-radius:12px;padding:.8rem 2rem;font-size:.9rem;font-weight:800;border:none;cursor:pointer;margin-top:8px">Login / Create Account</button>
+      </div>`;
+    document.getElementById('ckPlaceBtn').style.display = 'none';
+    return;
+  }
+  document.getElementById('ckPlaceBtn').style.display = '';
+  const selPay = window._payMethod === 'cod' ? 'upi' : (window._payMethod || 'upi');
+  window._payMethod = selPay;
   const payMethods = [
-    { id:'cod',  icon:'💵', title:'Cash on Delivery', sub:'Pay in cash when we arrive' },
     { id:'upi',  icon:'📱', title:'UPI Payment', sub: settings.upiId || 'Pay via UPI' },
-    { id:'account', icon:'📒', title:'Add to Account', sub: acctTok ? 'Charged to your BSC account' : 'Login to use — order added to your khata' },
+    { id:'account', icon:'📒', title:'Add to Account', sub: 'Charged to your BSC khata' },
   ];
   const payHTML = `<div class="ck-pay-cards">${payMethods.map(m => `
-    <div class="ck-pay-card ${m.id===selPay?'selected':''} ${m.id==='account'&&!acctTok?'ck-pay-locked':''}" data-pay="${m.id}" onclick="ckSelectPay('${m.id}')">
+    <div class="ck-pay-card ${m.id===selPay?'selected':''}" data-pay="${m.id}" onclick="ckSelectPay('${m.id}')">
       <div class="ck-pay-card-icon">${m.icon}</div>
       <div class="ck-pay-card-body">
-        <div class="ck-pay-card-title">${m.title}${m.id==='account'&&!acctTok?' <span style="font-size:.6rem;color:#f59e0b;font-weight:800;background:rgba(245,158,11,.1);border-radius:4px;padding:1px 5px">Login required</span>':''}</div>
+        <div class="ck-pay-card-title">${m.title}</div>
         <div class="ck-pay-card-sub">${m.sub}</div>
       </div>
       <div class="ck-pay-radio"></div>
@@ -1539,11 +1585,8 @@ function ckoValidate() {
 }
 
 function ckoPlace() {
-  const method=window._payMethod||'cod';
-  if (method==='account' && !getMilkToken()) {
-    showToast('Please login to your account first');
-    return;
-  }
+  if (!getMilkToken()) { showToast('Please login first'); return; }
+  const method=window._payMethod||'upi';
   if (method==='upi' && settings.upiId?.trim()) {
     const d=ckoValidate(); if(!d) return;
     window.location.href=`upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.storeName||'BSC Store')}&am=${total()}&cu=INR&tn=BSC+Order`;
@@ -1571,7 +1614,7 @@ function _doPlaceOrder(method) {
   const wa=settings.whatsapp||'';
   if (wa) {
     const lineItems=items.filter(i=>!i.isFreeGift).map(i=>`  • ${i.name}${i.variant?' ('+i.variant+')':''} × ${i.qty} = ₹${i.price*i.qty}`).join('\n');
-    const payLabel = method==='account'?'Add to Account (Khata)':method==='upi'?'UPI':'Cash on Delivery';
+    const payLabel = method==='account'?'Add to Account (Khata)':'UPI Payment';
     let msg=`🛒 *New Order — ${settings.storeName||'BSC Store'}*\n\n👤 *${d.name}*\n📞 ${d.phone}\n📍 Block ${d.block}, Villa ${d.villa}${d.note?'\n📝 '+d.note:''}\n\n📦 *Items:*\n${lineItems}\n\n${freeGiftLabel?`🎁 Free Gift: ${freeGiftLabel}\n\n`:''}💰 *Total: ₹${t}*\n💳 Payment: ${payLabel}${method==='account'?' (added to khata)':''}\n\n_Sent from BSC Store App_`;
     setTimeout(()=>{ window.open('https://wa.me/'+wa+'?text='+encodeURIComponent(msg),'_blank'); },300);
   }
@@ -1867,7 +1910,7 @@ function openOrdersSection() {
             <div style="font-size:.8rem;font-weight:700">₹${(item.price*item.qty).toFixed(0)}</div>
           </div>`).join('')}
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-            <div style="font-size:.7rem;color:var(--text3)">${o.paymentMethod==='upi'?'💳 UPI':'💵 Cash on Delivery'}</div>
+            <div style="font-size:.7rem;color:var(--text3)">${o.paymentMethod==='account'?'📒 Account (Khata)':'💳 UPI'}</div>
             <div style="font-size:.95rem;font-weight:900">₹${o.total}</div>
           </div>
         </div>`;
