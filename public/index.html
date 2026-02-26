@@ -6,1039 +6,419 @@
 <title>BSC Store</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-
-/* Smooth placeholder slide animation */
-@keyframes hintSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes hintSlideOut {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-}
-
-#searchInput.hint-out {
-  animation: hintSlideOut .12s ease forwards;
-}
-
-#searchInput.hint-in {
-  animation: hintSlideIn .18s cubic-bezier(.2,.8,.2,1) forwards;
-}
-
-#searchInp {
-  transition: opacity .2s ease;
-}
-
-html { touch-action: manipulation; }
-/* Page transitions */
-.fpage,
-.acc-page {
-  transform: translateX(100%);
-  opacity: 0;
-  transition: transform .35s cubic-bezier(.22,.61,.36,1), opacity .25s;
-}
-
-.fpage.open,
-.acc-page.open {
-  transform: translateX(0);
-  opacity: 1;
-}
-
-/* ── BUTTON PRESS FEEDBACK ───────────────────────── */
-
-button,
-.bn-item,
-.cat-card,
-.pcard,
-.ctab,
-.icon-btn {
-  transition: transform .12s ease, filter .12s ease;
-}
-
-button:active,
-.bn-item:active,
-.cat-card:active,
-.pcard:active,
-.ctab:active,
-.icon-btn:active {
-  transform: scale(.96);
-  filter: brightness(.9);
-}
-
-
 :root {
-  --bg:#0d0d0d; --bg2:#1a1a1a; --bg3:#242424; --bg4:#2e2e2e;
-  --border:#2a2a2a; --text:#ffffff; --text2:#b3b3b3; --text3:#555;
-  --green:#2dd36f; --green2:#25b35c; --red:#ff4757; --yellow:#f0c040;
+  --bg:#0d0d0d; --bg2:#161616; --bg3:#1e1e1e; --bg4:#272727; --bg5:#303030;
+  --border:#2a2a2a; --border2:#333;
+  --text:#ffffff; --text2:#a0a0a0; --text3:#555;
+  --green:#2dd36f; --green2:#25b35c; --green-dim:rgba(45,211,111,.12);
+  --red:#ff4757; --yellow:#f0c040; --blue:#3b82f6;
+  --radius:14px; --radius-sm:10px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{
-  height:100%;
-  min-height:100vh;
-  overflow-x:hidden;
-}
-body{
-  display:flex;
-  flex-direction:column;
-}
+html{touch-action:manipulation;}
+html,body{height:100%;overflow-x:hidden;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;max-width:480px;margin:0 auto;}
-button{font-family:'Inter',sans-serif;cursor:pointer;border:none;}
+button{font-family:'Inter',sans-serif;cursor:pointer;border:none;background:none;}
 input,select{font-family:'Inter',sans-serif;}
 ::-webkit-scrollbar{display:none;}
 img{display:block;max-width:100%;}
 
-/* TOP */
-.topbar{flex-shrink:0;background:var(--bg);padding:0 16px 0;padding-top:max(env(safe-area-inset-top),0px);position:sticky;top:0;z-index:90;transition:box-shadow .2s;}
-.topbar.scrolled{box-shadow:0 2px 16px rgba(0,0,0,.4);}
-.top-row{display:flex;align-items:center;justify-content:space-between;overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1),opacity .22s ease,margin .28s ease;max-height:60px;opacity:1;margin-top:12px;margin-bottom:10px;}
-.top-row.hidden{max-height:0;opacity:0;margin-top:0;margin-bottom:0;pointer-events:none;}
-.search-wrap{transition:padding .28s cubic-bezier(.4,0,.2,1);}
-.logo{font-size:1.2rem;font-weight:900;letter-spacing:-.5px;}
+/* ── PAGE TRANSITIONS ── */
+.fpage,.acc-page{transform:translateX(100%);opacity:0;transition:transform .35s cubic-bezier(.22,.61,.36,1),opacity .25s;position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;}
+.fpage.open,.acc-page.open{transform:translateX(0);opacity:1;}
+
+/* ── PRESS FEEDBACK ── */
+button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightness(.85);}
+
+/* ══════════════════════ TOPBAR ══════════════════════ */
+.topbar{flex-shrink:0;background:var(--bg);padding:0 16px;padding-top:max(env(safe-area-inset-top),0px);position:sticky;top:0;z-index:90;border-bottom:1px solid var(--border);}
+.top-row{display:flex;align-items:center;justify-content:space-between;height:52px;}
+.logo{font-size:1.15rem;font-weight:900;letter-spacing:-.5px;}
 .logo span{color:var(--green);}
+.logo-sub{font-size:.6rem;color:var(--text3);font-weight:500;display:block;margin-top:-2px;}
 .icon-btn{width:38px;height:38px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;position:relative;}
-.cart-badge{position:absolute;top:-4px;right:-4px;background:var(--green);color:#000;font-size:.58rem;font-weight:800;width:16px;height:16px;border-radius:50%;display:none;align-items:center;justify-content:center;}
-.search-bar{background:var(--bg2);border-radius:12px;display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border);margin-bottom:0;margin-top:10px;}
-.search-bar:focus-within{border-color:#444;}
-.search-bar input{flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);}
+.cart-badge{position:absolute;top:-5px;right:-5px;background:var(--green);color:#000;font-size:.55rem;font-weight:900;min-width:17px;height:17px;border-radius:50%;display:none;align-items:center;justify-content:center;border:2px solid var(--bg);}
+
+.search-bar{background:var(--bg2);border-radius:12px;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);margin:0 0 10px;}
+.search-bar:focus-within{border-color:var(--green);}
+.search-bar input{flex:1;background:none;border:none;outline:none;font-size:13.5px;color:var(--text);}
 .search-bar input::placeholder{color:var(--text3);}
-.cat-tabs{display:flex;overflow-x:auto;padding:8px 0 0;border-bottom:1px solid var(--border);}
-.ctab{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 12px 8px;cursor:pointer;border-bottom:2.5px solid transparent;}
-.ctab.active{border-bottom-color:var(--text);}
-.ctab .ti{width:26px;height:26px;border-radius:6px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.9rem;}
+.search-icon{color:var(--text3);font-size:.95rem;}
+
+.cat-tabs{display:flex;overflow-x:auto;gap:0;border-top:1px solid var(--border);}
+.ctab{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 14px 8px;cursor:pointer;border-bottom:2.5px solid transparent;transition:all .15s;}
+.ctab.active{border-bottom-color:var(--green);}
+.ctab .ti{width:28px;height:28px;border-radius:8px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.9rem;}
 .ctab .ti img{width:100%;height:100%;object-fit:cover;}
 .ctab .tn{font-size:10px;font-weight:600;color:var(--text2);white-space:nowrap;}
 .ctab.active .tn{color:var(--text);}
 
-/* SCROLL */
-.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:90px;}
+/* ══════════════════════ SCROLL AREA ══════════════════════ */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:100px;}
 
-/* BANNER */
-.banner-wrap{padding:12px 16px 0;}
-.banner-slider{border-radius:14px;overflow:hidden;}
-.banner-track{display:flex;transition:transform .4s ease;}
-.banner-slide{min-width:100%;height:150px;cursor:pointer;flex-shrink:0;position:relative;background:var(--bg2);}
+/* ══════════════════════ BANNER ══════════════════════ */
+.banner-wrap{padding:14px 14px 0;}
+.banner-slider{border-radius:16px;overflow:hidden;}
+.banner-track{display:flex;transition:transform .4s cubic-bezier(.4,0,.2,1);}
+.banner-slide{min-width:100%;height:140px;cursor:pointer;flex-shrink:0;position:relative;background:var(--bg2);}
 .banner-slide img{width:100%;height:100%;object-fit:cover;}
-.b-text{position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.65) 0%,transparent 70%);display:flex;flex-direction:column;justify-content:center;padding:18px;}
-.b-title{font-size:16px;font-weight:800;line-height:1.25;}
-.b-sub{font-size:11px;color:rgba(255,255,255,.75);margin-top:3px;}
+.b-text{position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.7) 0%,transparent 65%);display:flex;flex-direction:column;justify-content:center;padding:18px;}
+.b-title{font-size:15px;font-weight:900;line-height:1.25;}
+.b-sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:3px;}
 .bdots{display:flex;justify-content:center;gap:5px;margin-top:8px;}
 .bdot{width:5px;height:5px;border-radius:50%;background:var(--bg4);transition:all .3s;cursor:pointer;}
 .bdot.active{width:16px;border-radius:3px;background:#fff;}
 
-/* SECTION */
-.sec{padding:18px 16px 0;}
+/* ══════════════════════ SECTION ══════════════════════ */
+.sec{padding:18px 14px 0;}
 .sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.sec-title{font-size:16px;font-weight:800;}
-.see-all{font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;}
+.sec-title{font-size:15px;font-weight:800;letter-spacing:-.3px;}
+.see-all{font-size:11px;font-weight:700;color:var(--green);cursor:pointer;}
 
-/* CAT GRID */
-.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-.cat-card{background:var(--bg2);border-radius:10px;overflow:hidden;cursor:pointer;border:1px solid var(--border);}
-.cat-card:active{opacity:.7;}
-.cc-img{aspect-ratio:1;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;}
-.cc-img img{width:100%;height:100%;object-fit:cover;}
-.cc-name{font-size:9.5px;font-weight:600;padding:4px;text-align:center;line-height:1.25;}
+/* ══════════════════════ CATEGORY GRID (Blinkit style) ══════════════════════ */
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 
-/* PRODUCT STRIP */
-.pstrip{display:flex;gap:10px;overflow-x:auto;padding-bottom:2px;}
+/* Category color palettes */
+.cat-card{border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .15s;}
+.cat-card:active{transform:scale(.94);}
+.cc-img{aspect-ratio:1;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;padding:6px 6px 0;position:relative;}
+.cc-img img{width:85%;height:85%;object-fit:contain;border-radius:8px;margin:0 auto;}
+.cc-emoji{font-size:2rem;line-height:1;}
+.cc-name{font-size:9.5px;font-weight:700;padding:5px 4px;text-align:center;line-height:1.25;color:#fff;}
 
-/* PRODUCT CARD */
-.pcard{flex-shrink:0;width:142px;background:var(--bg2);border-radius:12px;border:1px solid var(--border);overflow:hidden;}
-.pc-img{height:108px;background:var(--bg3);display:flex;align-items:center;justify-content:center;padding:8px;}
-.pc-img img{width:100%;height:100%;object-fit:contain;}
-.pc-body{padding:7px 9px 9px;}
-.pc-unit{font-size:10px;color:var(--text3);}
-.pc-name{font-size:11.5px;font-weight:700;line-height:1.3;margin:2px 0 3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.pc-tier{font-size:9.5px;color:var(--green);font-weight:600;margin-bottom:4px;}
-.pc-bot{display:flex;align-items:center;justify-content:space-between;margin-top:6px;}
-.pc-price{font-size:13px;font-weight:800;}
-.add-btn{background:none;border:1.5px solid var(--green);color:var(--green);border-radius:7px;padding:4px 11px;font-size:12px;font-weight:700;}
-.qty-ctrl{display:flex;align-items:center;background:var(--green);border-radius:7px;}
-.qty-ctrl button{background:none;color:#000;font-size:14px;font-weight:800;padding:3px 7px;border:none;}
-.qty-ctrl span{color:#000;font-size:11px;font-weight:800;min-width:16px;text-align:center;}
+/* Soft colored backgrounds per category index */
+.cc-bg-0{background:linear-gradient(145deg,#1a3a2a,#0d2018);}
+.cc-bg-1{background:linear-gradient(145deg,#2a1a3a,#18102a);}
+.cc-bg-2{background:linear-gradient(145deg,#3a2a1a,#241808);}
+.cc-bg-3{background:linear-gradient(145deg,#1a2a3a,#0d1824);}
+.cc-bg-4{background:linear-gradient(145deg,#3a1a2a,#240d18);}
+.cc-bg-5{background:linear-gradient(145deg,#2a3a1a,#18240d);}
+.cc-bg-6{background:linear-gradient(145deg,#1a3a3a,#0d2424);}
+.cc-bg-7{background:linear-gradient(145deg,#3a3a1a,#242408);}
 
-/* BULK PRICING TABLE */
-.bulk-table{width:100%;border-collapse:collapse;margin:5px 0 2px;}
+/* ══════════════════════ PRODUCT STRIP ══════════════════════ */
+.pstrip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
+
+/* ══════════════════════ PRODUCT CARD (Blinkit style) ══════════════════════ */
+.pcard{flex-shrink:0;width:150px;background:var(--bg2);border-radius:14px;border:1px solid var(--border);overflow:visible;position:relative;}
+.pc-img-wrap{height:120px;background:var(--bg3);border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:center;padding:10px;overflow:hidden;position:relative;}
+.pc-img-wrap img{width:100%;height:100%;object-fit:contain;}
+.pc-discount-badge{position:absolute;top:7px;left:7px;background:var(--green);color:#000;font-size:.6rem;font-weight:900;padding:2px 6px;border-radius:5px;letter-spacing:.02em;}
+.pc-new-badge{position:absolute;top:7px;right:7px;background:#3b82f6;color:#fff;font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:5px;}
+.pc-body{padding:8px 10px 10px;}
+.pc-variant-label{font-size:10px;color:var(--text3);font-weight:600;margin-bottom:2px;}
+.pc-name{font-size:12px;font-weight:700;line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;letter-spacing:-.2px;}
+.pc-delivery{font-size:9.5px;color:var(--green);font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:3px;}
+.pc-price-row{display:flex;align-items:baseline;gap:4px;flex-wrap:wrap;margin-bottom:2px;}
+.pc-price{font-size:14px;font-weight:900;letter-spacing:-.4px;}
+.pc-mrp{font-size:10px;color:var(--text3);text-decoration:line-through;}
+.pc-off{font-size:9px;background:rgba(255,71,87,.15);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:800;}
+.pc-bulk-hint{font-size:9px;color:var(--green);font-weight:600;margin-bottom:5px;}
+.pc-bot{display:flex;align-items:center;justify-content:space-between;margin-top:4px;}
+.add-btn{background:none;border:1.5px solid var(--green);color:var(--green);border-radius:8px;padding:5px 14px;font-size:12px;font-weight:800;transition:all .15s;}
+.add-btn:active{background:var(--green);color:#000;}
+.qty-ctrl{display:flex;align-items:center;background:var(--green);border-radius:8px;overflow:hidden;}
+.qty-ctrl button{background:none;color:#000;font-size:15px;font-weight:900;padding:4px 9px;border:none;line-height:1;}
+.qty-ctrl span{color:#000;font-size:11px;font-weight:900;min-width:18px;text-align:center;}
+
+/* Variant selector inside card */
+.pc-variant-sel{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 8px;font-size:11px;color:var(--text);font-weight:600;margin-bottom:6px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;}
+
+/* ══════════════════════ PRODUCT FULL PAGE (category page) ══════════════════════ */
+.fp-head{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:max(env(safe-area-inset-top,10px),10px);background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
+.back-btn{width:36px;height:36px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--text);flex-shrink:0;}
+.fp-title{font-size:.96rem;font-weight:800;letter-spacing:-.3px;}
+.fp-body{flex:1;overflow-y:auto;padding:14px;}
+.fp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+
+/* ══════════════════════ BULK PRICING TABLE ══════════════════════ */
+.bulk-table{width:100%;border-collapse:collapse;margin:4px 0 2px;}
 .bulk-table tr{border-bottom:1px solid var(--border);}
 .bulk-table tr:last-child{border:none;}
-.bulk-table td{padding:2.5px 0;font-size:10px;line-height:1.3;}
+.bulk-table td{padding:2.5px 0;font-size:9.5px;line-height:1.3;}
 .bulk-table .bt-qty{color:var(--text2);font-weight:500;}
 .bulk-table .bt-price{text-align:right;font-weight:700;color:var(--text);}
-.bulk-table tr.bt-active .bt-qty{color:var(--green);font-weight:700;}
-.bulk-table tr.bt-active .bt-price{color:var(--green);}
-.bulk-table .bt-tag{font-size:8.5px;background:rgba(45,211,111,.15);color:var(--green);border-radius:3px;padding:1px 4px;margin-left:3px;font-weight:700;}
+.bulk-table tr.bt-active .bt-qty,.bulk-table tr.bt-active .bt-price{color:var(--green);font-weight:800;}
+.bulk-table .bt-tag{font-size:8px;background:rgba(45,211,111,.15);color:var(--green);border-radius:3px;padding:1px 4px;margin-left:3px;font-weight:800;}
 
-/* MRP + PRICE */
-.pc-mrp{font-size:9px;color:var(--text3);text-decoration:line-through;line-height:1;}
-.pc-off{font-size:8.5px;background:#ff475722;color:var(--red);border-radius:3px;padding:1px 4px;font-weight:700;margin-left:2px;}
-.pc-price-row{display:flex;align-items:baseline;gap:3px;flex-wrap:wrap;}
-
-/* FLOAT CART BOUNCE */
-@keyframes cartBounce{0%{transform:translateX(-50%) translateY(0) scale(1)}30%{transform:translateX(-50%) translateY(-10px) scale(1.1)}60%{transform:translateX(-50%) translateY(0) scale(.95)}80%{transform:translateX(-50%) translateY(-5px) scale(1.04)}100%{transform:translateX(-50%) translateY(0) scale(1)}}
-@keyframes pillPulse{0%,100%{box-shadow:0 4px 24px rgba(45,211,111,.45)}50%{box-shadow:0 4px 36px rgba(45,211,111,.75)}}
-@keyframes fadeSlideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-
-/* FLOAT CART PILL — compact & premium */
-.fcart{
-  position:fixed;bottom:72px;left:50%;
-  transform:translateX(-50%) translateY(20px);
-  background:linear-gradient(135deg,#2dd36f,#1da856);
-  border-radius:14px;
-  display:flex;align-items:center;
-  padding:0;overflow:hidden;
-  cursor:pointer;
-  box-shadow:0 6px 28px rgba(45,211,111,.45);
-  z-index:250;opacity:0;pointer-events:none;
-  transition:opacity .25s,transform .3s cubic-bezier(.34,1.56,.64,1);
-  min-width:0;
-}
+/* ══════════════════════ FLOAT CART PILL ══════════════════════ */
+@keyframes cartBounce{0%{transform:translateX(-50%) scale(1)}30%{transform:translateX(-50%) translateY(-8px) scale(1.08)}60%{transform:translateX(-50%) translateY(0) scale(.96)}100%{transform:translateX(-50%) scale(1)}}
+@keyframes pillPulse{0%,100%{box-shadow:0 4px 24px rgba(45,211,111,.4)}50%{box-shadow:0 4px 36px rgba(45,211,111,.7)}}
+.fcart{position:fixed;bottom:68px;left:50%;transform:translateX(-50%) translateY(20px);background:linear-gradient(135deg,#2dd36f,#1da856);border-radius:14px;display:flex;align-items:center;padding:0;overflow:hidden;cursor:pointer;box-shadow:0 6px 28px rgba(45,211,111,.45);z-index:250;opacity:0;pointer-events:none;transition:opacity .25s,transform .3s cubic-bezier(.34,1.56,.64,1);min-width:0;}
 .fcart.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);animation:pillPulse 2.5s ease-in-out infinite;}
-.fcart.bounce{animation:cartBounce .5s cubic-bezier(.36,.07,.19,.97)!important;}
+.fcart.bounce{animation:cartBounce .45s cubic-bezier(.36,.07,.19,.97)!important;}
 .fc-left{padding:9px 12px 9px 14px;display:flex;align-items:center;gap:7px;}
 .fc-icon{font-size:.9rem;}
-.fc-cnt-badge{background:rgba(0,0,0,.22);border-radius:6px;padding:2px 7px;font-size:.72rem;font-weight:800;color:#000;letter-spacing:-.3px;}
-.fc-label{font-size:.82rem;font-weight:800;color:#000;letter-spacing:-.2px;}
+.fc-cnt-badge{background:rgba(0,0,0,.2);border-radius:6px;padding:2px 7px;font-size:.72rem;font-weight:800;color:#000;}
+.fc-label{font-size:.82rem;font-weight:800;color:#000;}
 .fc-divider{width:1px;background:rgba(0,0,0,.15);height:36px;}
-.fc-amt{padding:9px 14px 9px 12px;font-size:.88rem;font-weight:900;color:#000;letter-spacing:-.5px;}
+.fc-amt{padding:9px 14px;font-size:.9rem;font-weight:900;color:#000;}
 
-/* CART OVERLAY */
-.cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;opacity:0;pointer-events:none;transition:opacity .3s;backdrop-filter:blur(3px);}
+/* ══════════════════════ CART OVERLAY & DRAWER ══════════════════════ */
+.cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;opacity:0;pointer-events:none;transition:opacity .3s;backdrop-filter:blur(4px);}
 .cart-overlay.open{opacity:1;pointer-events:auto;}
-
-/* CART DRAWER — premium sheet */
-.cart-drawer{
-  position:fixed;bottom:0;left:50%;
-  transform:translateX(-50%) translateY(100%);
-  width:100%;max-width:480px;
-  background:var(--bg2);
-  border-radius:24px 24px 0 0;
-  z-index:301;
-  display:flex;flex-direction:column;
-  max-height:92vh;
-  padding-bottom:env(safe-area-inset-bottom,0);
-  transition:transform .38s cubic-bezier(.32,.72,0,1);
-  box-shadow:0 -8px 40px rgba(0,0,0,.5);
-}
+.cart-drawer{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:480px;background:var(--bg2);border-radius:22px 22px 0 0;z-index:301;display:flex;flex-direction:column;max-height:92vh;padding-bottom:env(safe-area-inset-bottom,0);transition:transform .38s cubic-bezier(.32,.72,0,1);box-shadow:0 -8px 40px rgba(0,0,0,.6);}
 .cart-drawer.open{transform:translateX(-50%) translateY(0);}
-
-/* Drag pill */
-.cart-drag{width:40px;height:4px;border-radius:2px;background:var(--bg4);margin:10px auto 0;flex-shrink:0;}
-
-/* Cart header */
-.cart-hd{
-  padding:10px 18px 12px;
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
-  border-bottom:1px solid var(--border);
-}
+.cart-drag{width:40px;height:4px;border-radius:2px;background:var(--bg5);margin:10px auto 0;flex-shrink:0;}
+.cart-hd{padding:10px 18px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--border);}
 .cart-hd-left{display:flex;align-items:center;gap:8px;}
-.cart-hd-icon{width:32px;height:32px;background:rgba(45,211,111,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.95rem;}
-.cart-hd h2{font-size:.95rem;font-weight:800;letter-spacing:-.3px;}
-.cart-hd-count{font-size:.7rem;font-weight:600;color:var(--text2);background:var(--bg3);border-radius:20px;padding:2px 8px;border:1px solid var(--border);}
-.close-x{
-  width:30px;height:30px;border-radius:50%;background:var(--bg3);
-  display:flex;align-items:center;justify-content:center;
-  font-size:.85rem;color:var(--text2);border:1px solid var(--border);
-  cursor:pointer;flex-shrink:0;transition:all .15s;
-}
-.close-x:hover{background:var(--bg4);color:var(--text);}
+.cart-hd-icon{width:32px;height:32px;background:var(--green-dim);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.95rem;}
+.cart-hd h2{font-size:.95rem;font-weight:800;}
+.cart-hd-count{font-size:.68rem;font-weight:600;color:var(--text2);background:var(--bg3);border-radius:20px;padding:2px 8px;border:1px solid var(--border);}
+.close-x{width:30px;height:30px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.85rem;color:var(--text2);border:1px solid var(--border);cursor:pointer;}
+.cart-body{flex:0 1 auto;overflow-y:auto;padding:8px 16px 4px;max-height:44vh;}
+.cart-foot{border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2);overflow-y:auto;max-height:50vh;}
 
-/* Cart body */
-.cart-body{flex:0 1 auto;overflow-y:auto;padding:8px 18px 4px;max-height:45vh;}
-
-/* CART ITEM */
-@keyframes ciIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
-.ci{
-  display:flex;align-items:center;gap:12px;
-  padding:12px 0;border-bottom:1px solid var(--border);
-  animation:ciIn .2s ease both;
-}
+/* ── CART ITEM ── */
+@keyframes ciIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+.ci{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);animation:ciIn .2s ease both;}
 .ci:last-child{border:none;}
-.ci-img{
-  width:54px;height:54px;border-radius:12px;
-  background:var(--bg3);overflow:hidden;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  border:1px solid var(--border);
-  position:relative;
-}
+.ci-img{width:52px;height:52px;border-radius:10px;background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);}
 .ci-img img{width:100%;height:100%;object-fit:contain;padding:4px;}
 .ci-info{flex:1;min-width:0;}
-.ci-name{font-size:.83rem;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px;}
-.ci-meta{font-size:.68rem;color:var(--text3);margin-top:1px;}
-.ci-price-row{display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap;}
-.ci-total{font-size:.9rem;font-weight:900;letter-spacing:-.4px;}
-.ci-mrp{font-size:.7rem;color:var(--text3);text-decoration:line-through;}
-.ci-each{font-size:.68rem;color:var(--text2);background:var(--bg3);padding:1px 5px;border-radius:4px;}
-
-/* Qty control */
-.ci-ctrl{
-  display:flex;align-items:center;
-  background:var(--bg3);border-radius:10px;flex-shrink:0;
-  border:1px solid var(--border);overflow:hidden;
-}
-.ci-ctrl button{
-  background:none;color:var(--text);font-size:16px;font-weight:700;
-  padding:5px 10px;border:none;line-height:1;
-  transition:background .12s;
-}
-.ci-ctrl button:active{background:var(--bg4);}
+.ci-name{font-size:.82rem;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ci-meta{font-size:.66rem;color:var(--text3);margin-top:1px;}
+.ci-price-row{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap;}
+.ci-total{font-size:.88rem;font-weight:900;}
+.ci-each{font-size:.66rem;color:var(--text2);background:var(--bg3);padding:1px 5px;border-radius:4px;}
+.tier-coach{display:inline-flex;align-items:center;gap:3px;background:rgba(45,211,111,.08);border:1px solid rgba(45,211,111,.2);border-radius:5px;padding:2px 6px;margin-top:3px;font-size:.62rem;font-weight:700;color:var(--green);}
+.ci-ctrl{display:flex;align-items:center;background:var(--bg3);border-radius:9px;flex-shrink:0;border:1px solid var(--border);}
+.ci-ctrl button{background:none;color:var(--text);font-size:15px;font-weight:700;padding:5px 10px;border:none;line-height:1;}
 .ci-ctrl span{font-size:.82rem;font-weight:800;min-width:22px;text-align:center;color:var(--text);}
 
-/* CART FOOTER */
-.cart-foot{border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2);overflow-y:auto;max-height:48vh;}
-
-/* ── FREE DELIVERY PROGRESS BAR ── */
-.fd-wrap{padding:12px 18px 0;}
-.fd-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+/* ── FREE DELIVERY BAR ── */
+.fd-wrap{padding:12px 16px 0;}
+.fd-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
 .fd-label{font-size:.72rem;font-weight:700;}
-.fd-label.pending{color:var(--text2);}
+.fd-label em{font-style:normal;font-weight:900;color:var(--green);}
 .fd-label.unlocked{color:var(--green);}
-.fd-label em{font-style:normal;font-weight:900;}
-.fd-pct{font-size:.68rem;color:var(--text3);font-weight:600;}
+.fd-pct{font-size:.67rem;color:var(--text3);}
 .fd-track{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;}
 .fd-fill{height:100%;border-radius:3px;transition:width .55s cubic-bezier(.34,1.56,.64,1);}
-.fd-fill.pending{background:linear-gradient(90deg,#2dd36f,#06b6d4);}
-.fd-fill.unlocked{background:linear-gradient(90deg,#2dd36f,#00d4a0);}
-
-/* ══════════════════════════════════════════════
-   FREE GIFT SYSTEM — premium cart UI
-══════════════════════════════════════════════ */
-
-/* Gift progress bar track (amber) */
-.fd-fill.gift{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
-
-/* ── GIFT PROGRESS CARD (pre-unlock) ── */
-@keyframes giftPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,.18)}50%{box-shadow:0 0 0 6px rgba(251,191,36,0)}}
-.gift-progress-card{
-  margin:0 18px 0;
-  background:linear-gradient(135deg,rgba(251,191,36,.06),rgba(245,158,11,.03));
-  border:1px solid rgba(251,191,36,.18);
-  border-radius:14px;padding:12px 14px;
-  transition:border-color .3s;
-}
-.gift-progress-card.near{
-  border-color:rgba(251,191,36,.4);
-  animation:giftPulse 2s ease-in-out infinite;
-}
-.gift-progress-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.gift-progress-emoji{font-size:1.1rem;line-height:1;flex-shrink:0;}
-.gift-progress-text{flex:1;}
-.gift-progress-title{font-size:.74rem;font-weight:700;color:rgba(255,255,255,.85);line-height:1.3;}
-.gift-progress-title em{font-style:normal;color:#fbbf24;font-weight:900;}
-.gift-progress-remaining{font-size:.62rem;color:rgba(255,255,255,.35);margin-top:1px;}
-.gift-progress-bar-track{height:4px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;}
-.gift-progress-bar-fill{
-  height:100%;border-radius:4px;
-  background:linear-gradient(90deg,#f59e0b,#fbbf24);
-  transition:width .55s cubic-bezier(.34,1.56,.64,1);
-  will-change:width;
-}
-
-/* ── MANUAL CLAIM BUTTON ── */
-.gift-claim-btn{
-  width:100%;margin-top:10px;
-  background:linear-gradient(135deg,rgba(251,191,36,.15),rgba(245,158,11,.1));
-  border:1px solid rgba(251,191,36,.35);
-  border-radius:10px;padding:.6rem .9rem;
-  font-size:.78rem;font-weight:800;color:#fbbf24;
-  display:flex;align-items:center;justify-content:center;gap:.4rem;
-  transition:background .2s,border-color .2s,transform .1s;
-}
-.gift-claim-btn:active{transform:scale(.97);}
-.gift-claim-btn.claimed{
-  background:rgba(45,211,111,.08);
-  border-color:rgba(45,211,111,.25);
-  color:var(--green);
-  pointer-events:none;
-}
-.gift-claim-btn:disabled{opacity:.6;pointer-events:none;}
-
-/* ── UNLOCKED CONFIRMATION BANNER ── */
-@keyframes giftBannerIn{
-  0%{opacity:0;transform:translateY(-8px) scale(.96)}
-  60%{transform:translateY(2px) scale(1.01)}
-  100%{opacity:1;transform:translateY(0) scale(1)}
-}
-.gift-unlocked-banner{
-  margin:0 18px 0;
-  display:flex;align-items:center;gap:11px;
-  background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(245,158,11,.07));
-  border:1px solid rgba(251,191,36,.3);
-  border-radius:14px;padding:12px 14px;
-  animation:giftBannerIn .38s cubic-bezier(.34,1.56,.64,1) both;
-}
-.gift-unlocked-icon{
-  width:38px;height:38px;flex-shrink:0;
-  background:rgba(251,191,36,.15);border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:1.1rem;border:1px solid rgba(251,191,36,.25);
-}
-.gift-unlocked-body{flex:1;}
-.gift-unlocked-title{font-size:.78rem;font-weight:800;color:#fbbf24;letter-spacing:-.1px;}
-.gift-unlocked-sub{font-size:.65rem;color:rgba(255,255,255,.35);margin-top:2px;}
-.gift-free-pill{
-  background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);
-  color:#fbbf24;font-size:.6rem;font-weight:900;
-  padding:3px 9px;border-radius:20px;flex-shrink:0;letter-spacing:.04em;
-}
-
-/* ── GIFT CART ITEM ── */
-@keyframes giftItemIn{
-  0%{opacity:0;transform:translateY(-14px) scale(.93)}
-  55%{transform:translateY(3px) scale(1.015)}
-  100%{opacity:1;transform:translateY(0) scale(1)}
-}
-.ci.ci-gift{
-  background:linear-gradient(135deg,rgba(251,191,36,.07),rgba(245,158,11,.04));
-  border:1px solid rgba(251,191,36,.2);
-  border-radius:12px;
-  animation:giftItemIn .42s cubic-bezier(.34,1.56,.64,1) both;
-  position:relative;overflow:hidden;
-}
-.ci.ci-gift::before{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(135deg,rgba(251,191,36,.04),transparent 60%);
-  pointer-events:none;
-}
-.ci-gift-badge{
-  display:inline-flex;align-items:center;gap:3px;
-  background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.35);
-  color:#fbbf24;font-size:.58rem;font-weight:900;
-  padding:2px 7px;border-radius:20px;letter-spacing:.06em;
-  margin-top:3px;
-}
-.ci-gift-price{font-size:.88rem;font-weight:900;color:#fbbf24;}
-.ci-gift-original{font-size:.65rem;color:var(--text3);text-decoration:line-through;margin-left:4px;}
-.ci-gift-remove{
-  width:30px;height:30px;border-radius:8px;flex-shrink:0;
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-  display:flex;align-items:center;justify-content:center;
-  font-size:.72rem;font-weight:700;color:var(--text3);
-  transition:background .15s,color .15s,border-color .15s;
-  cursor:pointer;
-}
-.ci-gift-remove:hover,.ci-gift-remove:active{
-  background:rgba(255,71,87,.12);border-color:rgba(255,71,87,.3);color:var(--red);
-}
+.fd-fill.pending{background:linear-gradient(90deg,var(--green),#06d6a0);}
+.fd-fill.unlocked{background:linear-gradient(90deg,var(--green),#00e5a0);}
 
 /* ── SAVINGS STRIP ── */
-.savings-strip{
-  display:flex;align-items:center;gap:8px;
-  background:linear-gradient(90deg,rgba(45,211,111,.09),rgba(45,211,111,.04));
-  border:1px solid rgba(45,211,111,.18);
-  border-radius:10px;padding:8px 12px;
-  font-size:.74rem;font-weight:700;color:var(--green);
-}
+.savings-strip{display:flex;align-items:center;gap:8px;background:var(--green-dim);border:1px solid rgba(45,211,111,.18);border-radius:10px;padding:8px 12px;font-size:.74rem;font-weight:700;color:var(--green);}
 
-/* ── UPSELL STRIP ── */
-.upsell-wrap{padding:10px 18px 0;}
-.upsell-label{font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;}
+/* ── UPSELL ── */
+.upsell-wrap{padding:10px 16px 0;}
+.upsell-label{font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;}
 .upsell-scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;}
-.upsell-card{
-  flex-shrink:0;width:90px;
-  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
-  padding:8px 7px;text-align:center;cursor:pointer;
-  transition:transform .12s,border-color .12s;
-}
-.upsell-card:active{transform:scale(.94);}
+.upsell-card{flex-shrink:0;width:88px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 7px;text-align:center;cursor:pointer;}
 .upsell-card-img{width:36px;height:36px;border-radius:7px;background:var(--bg4);margin:0 auto 5px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .upsell-card-img img{width:100%;height:100%;object-fit:contain;}
-.upsell-card-name{font-size:.62rem;font-weight:700;line-height:1.2;margin-bottom:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-.upsell-card-price{font-size:.7rem;font-weight:800;color:var(--green);margin-bottom:5px;}
-.upsell-add-btn{
-  width:100%;background:var(--green);color:#000;
-  border-radius:6px;padding:4px 0;font-size:.62rem;font-weight:800;border:none;cursor:pointer;
-}
+.upsell-card-name{font-size:.6rem;font-weight:700;line-height:1.2;margin-bottom:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.upsell-card-price{font-size:.68rem;font-weight:800;color:var(--green);margin-bottom:4px;}
+.upsell-add-btn{width:100%;background:var(--green);color:#000;border-radius:6px;padding:4px 0;font-size:.6rem;font-weight:800;border:none;cursor:pointer;}
 .upsell-add-btn.added{background:var(--bg4);color:var(--text3);}
 
-/* ── TIER COACH ── */
-.tier-coach{
-  display:inline-flex;align-items:center;gap:4px;
-  background:rgba(255,100,60,.08);border:1px solid rgba(255,100,60,.2);
-  border-radius:6px;padding:3px 7px;margin-top:4px;
-  font-size:.63rem;font-weight:700;color:#ff7c5c;
-}
+/* ── GIFT PROGRESS ── */
+@keyframes giftPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,.2)}50%{box-shadow:0 0 0 6px rgba(251,191,36,0)}}
+.gift-progress-card{margin:0;background:linear-gradient(135deg,rgba(251,191,36,.07),rgba(245,158,11,.03));border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:10px 12px;transition:border-color .3s;}
+.gift-progress-card.near{border-color:rgba(251,191,36,.4);animation:giftPulse 2s ease-in-out infinite;}
+.gift-progress-header{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.gift-progress-text{flex:1;}
+.gift-progress-title{font-size:.73rem;font-weight:700;line-height:1.3;}
+.gift-progress-title em{font-style:normal;color:#fbbf24;font-weight:900;}
+.gift-progress-remaining{font-size:.62rem;color:var(--text3);margin-top:1px;}
+.gift-progress-bar-track{height:4px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;}
+.gift-progress-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#f59e0b,#fbbf24);transition:width .55s cubic-bezier(.34,1.56,.64,1);}
+.gift-claim-btn{width:100%;margin-top:8px;background:linear-gradient(135deg,rgba(251,191,36,.15),rgba(245,158,11,.1));border:1px solid rgba(251,191,36,.35);border-radius:10px;padding:9px;font-size:.78rem;font-weight:800;color:#fbbf24;cursor:pointer;}
+.gift-unlocked-banner{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(251,191,36,.1),rgba(245,158,11,.05));border:1px solid rgba(251,191,36,.3);border-radius:12px;padding:10px 12px;}
+.gift-unlocked-icon{width:36px;height:36px;border-radius:10px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.gift-unlocked-body{flex:1;min-width:0;}
+.gift-unlocked-title{font-size:.78rem;font-weight:800;color:#fbbf24;line-height:1.2;}
+.gift-unlocked-sub{font-size:.65rem;color:var(--text3);margin-top:2px;}
+.gift-free-pill{font-size:.65rem;font-weight:900;padding:3px 8px;border-radius:20px;background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.4);color:#fbbf24;flex-shrink:0;}
 
-/* ══════════════════════════════════════════════════════
-   CHECKOUT — Premium delivery card + payment cards
-══════════════════════════════════════════════════════ */
-.cko-wrap{padding:14px 16px 18px;}
-.cko-total-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-.cko-total{font-size:1.1rem;font-weight:900;letter-spacing:-.5px;}
-.cko-delivery-chip{font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(45,211,111,.12);border:1px solid rgba(45,211,111,.2);color:var(--green);}
+/* Gift cart item */
+.ci-gift{background:rgba(251,191,36,.04);border-radius:10px;border:1px solid rgba(251,191,36,.15)!important;padding:8px 10px!important;margin:0 0 6px;}
+.ci-gift-price{font-size:.88rem;font-weight:900;color:var(--green);}
+.ci-gift-original{font-size:.7rem;color:var(--text3);text-decoration:line-through;}
+.ci-gift-badge{display:inline-block;font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:20px;background:rgba(45,211,111,.15);border:1px solid rgba(45,211,111,.25);color:var(--green);margin-top:3px;}
+.ci-gift-remove{width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--text3);cursor:pointer;}
 
-/* ── SECTION LABEL ── */
-.cko-section-label{font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
-
-/* ── DELIVERY CARD (collapsed) ── */
-.dlv-card{
-  background:var(--bg3);border:1.5px solid var(--border);border-radius:16px;
-  margin-bottom:12px;overflow:hidden;cursor:pointer;
-  transition:border-color .25s;
-}
-.dlv-card:hover{border-color:#3a3a3a;}
-.dlv-card.has-data{border-color:rgba(45,211,111,.25);}
-
-/* Collapsed row */
-.dlv-collapsed{
-  display:flex;align-items:center;gap:10px;padding:13px 14px;
-}
-.dlv-icon{
-  width:36px;height:36px;border-radius:10px;flex-shrink:0;
-  background:rgba(45,211,111,.1);border:1px solid rgba(45,211,111,.2);
-  display:flex;align-items:center;justify-content:center;font-size:1rem;
-}
-.dlv-summary{flex:1;min-width:0;}
-.dlv-summary-line1{font-size:.78rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dlv-summary-line2{font-size:.68rem;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dlv-change-btn{
-  font-size:.68rem;font-weight:700;color:var(--green);
-  background:rgba(45,211,111,.08);border:1px solid rgba(45,211,111,.2);
-  border-radius:8px;padding:5px 10px;flex-shrink:0;cursor:pointer;
-  transition:background .2s;
-}
-.dlv-change-btn:hover{background:rgba(45,211,111,.15);}
-.dlv-chevron{font-size:.7rem;color:var(--text3);flex-shrink:0;transition:transform .25s;}
-.dlv-card.open .dlv-chevron{transform:rotate(180deg);}
-
-/* Expanded form area */
-.dlv-form{
-  max-height:0;overflow:hidden;
-  transition:max-height .35s cubic-bezier(.4,0,.2,1), opacity .25s;
-  opacity:0;
-}
-.dlv-card.open .dlv-form{max-height:500px;opacity:1;}
-.dlv-form-inner{padding:0 14px 14px;border-top:1px solid var(--border);}
-.dlv-form-inner{padding-top:12px;}
-
-/* Form fields */
-.dlv-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
-.dlv-field{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;}
-.dlv-label{font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;}
-.cko-inp{
-  width:100%;background:var(--bg2);border:1.5px solid var(--border);
-  border-radius:11px;padding:.62rem .9rem;
-  font-size:.88rem;color:var(--text);outline:none;-webkit-appearance:none;
-  transition:border-color .2s,box-shadow .2s;
-}
-.cko-inp:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(45,211,111,.1);}
-.cko-inp::placeholder{color:var(--text3);}
-select.cko-inp option{background:var(--bg2);}
-.dlv-save-btn{
-  width:100%;background:var(--green);color:#000;border-radius:11px;
-  padding:.7rem;font-size:.84rem;font-weight:800;
-  display:flex;align-items:center;justify-content:center;gap:.4rem;
-  transition:filter .15s;margin-top:4px;
-}
-.dlv-save-btn:active{filter:brightness(.9);}
-
-/* Empty state (no saved data, card starts open) */
-.dlv-empty-hint{font-size:.72rem;color:var(--text3);padding:4px 0 8px;text-align:center;}
-
-/* ── PAYMENT CARDS ── */
-.pay-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
-.pay-card{
-  position:relative;
-  background:var(--bg3);border:1.5px solid var(--border);
-  border-radius:14px;padding:13px 14px;cursor:pointer;
-  display:flex;align-items:center;gap:12px;
-  transition:border-color .22s, background .22s, box-shadow .22s;
-  -webkit-tap-highlight-color:transparent;
-}
-.pay-card:active{transform:scale(.985);}
-
-/* Selected state */
-.pay-card.selected{
-  border-color:var(--green);
-  background:rgba(45,211,111,.05);
-  box-shadow:0 0 0 1px rgba(45,211,111,.15), inset 0 0 20px rgba(45,211,111,.04);
-}
-
-/* Icon pill */
-.pay-card-icon{
-  width:40px;height:40px;border-radius:11px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:1.1rem;
-  border:1px solid var(--border);background:var(--bg2);
-  transition:background .22s,border-color .22s;
-}
-.pay-card.selected .pay-card-icon{background:rgba(45,211,111,.12);border-color:rgba(45,211,111,.25);}
-
-/* Text */
-.pay-card-body{flex:1;min-width:0;}
-.pay-card-title{font-size:.84rem;font-weight:700;color:var(--text);line-height:1.2;}
-.pay-card-sub{font-size:.68rem;color:var(--text3);margin-top:2px;line-height:1.4;}
-
-/* Radio dot */
-.pay-card-radio{
-  width:20px;height:20px;border-radius:50%;border:2px solid var(--border);
-  flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  transition:border-color .22s;
-}
-.pay-card.selected .pay-card-radio{border-color:var(--green);}
-.pay-card-radio::after{
-  content:'';width:10px;height:10px;border-radius:50%;
-  background:var(--green);transform:scale(0);
-  transition:transform .22s cubic-bezier(.34,1.56,.64,1);
-}
-.pay-card.selected .pay-card-radio::after{transform:scale(1);}
-
-/* Badge on pay-card */
-.pay-card-badge{
-  position:absolute;top:-1px;right:12px;
-  font-size:.58rem;font-weight:800;padding:2px 7px;border-radius:0 0 7px 7px;
-  background:var(--green);color:#000;letter-spacing:.04em;
-}
-
-/* ── CART CHECKOUT CTA (step 1 → step 2) ── */
-.cart-cta-bar{
-  padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom,12px));
-  background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0;
-  box-shadow:0 -8px 24px rgba(0,0,0,.3);
-}
-@keyframes ctaTotalPop{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
-.cart-cta-btn{
-  width:100%;background:linear-gradient(135deg,#2dd36f,#1da856);
-  color:#000;border-radius:14px;padding:.9rem 1.2rem;
-  font-size:.94rem;font-weight:900;letter-spacing:-.2px;
-  display:flex;align-items:center;justify-content:space-between;
-  box-shadow:0 4px 22px rgba(45,211,111,.35);
-  transition:filter .15s,transform .12s,box-shadow .2s;
-  position:relative;overflow:hidden;
-}
+/* ── CART CTA BAR ── */
+.cart-cta-bar{padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom,12px));background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0;}
+.cart-cta-btn{width:100%;background:linear-gradient(135deg,#2dd36f,#1da856);color:#000;border-radius:14px;padding:.88rem 1.2rem;font-size:.94rem;font-weight:900;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 22px rgba(45,211,111,.3);transition:filter .15s,transform .12s;}
 .cart-cta-btn:active{transform:scale(.98);filter:brightness(.92);}
 .cart-cta-btn:disabled{background:var(--bg3);color:var(--text3);box-shadow:none;}
-.cart-cta-left{display:flex;align-items:center;gap:8px;}
-.cart-cta-icon{font-size:1rem;opacity:.8;}
-.cart-cta-label{font-size:.9rem;font-weight:800;}
-.cart-cta-total{
-  font-size:1rem;font-weight:900;letter-spacing:-.4px;
-  background:rgba(0,0,0,.12);padding:4px 12px;border-radius:9px;
-}
-.cart-cta-arr{font-size:1rem;margin-left:4px;transition:transform .2s;}
-.cart-cta-btn:hover .cart-cta-arr{transform:translateX(3px);}
+.cart-cta-total{font-size:1rem;font-weight:900;background:rgba(0,0,0,.12);padding:4px 12px;border-radius:9px;}
 
-/* ── CHECKOUT PAGE (full-screen, z-index above drawer) ── */
-@keyframes ckoSlideIn{
-  from{transform:translateX(100%);opacity:.6}
-  to{transform:translateX(0);opacity:1}
-}
-@keyframes ckoSlideOut{
-  from{transform:translateX(0);opacity:1}
-  to{transform:translateX(100%);opacity:.6}
-}
-.cko-page{
-  position:fixed;
-  inset:0;
-  background:var(--bg);
-  z-index:400;
-  display:flex;
-  flex-direction:column;
-  max-width:480px;
-  margin:0 auto;
-
-  transform:translateY(100%);   /* start from bottom */
-  transition:transform .38s cubic-bezier(.32,.72,0,1);
-}
-
-.cko-page.open{
-  transform:translateY(0);      /* slide up */
-}
-
-/* Checkout topbar */
-.cko-topbar{
-  flex-shrink:0;
-  display:flex;align-items:center;gap:10px;
-  padding:12px 16px;
-  padding-top:max(env(safe-area-inset-top,12px),12px);
-  border-bottom:1px solid var(--border);
-  background:var(--bg);
-  position:sticky;top:0;z-index:10;
-}
-.cko-back{
-  width:36px;height:36px;border-radius:11px;flex-shrink:0;
-  background:var(--bg2);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;
-  font-size:1rem;cursor:pointer;
-  transition:background .15s;
-}
-.cko-back:active{background:var(--bg3);}
-.cko-topbar-info{flex:1;}
-.cko-topbar-title{font-size:.96rem;font-weight:800;letter-spacing:-.3px;}
-.cko-topbar-sub{font-size:.66rem;color:var(--text3);margin-top:1px;}
-
-/* Checkout body (scrollable) */
+/* ══════════════════════ CHECKOUT PAGE ══════════════════════ */
+.cko-page{position:fixed;inset:0;background:var(--bg);z-index:400;display:flex;flex-direction:column;max-width:480px;margin:0 auto;transform:translateY(100%);transition:transform .38s cubic-bezier(.32,.72,0,1);}
+.cko-page.open{transform:translateY(0);}
+.cko-topbar{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 16px;padding-top:max(env(safe-area-inset-top,12px),12px);border-bottom:1px solid var(--border);background:var(--bg);}
+.cko-back{width:36px;height:36px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;}
+.cko-topbar-title{font-size:.96rem;font-weight:800;}
+.cko-topbar-sub{font-size:.65rem;color:var(--text3);margin-top:1px;}
 .cko-body{flex:1;overflow-y:auto;padding:0 0 120px;}
-
-/* Checkout section wrapper */
 .cko-section{padding:16px 16px 0;}
-.cko-sec-label{
-  font-size:.6rem;font-weight:700;color:var(--text3);
-  text-transform:uppercase;letter-spacing:.12em;
-  margin-bottom:10px;display:flex;align-items:center;gap:6px;
-}
-.cko-sec-label::after{
-  content:'';flex:1;height:1px;background:var(--border);
-}
+.cko-sec-label{font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.cko-sec-label::after{content:'';flex:1;height:1px;background:var(--border);}
 
-/* Delivery card (checkout step 2 version) */
-.ck-dlv-card{
-  background:var(--bg2);border:1.5px solid var(--border);
-  border-radius:16px;overflow:hidden;
-  transition:border-color .25s,box-shadow .25s;
-  margin-bottom:4px;
-}
+/* Delivery card */
+.ck-dlv-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:4px;transition:border-color .25s;}
 .ck-dlv-card.has-data{border-color:rgba(45,211,111,.3);}
-.ck-dlv-card.editing{
-  border-color:rgba(45,211,111,.4);
-  box-shadow:0 0 0 3px rgba(45,211,111,.07);
-}
-.ck-dlv-collapsed{
-  display:flex;align-items:center;gap:12px;padding:14px 15px;cursor:pointer;
-}
-.ck-dlv-addr-icon{
-  width:38px;height:38px;border-radius:11px;flex-shrink:0;
-  background:rgba(45,211,111,.1);border:1px solid rgba(45,211,111,.2);
-  display:flex;align-items:center;justify-content:center;font-size:1.1rem;
-}
+.ck-dlv-card.editing{border-color:rgba(45,211,111,.4);}
+.ck-dlv-collapsed{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer;}
+.ck-dlv-addr-icon{width:38px;height:38px;border-radius:10px;background:var(--green-dim);border:1px solid rgba(45,211,111,.2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
 .ck-dlv-addr-body{flex:1;min-width:0;}
 .ck-dlv-addr-line1{font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ck-dlv-addr-line2{font-size:.68rem;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ck-dlv-change{
-  font-size:.68rem;font-weight:700;color:var(--green);
-  background:rgba(45,211,111,.08);border:1px solid rgba(45,211,111,.2);
-  border-radius:8px;padding:5px 10px;flex-shrink:0;cursor:pointer;
-  white-space:nowrap;transition:background .2s;
-}
-.ck-dlv-change:hover{background:rgba(45,211,111,.15);}
-
-/* Delivery form expand */
-.ck-dlv-form{
-  max-height:0;overflow:hidden;
-  transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .28s ease;
-  opacity:0;
-}
+.ck-dlv-addr-line2{font-size:.68rem;color:var(--text3);margin-top:2px;}
+.ck-dlv-change{font-size:.68rem;font-weight:700;color:var(--green);background:var(--green-dim);border:1px solid rgba(45,211,111,.2);border-radius:8px;padding:5px 10px;flex-shrink:0;cursor:pointer;}
+.ck-dlv-form{max-height:0;overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .28s;opacity:0;}
 .ck-dlv-card.editing .ck-dlv-form{max-height:540px;opacity:1;}
-.ck-dlv-form-inner{
-  padding:0 15px 15px;
-  border-top:1px solid var(--border);
-  padding-top:14px;
-}
+.ck-dlv-form-inner{padding:14px 15px 15px;border-top:1px solid var(--border);}
 .ck-field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
 .ck-field{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;}
-.ck-label{font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;}
-.ck-inp{
-  width:100%;background:var(--bg3);border:1.5px solid var(--border);
-  border-radius:11px;padding:.62rem .9rem;
-  font-size:.88rem;color:var(--text);outline:none;
-  transition:border-color .2s,box-shadow .2s;
-}
-.ck-inp:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(45,211,111,.1);}
+.ck-label{font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
+.ck-inp{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:11px;padding:.62rem .9rem;font-size:.88rem;color:var(--text);outline:none;transition:border-color .2s;}
+.ck-inp:focus{border-color:var(--green);}
 .ck-inp::placeholder{color:var(--text3);}
 select.ck-inp option{background:var(--bg2);}
-.ck-save-btn{
-  width:100%;background:var(--green);color:#000;
-  border-radius:11px;padding:.7rem;font-size:.84rem;font-weight:800;
-  transition:filter .15s,transform .1s;margin-top:4px;
-}
-.ck-save-btn:active{filter:brightness(.9);transform:scale(.98);}
+.ck-save-btn{width:100%;background:var(--green);color:#000;border-radius:11px;padding:.7rem;font-size:.84rem;font-weight:800;margin-top:4px;}
 
-/* Payment cards (checkout) */
-.ck-pay-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:4px;}
-.ck-pay-card{
-  position:relative;background:var(--bg2);
-  border:1.5px solid var(--border);border-radius:14px;
-  padding:13px 14px;cursor:pointer;
-  display:flex;align-items:center;gap:12px;
-  transition:border-color .22s,background .22s,box-shadow .22s;
-}
-.ck-pay-card:active{transform:scale(.985);}
-.ck-pay-card.selected{
-  border-color:var(--green);background:rgba(45,211,111,.04);
-  box-shadow:0 0 0 1px rgba(45,211,111,.14),inset 0 0 20px rgba(45,211,111,.03);
-}
-.ck-pay-icon{
-  width:40px;height:40px;border-radius:11px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:1.1rem;
-  border:1px solid var(--border);background:var(--bg3);
-  transition:background .22s,border-color .22s;
-}
-.ck-pay-card.selected .ck-pay-icon{
-  background:rgba(45,211,111,.12);border-color:rgba(45,211,111,.25);
-}
-.ck-pay-body{flex:1;min-width:0;}
-.ck-pay-title{font-size:.84rem;font-weight:700;line-height:1.2;}
-.ck-pay-sub{font-size:.68rem;color:var(--text3);margin-top:2px;line-height:1.4;}
-.ck-pay-radio{
-  width:20px;height:20px;border-radius:50%;
-  border:2px solid var(--border);flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  transition:border-color .22s;
-}
+/* Payment cards */
+.ck-pay-cards{display:flex;flex-direction:column;gap:8px;}
+.ck-pay-card{position:relative;background:var(--bg2);border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:border-color .2s,background .2s;}
+.ck-pay-card.selected{border-color:var(--green);background:rgba(45,211,111,.04);}
+.ck-pay-card-icon{width:40px;height:40px;border-radius:11px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;transition:background .2s;}
+.ck-pay-card.selected .ck-pay-card-icon{background:var(--green-dim);border-color:rgba(45,211,111,.25);}
+.ck-pay-card-body{flex:1;}
+.ck-pay-card-title{font-size:.84rem;font-weight:700;}
+.ck-pay-card-sub{font-size:.67rem;color:var(--text3);margin-top:2px;}
+.ck-pay-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;transition:border-color .2s;flex-shrink:0;}
 .ck-pay-card.selected .ck-pay-radio{border-color:var(--green);}
-.ck-pay-radio::after{
-  content:'';width:10px;height:10px;border-radius:50%;
-  background:var(--green);transform:scale(0);
-  transition:transform .22s cubic-bezier(.34,1.56,.64,1);
-}
+.ck-pay-radio::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--green);transform:scale(0);transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
 .ck-pay-card.selected .ck-pay-radio::after{transform:scale(1);}
-.ck-pay-badge{
-  position:absolute;top:-1px;right:12px;
-  font-size:.57rem;font-weight:800;padding:2px 7px;
-  border-radius:0 0 7px 7px;background:var(--green);color:#000;letter-spacing:.04em;
-}
 
-/* Order summary (checkout) */
-.ck-summary-card{
-  background:var(--bg2);border:1.5px solid var(--border);
-  border-radius:16px;padding:14px 16px;
-  margin-bottom:4px;
-}
-.ck-sum-row{
-  display:flex;justify-content:space-between;align-items:center;
-  font-size:.8rem;color:var(--text2);padding:5px 0;
-}
-.ck-sum-row.saving{color:var(--green);}
-.ck-sum-row.free-dlv{color:var(--green);}
+/* Order summary */
+.ck-sum-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;margin-top:4px;}
+.ck-sum-row{display:flex;justify-content:space-between;align-items:center;font-size:.84rem;padding:5px 0;color:var(--text2);}
+.ck-sum-row span:last-child{font-weight:700;color:var(--text);}
+.ck-sum-row.free-dlv span:last-child{color:var(--green);}
 .ck-sum-divider{height:1px;background:var(--border);margin:6px 0;}
-.ck-sum-total{
-  display:flex;justify-content:space-between;align-items:center;
-  font-size:.94rem;font-weight:900;padding:6px 0 0;letter-spacing:-.3px;
-}
-.ck-sum-total-num{font-size:1.08rem;color:var(--text);}
+.ck-sum-total{display:flex;justify-content:space-between;align-items:center;font-size:.95rem;font-weight:900;padding:4px 0;}
+.ck-sum-total-num{color:var(--green);font-size:1.05rem;}
 
-/* Place order sticky footer */
-.ck-place-bar{
-  position:fixed;bottom:0;left:50%;
-  transform:translateX(-50%);
-  width:100%;max-width:480px;
-  padding:12px 16px;
-  padding-bottom:max(14px,env(safe-area-inset-bottom,14px));
-  background:linear-gradient(to top,var(--bg) 80%,transparent);
-  z-index:401;pointer-events:none;
-}
-.ck-place-btn{
-  pointer-events:auto;
-  width:100%;
-  background:linear-gradient(135deg,#2dd36f,#1da856);
-  color:#000;border-radius:14px;padding:.92rem 1.2rem;
-  font-size:.96rem;font-weight:900;letter-spacing:-.3px;
-  display:flex;align-items:center;justify-content:space-between;
-  box-shadow:0 6px 28px rgba(45,211,111,.4);
-  transition:filter .15s,transform .12s,box-shadow .2s;
-}
+/* Place order bar */
+.ck-place-bar{flex-shrink:0;padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom,12px));border-top:1px solid var(--border);background:var(--bg);}
+.ck-place-btn{width:100%;background:linear-gradient(135deg,#2dd36f,#1da856);color:#000;border-radius:14px;padding:.9rem 1.2rem;font-size:.96rem;font-weight:900;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 20px rgba(45,211,111,.3);transition:filter .15s,transform .12s;}
 .ck-place-btn:active{transform:scale(.98);filter:brightness(.9);}
-.ck-place-btn:disabled{
-  background:var(--bg3);color:var(--text3);
-  box-shadow:none;pointer-events:none;
-}
-.ck-place-left{display:flex;align-items:center;gap:8px;}
-.ck-place-label{font-size:.9rem;font-weight:800;}
-.ck-place-amt{
-  font-size:1rem;font-weight:900;
-  background:rgba(0,0,0,.12);padding:4px 13px;border-radius:9px;
-}
+.ck-place-amt{font-size:1rem;font-weight:900;background:rgba(0,0,0,.12);padding:4px 12px;border-radius:9px;}
 
-/* ── PLACE ORDER BUTTON (legacy kept but unused) ── */
-.place-btn{
-  width:100%;background:linear-gradient(135deg,var(--green),#1da856);
-  color:#000;border-radius:14px;padding:.92rem;
-  font-size:.94rem;font-weight:900;letter-spacing:-.2px;
-  display:flex;align-items:center;justify-content:center;gap:.5rem;
-  box-shadow:0 4px 20px rgba(45,211,111,.3);
-  transition:filter .15s,transform .1s,box-shadow .2s;
-}
-.place-btn:active{transform:scale(.98);box-shadow:0 2px 8px rgba(45,211,111,.2);}
+/* ══════════════════════ BOTTOM NAV ══════════════════════ */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -4px 20px rgba(0,0,0,.4);}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:.55rem .3rem;cursor:pointer;color:var(--text3);transition:color .15s;}
+.bn-item.active{color:var(--green);}
+.bn-item .ni{font-size:1.2rem;line-height:1;}
+.bn-item .nl{font-size:.58rem;font-weight:700;}
 
-/* Separator */
-.cko-sep{height:1px;background:var(--border);margin:12px 0;}
-
-/* Confetti */
-@keyframes confettiFall{0%{opacity:1;transform:translateY(-10px) rotate(0deg)}100%{opacity:0;transform:translateY(90px) rotate(720deg)}}
-.cpiece{position:fixed;pointer-events:none;z-index:9999;border-radius:2px;animation:confettiFall .9s ease-out forwards;}
-
-/* FULL PAGE */
-.fpage{position:fixed;inset:0;bottom:0;background:var(--bg);z-index:95;display:none;flex-direction:column;max-width:480px;margin:0 auto;}
-.fpage.open{display:flex;}
-.fp-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;padding-top:max(env(safe-area-inset-top),12px);}
-.back-btn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:.85rem;color:var(--text);}
-.fp-title{font-size:.95rem;font-weight:700;}
-.fp-body{flex:1;overflow-y:auto;padding:12px 16px;padding-bottom:90px;}
-.fp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.fp-grid .pcard{width:100%;}
-
-/* MODAL */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;display:none;align-items:flex-end;justify-content:center;}
-.modal.open{display:flex;}
-.mbox{background:var(--bg2);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,0);}
-.mhd{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:1;}
-.mhd h2{font-size:.92rem;font-weight:700;}
-.mbody{padding:14px 16px;}
-.fg{margin-bottom:11px;}
-.fg label{display:block;font-size:.68rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;}
-.fg input,.fg select{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;padding:.58rem .8rem;font-size:.88rem;color:var(--text);}
-.fg input:focus,.fg select:focus{outline:none;border-color:var(--green);}
-.fg select option{background:var(--bg2);}
-.frow{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
-.order-sum{background:var(--bg3);border-radius:10px;padding:11px 13px;margin-bottom:13px;}
-.os-row{display:flex;justify-content:space-between;font-size:.78rem;color:var(--text2);margin-bottom:3px;}
-.os-total{display:flex;justify-content:space-between;font-size:.88rem;font-weight:800;color:var(--text);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);}
-.pay-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);margin-bottom:9px;}
-.upi-btn{width:100%;background:linear-gradient(135deg,#5b21b6,#7c3aed);color:#fff;border-radius:11px;padding:.82rem;font-size:.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:.5rem;margin-bottom:7px;}
-.wa-btn{width:100%;background:#25d366;color:#fff;border-radius:11px;padding:.82rem;font-size:.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:.5rem;}
-.or-div{text-align:center;font-size:.72rem;color:var(--text3);margin:8px 0;position:relative;}
-.or-div::before,.or-div::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:var(--border);}
-.or-div::before{left:0;} .or-div::after{right:0;}
-.confirm-btn{width:100%;background:var(--green);color:#000;border-radius:11px;padding:.82rem;font-size:.9rem;font-weight:800;margin-top:11px;}
-
-/* SUCCESS */
-.success{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;max-width:480px;margin:0 auto;}
+/* ══════════════════════ SUCCESS ══════════════════════ */
+.success{position:fixed;inset:0;background:var(--bg);z-index:600;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;}
 .success.show{display:flex;}
-.s-icon{font-size:5rem;margin-bottom:1rem;animation:pop .4s ease;}
-@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
-.s-title{font-size:1.4rem;font-weight:900;margin-bottom:.5rem;}
-.s-sub{color:var(--text2);font-size:.88rem;line-height:1.7;margin-bottom:2rem;}
-.s-back{background:var(--green);color:#000;border-radius:12px;padding:.8rem 2rem;font-size:.9rem;font-weight:800;}
+.s-icon{font-size:3.5rem;margin-bottom:16px;animation:bounce .6s ease both;}
+@keyframes bounce{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.s-title{font-size:1.5rem;font-weight:900;margin-bottom:8px;}
+.s-sub{font-size:.85rem;color:var(--text2);line-height:1.6;margin-bottom:28px;}
+.s-back{background:var(--green);color:#000;border-radius:14px;padding:.9rem 2rem;font-size:.9rem;font-weight:800;}
 
-/* BOTTOM NAV */
-.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0);z-index:500;}
-.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 0 5px;cursor:pointer;gap:3px;}
-.bn-item .ni{font-size:1.15rem;}
-.bn-item .nl{font-size:9px;font-weight:600;color:var(--text3);}
-.bn-item.active .nl{color:var(--green);}
-
-/* ── ANIMATIONS ─────────────────────────────────────── */
-@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
-.su0{animation:slideUp .32s .00s both}
-.su1{animation:slideUp .32s .07s both}
-.su2{animation:slideUp .32s .14s both}
-.su3{animation:slideUp .32s .21s both}
-.su4{animation:slideUp .32s .28s both}
-
-/* ── ACCOUNT PAGE ─────────────────────────────────── */
-.acc-page{position:fixed;inset:0;bottom:0;background:var(--bg);z-index:95;display:none;flex-direction:column;max-width:480px;margin:0 auto;}
-.acc-page.open{display:flex;}
-
-.acc-topbar{flex-shrink:0;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:12px 16px;padding-top:max(env(safe-area-inset-top),12px);}
-.acc-back{width:36px;height:36px;background:var(--bg2);border:1px solid var(--border);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;cursor:pointer;flex-shrink:0;}
-.acc-topbar-title{font-size:.98rem;font-weight:800;letter-spacing:-.3px;}
-.acc-topbar-sub{font-size:.68rem;color:var(--text3);}
-
+/* ══════════════════════ ACCOUNT PAGE ══════════════════════ */
+.acc-topbar{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 16px;padding-top:max(env(safe-area-inset-top,12px),12px);border-bottom:1px solid var(--border);background:var(--bg);}
+.acc-back{width:36px;height:36px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;cursor:pointer;flex-shrink:0;}
+.acc-topbar-title{font-size:.95rem;font-weight:800;}
+.acc-topbar-sub{font-size:.65rem;color:var(--text3);}
 .acc-tabs{display:flex;gap:6px;padding:12px 16px 0;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg);}
 .acc-tab{flex:1;padding:9px 4px 11px;text-align:center;font-size:.78rem;font-weight:700;cursor:pointer;color:var(--text3);border-bottom:2.5px solid transparent;transition:all .18s;}
 .acc-tab.active{color:var(--green);border-bottom-color:var(--green);}
-
 .acc-body{flex:1;overflow-y:auto;padding:16px 16px 90px;}
-
-/* ── FORM ELEMENTS (shared login/register) ── */
 .acc-card{background:var(--bg2);border-radius:18px;border:1px solid var(--border);overflow:hidden;margin-bottom:12px;}
-.acc-card-hero{background:linear-gradient(145deg,#0d1f35,#112842,#0a1928);padding:22px 20px;position:relative;overflow:hidden;}
+.acc-card-hero{background:linear-gradient(145deg,#0d2218,#0e1c14,#091510);padding:22px 20px;position:relative;overflow:hidden;}
 .acc-card-hero::after{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(45,211,111,.15),transparent 70%);}
 .acc-hero-emoji{font-size:2.2rem;display:block;margin-bottom:8px;}
-.acc-hero-title{font-size:1.05rem;font-weight:900;color:#fff;letter-spacing:-.3px;margin-bottom:4px;}
+.acc-hero-title{font-size:1.05rem;font-weight:900;color:#fff;margin-bottom:4px;}
 .acc-hero-sub{font-size:.74rem;color:rgba(255,255,255,.4);line-height:1.6;}
 .acc-form-body{padding:18px 18px 20px;}
 .acc-field{margin-bottom:13px;}
 .acc-label{font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:6px;}
-.acc-inp{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:.72rem 1rem;font-size:.9rem;color:var(--text);outline:none;-webkit-appearance:none;transition:border-color .2s,box-shadow .2s;}
-.acc-inp:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(45,211,111,.1);}
+.acc-inp{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:.72rem 1rem;font-size:.9rem;color:var(--text);outline:none;transition:border-color .2s;}
+.acc-inp:focus{border-color:var(--green);}
 .acc-inp::placeholder{color:var(--text3);}
-
-/* Qty pills */
-.qty-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
-.qty-opt{padding:10px 4px;text-align:center;border-radius:10px;border:1.5px solid var(--border);background:var(--bg3);font-size:.82rem;font-weight:700;cursor:pointer;color:var(--text3);transition:all .16s;}
-.qty-opt.selected{border-color:var(--green);background:rgba(45,211,111,.1);color:var(--green);}
-
-/* Buttons */
 .acc-btn{width:100%;padding:.8rem;border-radius:12px;font-size:.9rem;font-weight:800;cursor:pointer;border:none;transition:transform .1s,filter .15s;}
 .acc-btn:active{transform:scale(.98);}
 .acc-btn-green{background:var(--green);color:#000;margin-bottom:8px;}
 .acc-btn-outline{background:none;border:1.5px solid var(--border);color:var(--text2);}
 .acc-btn-danger{background:rgba(255,71,87,.07);border:1.5px solid rgba(255,71,87,.2);color:var(--red);margin-top:8px;}
-
-/* ── DASHBOARD ── */
-.dash-profile{background:linear-gradient(145deg,#0d1f35,#112842,#0a1928);border-radius:18px;padding:18px;margin-bottom:12px;position:relative;overflow:hidden;}
-.dash-profile::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(37,99,235,.2),transparent 70%);}
-.dash-profile::after{content:'';position:absolute;bottom:-30px;left:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(45,211,111,.1),transparent 70%);}
+.dash-profile{background:linear-gradient(145deg,#0d2218,#0e1c14);border-radius:18px;padding:18px;margin-bottom:12px;position:relative;overflow:hidden;}
+.dash-profile::after{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(45,211,111,.18),transparent 70%);}
 .dash-avatar-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;position:relative;z-index:1;}
 .dash-avatar{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
-.dash-name{font-size:1.05rem;font-weight:900;color:#fff;letter-spacing:-.3px;}
+.dash-name{font-size:1.05rem;font-weight:900;color:#fff;}
 .dash-phone{font-size:.72rem;color:rgba(255,255,255,.35);margin-top:2px;}
 .dash-chips{display:flex;flex-wrap:wrap;gap:6px;position:relative;z-index:1;}
 .dash-chip{font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);}
 .dash-chip.g{background:rgba(45,211,111,.12);border-color:rgba(45,211,111,.2);color:#4ade80;}
-
-/* Stats row */
 .dash-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
 .dash-stat{background:var(--bg2);border-radius:14px;border:1px solid var(--border);padding:13px 8px;text-align:center;}
-.ds-num{font-size:1.15rem;font-weight:900;letter-spacing:-.5px;margin-bottom:2px;}
-.ds-num.b{color:#60a5fa;}
-.ds-num.g{color:var(--green);}
-.ds-num.y{color:#fbbf24;}
+.ds-num{font-size:1.15rem;font-weight:900;margin-bottom:2px;}
+.ds-num.b{color:#60a5fa;}.ds-num.g{color:var(--green);}.ds-num.y{color:#fbbf24;}
 .ds-lbl{font-size:.6rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
-
-/* Section label */
-.sec-row{display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;}
+.sec-row{display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px;}
 .sec-label{font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;}
 .sec-count{font-size:.68rem;color:var(--text3);background:var(--bg2);border:1px solid var(--border);padding:2px 9px;border-radius:20px;}
-
-/* ── MILK LOG (compact — delivered days only) ── */
 .milk-log-wrap{background:var(--bg2);border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:12px;}
-.milk-log-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);animation:slideUp .28s both;}
+.milk-log-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);}
 .milk-log-row:last-child{border:none;}
-.mlog-day{width:42px;text-align:center;flex-shrink:0;}
-.mlog-day-num{font-size:.9rem;font-weight:900;line-height:1;color:var(--text);}
+.mlog-day{width:40px;text-align:center;flex-shrink:0;}
+.mlog-day-num{font-size:.9rem;font-weight:900;}
 .mlog-day-name{font-size:.55rem;font-weight:700;color:var(--text3);text-transform:uppercase;margin-top:1px;}
-.mlog-divider{width:1px;height:32px;background:var(--border);flex-shrink:0;}
+.mlog-divider{width:1px;height:30px;background:var(--border);flex-shrink:0;}
 .mlog-info{flex:1;}
-.mlog-qty{font-size:.85rem;font-weight:700;}
+.mlog-qty{font-size:.84rem;font-weight:700;}
 .mlog-amt{font-size:.72rem;color:var(--text3);margin-top:1px;}
-.mlog-pill{font-size:.68rem;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(45,211,111,.1);color:var(--green);border:1px solid rgba(45,211,111,.2);}
+.mlog-pill{font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:20px;background:var(--green-dim);color:var(--green);border:1px solid rgba(45,211,111,.2);}
 .milk-log-empty{text-align:center;padding:24px;color:var(--text3);font-size:.82rem;}
-
-/* Grocery entries (manual + app orders combined) */
-.grocery-day-group{margin-bottom:10px;}
-.grocery-day-label{font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:0 2px 6px;}
-.grocery-item-card{background:var(--bg2);border-radius:14px;border:1px solid var(--border);padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.grocery-item-card{background:var(--bg2);border-radius:14px;border:1px solid var(--border);padding:11px 14px;margin-bottom:7px;display:flex;align-items:center;gap:10px;}
 .gi-icon{width:34px;height:34px;border-radius:9px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;border:1px solid var(--border);}
 .gi-info{flex:1;min-width:0;}
 .gi-name{font-size:.84rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .gi-sub{font-size:.7rem;color:var(--text3);margin-top:1px;}
 .gi-amt{font-size:.88rem;font-weight:800;color:var(--green);flex-shrink:0;}
-.gi-tag{font-size:.62rem;font-weight:600;padding:2px 7px;border-radius:20px;flex-shrink:0;}
-.gi-tag.app{background:rgba(37,99,235,.1);color:#60a5fa;border:1px solid rgba(37,99,235,.2);}
-.gi-tag.manual{background:rgba(240,192,64,.1);color:#fbbf24;border:1px solid rgba(240,192,64,.2);}
 
+/* ══════════════════════ CONFETTI & TOAST ══════════════════════ */
+@keyframes confettiFall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(160px) rotate(600deg)}}
+.cpiece{position:fixed;border-radius:2px;animation:confettiFall .9s ease forwards;z-index:9999;pointer-events:none;}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(10px);background:#1a1a1a;color:#fff;padding:.65rem 1.2rem;border-radius:12px;font-size:.82rem;font-weight:600;z-index:9998;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;white-space:nowrap;border:1px solid var(--border);box-shadow:0 4px 20px rgba(0,0,0,.4);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+/* ══════════════════════ EMPTY STATE ══════════════════════ */
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text2);}
+.empty-state .ei{font-size:2.5rem;margin-bottom:.5rem;}
+.empty-state p{font-size:.88rem;line-height:1.6;color:var(--text3);}
+
+/* Qty grid for milk reg */
+.qty-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.qty-opt{padding:10px 4px;text-align:center;border-radius:10px;border:1.5px solid var(--border);background:var(--bg3);font-size:.82rem;font-weight:700;cursor:pointer;color:var(--text3);transition:all .16s;}
+.qty-opt.selected{border-color:var(--green);background:rgba(45,211,111,.1);color:var(--green);}
+
+/* Udhar rows */
+.su2,.su3,.su4{margin-bottom:12px;}
 </style>
 </head>
 <body>
 
+<!-- TOPBAR -->
 <div class="topbar">
   <div class="top-row">
-    <div class="logo">🛒 <span>BSC</span> Store</div>
-    <div class="icon-btn" onclick="openCart()">
-      🛒<div class="cart-badge" id="cartBadge">0</div>
-    </div>
+    <div class="logo">🛒 <span>BSC</span> Store<span class="logo-sub">Fast delivery · Best prices</span></div>
+    <div class="icon-btn" onclick="openCart()">🛒<div class="cart-badge" id="cartBadge">0</div></div>
   </div>
   <div class="search-bar">
-    <span style="color:var(--text3)">🔍</span>
+    <span class="search-icon">🔍</span>
     <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value)">
-    <span style="color:var(--text3);cursor:pointer" onclick="clearSearch()">✕</span>
+    <span style="color:var(--text3);cursor:pointer;font-size:.8rem" onclick="clearSearch()">✕</span>
   </div>
   <div class="cat-tabs" id="catTabs"></div>
 </div>
@@ -1047,10 +427,7 @@ select.ck-inp option{background:var(--bg2);}
 <div class="acc-page" id="milkPage">
   <div class="acc-topbar">
     <button class="acc-back" onclick="closeMilkPage()">&#8592;</button>
-    <div>
-      <div class="acc-topbar-title">My Account</div>
-      <div class="acc-topbar-sub">Orders &amp; Milk Delivery</div>
-    </div>
+    <div><div class="acc-topbar-title">My Account</div><div class="acc-topbar-sub">Orders &amp; Milk Delivery</div></div>
   </div>
   <div class="acc-tabs">
     <div class="acc-tab active" id="mtab0" onclick="switchMilkTab(0)">My Record</div>
@@ -1059,39 +436,35 @@ select.ck-inp option{background:var(--bg2);}
   <div class="acc-body" id="milkBody"></div>
 </div>
 
+<!-- MAIN SCROLL -->
 <div class="scroll" id="scroll"><div id="home"></div></div>
 
-<!-- FULL PAGE -->
+<!-- CATEGORY / SEARCH FULL PAGE -->
 <div class="fpage" id="fpage">
   <div class="fp-head">
-    <button class="back-btn" onclick="closeFP()">← Back</button>
+    <button class="back-btn" onclick="closeFP()">&#8592;</button>
     <span class="fp-title" id="fpTitle"></span>
   </div>
   <div class="fp-body"><div class="fp-grid" id="fpGrid"></div></div>
 </div>
-
-<!-- SEARCH PAGE -->
 <div class="fpage" id="searchPage">
   <div class="fp-head">
-    <button class="back-btn" onclick="closeSearch()">← Back</button>
-    <span class="fp-title" id="searchTitle">Search</span>
+    <button class="back-btn" onclick="closeSearch()">&#8592;</button>
+    <span class="fp-title">Search Results</span>
   </div>
   <div class="fp-body"><div class="fp-grid" id="searchGrid"></div></div>
 </div>
 
-<!-- CHECKOUT PAGE (step 2) -->
+<!-- CHECKOUT PAGE -->
 <div class="cko-page" id="ckoPage">
   <div class="cko-topbar">
     <button class="cko-back" onclick="closeCkoPage()">&#8592;</button>
-    <div class="cko-topbar-info">
-      <div class="cko-topbar-title">Checkout</div>
-      <div class="cko-topbar-sub" id="ckoTopSub">Review &amp; place order</div>
-    </div>
+    <div><div class="cko-topbar-title">Checkout</div><div class="cko-topbar-sub" id="ckoTopSub">Review &amp; place order</div></div>
   </div>
   <div class="cko-body" id="ckoBody"></div>
   <div class="ck-place-bar">
     <button class="ck-place-btn" id="ckPlaceBtn" onclick="ckoPlace()">
-      <div class="ck-place-left"><span class="ck-place-label">Place Order</span></div>
+      <span>Place Order</span>
       <span class="ck-place-amt" id="ckPlaceAmt">₹0</span>
     </button>
   </div>
@@ -1112,8 +485,6 @@ select.ck-inp option{background:var(--bg2);}
   <div class="cart-body" id="cartBody"></div>
   <div class="cart-foot" id="cartFoot"></div>
 </div>
-
-<!-- checkout now inline in cart footer -->
 
 <!-- SUCCESS -->
 <div class="success" id="success">
@@ -1144,107 +515,104 @@ select.ck-inp option{background:var(--bg2);}
 <div class="toast" id="toast"></div>
 
 <script>
-
-const searchHints = [
-  "Search potatoes",
-  "Search milk",
-  "Search bread",
-  "Search onions",
-  "Search rice",
-  "Search fruits"
-];
-
-let hintIndex = 0;
-
-function rotateSearchHint() {
-  const input = document.getElementById('searchInput');
-  if (!input) return;
-
-  input.classList.remove('hint-in');
-  input.classList.add('hint-out');
-
-  setTimeout(() => {
-    input.placeholder = searchHints[hintIndex];
-    hintIndex = (hintIndex + 1) % searchHints.length;
-
-    input.classList.remove('hint-out');
-    input.classList.add('hint-in');
-  }, 120); // very quick swap
-}
-
-// Faster than before
-window._hintTimer = setInterval(rotateSearchHint, 1700);
-
-
+// ── GLOBALS ───────────────────────────────────────────────────────────────────
 let prods=[], cats=[], banners=[], settings={};
-let cart={};
-
-// ── FREE GIFT STATE ────────────────────────────────────────────────────────────
-// giftCart: tracks the injected gift item separately so it never touches
-// the real cart object and cannot be double-injected.
-// { productId, qty, claimed } — null when no gift active
-let giftState = { injected: false, claimed: false, prevUnlocked: false };
+// cart: { "productId_variantId": qty, ... }
+let cart = {};
+let giftState = { injected:false, claimed:false, prevUnlocked:false };
 let bIdx=0, bTimer=null;
 
-function closeAllPages() {
-  document.getElementById('fpage')?.classList.remove('open');
-  document.getElementById('searchPage')?.classList.remove('open');
-  document.getElementById('milkPage')?.classList.remove('open');
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function getVariant(p, vid) {
+  if (!p.variants?.length) return null;
+  return p.variants.find(v => v.id === vid) || p.variants[0];
+}
+function defaultVariant(p) {
+  return p.variants?.[0] || null;
+}
+function cartKey(pid, vid) { return pid + '_' + vid; }
+function parseKey(k) { const i = k.indexOf('_'); return { pid: parseInt(k.slice(0,i)), vid: k.slice(i+1) }; }
+
+function getPrice(priceTiers, qty) {
+  if (!priceTiers?.length) return 0;
+  const sorted = [...priceTiers].sort((a,b) => a.minQty - b.minQty);
+  let price = sorted[0].price;
+  for (const t of sorted) { if (qty >= t.minQty) price = t.price; }
+  return price;
+}
+function getVariantPrice(p, vid, qty) {
+  const v = getVariant(p, vid);
+  if (!v) return 0;
+  return getPrice(v.priceTiers, qty || 1);
+}
+
+function offPct(price, mrp) {
+  if (!mrp || mrp <= price) return 0;
+  return Math.round((mrp - price) / mrp * 100);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-// ── NAV HELPER ────────────────────────────────────────────────────────────────
-function setNavActive(id) {
-  ['bn0','bn1','bn2','bn3'].forEach(bid => {
-    const el = document.getElementById(bid);
-    if (el) el.classList.toggle('active', bid === id);
-  });
-}
-
 async function init() {
   try {
     const d = await fetch('/api/store').then(r=>r.json());
     prods=d.products||[]; cats=d.categories||[]; banners=d.banners||[]; settings=d.settings||{};
     buildTabs(); renderHome();
-  } catch {
-    document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.<br>Make sure node server.js is running.</p></div>';
+  } catch(e) {
+    document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
   }
-  // Scroll to hide logo bar
   const scroller = document.getElementById('scroll');
-  let lastY = 0;
   scroller.addEventListener('scroll', () => {
-    const y = scroller.scrollTop;
-    const topRow = document.querySelector('.top-row');
-    const topbar = document.querySelector('.topbar');
-    if (y > 50) {
-      topRow.classList.add('hidden');
-      topbar.classList.add('scrolled');
-    } else {
-      topRow.classList.remove('hidden');
-      topbar.classList.remove('scrolled');
-    }
-    lastY = y;
-  }, { passive: true });
+    document.querySelector('.topbar').classList.toggle('scrolled', scroller.scrollTop > 40);
+  }, { passive:true });
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
 function buildTabs() {
-  document.getElementById('catTabs').innerHTML=
-    `<div class="ctab active" onclick="tabClick('all',this)"><div class="ti">🛍️</div><div class="tn">All</div></div>`+
-    cats.map(c=>`<div class="ctab" onclick="tabClick(${c.id},this)"><div class="ti">${c.imageUrl?`<img src="${c.imageUrl}">`:'📂'}</div><div class="tn">${c.name}</div></div>`).join('');
+  document.getElementById('catTabs').innerHTML =
+    `<div class="ctab active" onclick="tabClick('all',this)"><div class="ti">🛍️</div><div class="tn">All</div></div>` +
+    cats.map(c=>`<div class="ctab" onclick="tabClick(${c.id},this)">
+      <div class="ti">${c.imageUrl?`<img src="${c.imageUrl}">`:'📂'}</div>
+      <div class="tn">${c.name}</div>
+    </div>`).join('');
 }
-function tabClick(id,el) {
+function tabClick(id, el) {
   document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  if(id==='all') renderHome(); else openFP(id);
+  if (id==='all') { closeFP(); renderHome(); } else openFP(id);
 }
 
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function setNav(id) {
+  ['bn0','bn1','bn3'].forEach(b => { const el=document.getElementById(b); if(el) el.classList.toggle('active', b===id); });
+}
+function goHome() {
+  document.querySelectorAll('.ctab')[0]?.classList.add('active');
+  document.querySelectorAll('.ctab').forEach((t,i)=>{ if(i>0) t.classList.remove('active'); });
+  closeFP(); closeSearch(); document.getElementById('milkPage')?.classList.remove('open');
+  renderHome(); setNav('bn0');
+}
+function openCatsPage() {
+  setNav('bn1');
+  document.getElementById('fpTitle').textContent = 'All Categories';
+  document.getElementById('fpGrid').innerHTML = cats.map((c,i) =>
+    `<div class="cat-card ${getCcBg(i)}" onclick="openFP(${c.id})">
+      <div class="cc-img" style="height:100px">${c.imageUrl?`<img src="${c.imageUrl}" style="width:80%;height:80%;object-fit:contain">`:`<span class="cc-emoji">📂</span>`}</div>
+      <div class="cc-name">${c.name}</div>
+    </div>`
+  ).join('');
+  document.getElementById('fpage').classList.add('open');
+}
+function closeFP() { document.getElementById('fpage')?.classList.remove('open'); setNav('bn0'); }
+function closeSearch() { document.getElementById('searchPage')?.classList.remove('open'); }
+
 // ── HOME ──────────────────────────────────────────────────────────────────────
+function getCcBg(i) { return 'cc-bg-' + (i % 8); }
+
 function renderHome() {
-  let h='';
+  let h = '';
   // Banners
-  if(banners.length) {
-    h+=`<div class="banner-wrap"><div class="banner-slider"><div class="banner-track" id="btrack">
+  if (banners.length) {
+    h += `<div class="banner-wrap"><div class="banner-slider"><div class="banner-track" id="btrack">
       ${banners.map(b=>`<div class="banner-slide" onclick="bannerClick(${b.id})" style="${!b.imageUrl?'background:'+b.bgColor:''}">
         ${b.imageUrl?`<img src="${b.imageUrl}" loading="lazy">`:''}
         ${b.title?`<div class="b-text"><div class="b-title">${b.title}</div>${b.subtitle?`<div class="b-sub">${b.subtitle}</div>`:''}</div>`:''}
@@ -1253,167 +621,301 @@ function renderHome() {
     ${banners.length>1?`<div class="bdots" id="bdots">${banners.map((_,i)=>`<div class="bdot ${i===0?'active':''}" onclick="goBanner(${i})"></div>`).join('')}</div>`:''}</div>`;
     startBanner();
   }
-  // Featured
-  const feat=prods.filter(p=>p.featured&&p.inStock);
-  if(feat.length) h+=`<div class="sec"><div class="sec-hd"><span class="sec-title">⭐ Featured</span></div><div class="pstrip">${feat.map(pCard).join('')}</div></div>`;
-  // New
-  const newP=prods.filter(p=>p.isNew&&p.inStock);
-  if(newP.length) h+=`<div class="sec"><div class="sec-hd"><span class="sec-title">✨ New Arrivals</span></div><div class="pstrip">${newP.map(pCard).join('')}</div></div>`;
-  // Categories grid
-  if(cats.length) h+=`<div class="sec"><div class="sec-hd"><span class="sec-title">Shop by Category</span></div>
-    <div class="cat-grid">${cats.map(c=>`<div class="cat-card" onclick="openFP(${c.id})">
-      <div class="cc-img">${c.imageUrl?`<img src="${c.imageUrl}" loading="lazy">`:'<span style="font-size:1.4rem">📂</span>'}</div>
-      <div class="cc-name">${c.name}</div>
-    </div>`).join('')}</div></div>`;
-  // Per category strips
-  cats.forEach(c=>{
-    const ps=prods.filter(p=>p.catId===c.id&&p.inStock);
-    if(!ps.length) return;
-    h+=`<div class="sec"><div class="sec-hd"><span class="sec-title">${c.name}</span><span class="see-all" onclick="openFP(${c.id})">See all</span></div>
+  // Featured & New
+  const feat = prods.filter(p => p.featured && p.variants?.some(v=>v.inStock));
+  const newP  = prods.filter(p => p.isNew   && p.variants?.some(v=>v.inStock));
+  if (feat.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">⭐ Featured</span></div><div class="pstrip">${feat.map(pCard).join('')}</div></div>`;
+  if (newP.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">✨ New Arrivals</span></div><div class="pstrip">${newP.map(pCard).join('')}</div></div>`;
+
+  // Category grid (Blinkit style)
+  if (cats.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">Shop by Category</span></div>
+    <div class="cat-grid">${cats.map((c,i) =>
+      `<div class="cat-card ${getCcBg(i)}" onclick="openFP(${c.id})">
+        <div class="cc-img">${c.imageUrl?`<img src="${c.imageUrl}" loading="lazy">`:`<span class="cc-emoji">📂</span>`}</div>
+        <div class="cc-name">${c.name}</div>
+      </div>`
+    ).join('')}</div></div>`;
+
+  // Per-category strips
+  cats.forEach(c => {
+    const ps = prods.filter(p => p.catId===c.id && p.variants?.some(v=>v.inStock));
+    if (!ps.length) return;
+    h += `<div class="sec"><div class="sec-hd"><span class="sec-title">${c.name}</span><span class="see-all" onclick="openFP(${c.id})">See all →</span></div>
       <div class="pstrip">${ps.slice(0,8).map(pCard).join('')}</div></div>`;
   });
-  if(!h) h='<div class="empty-state" style="margin-top:3rem"><div class="ei">🛍️</div><p>No products yet.<br>Add some in admin panel!</p></div>';
-  document.getElementById('home').innerHTML=h;
-  document.getElementById('scroll').scrollTop=0;
+
+  if (!h) h = '<div class="empty-state" style="margin-top:4rem"><div class="ei">🛍️</div><p>No products yet.</p></div>';
+  document.getElementById('home').innerHTML = h;
+  document.getElementById('scroll').scrollTop = 0;
 }
 
 // ── PRODUCT CARD ──────────────────────────────────────────────────────────────
-function buildBulkTable(p, currentQty) {
-  if (!p.priceTiers || p.priceTiers.length <= 1) return '';
-  const tiers = [...p.priceTiers].sort((a,b) => a.minQty - b.minQty);
-  const activePrice = getPrice(p, currentQty || 1);
-  const rows = tiers.map((t, i) => {
-    const isActive = t.price === activePrice;
-    const nextMin = tiers[i+1]?.minQty;
-    const label = nextMin ? `${t.minQty}–${nextMin-1}` : `${t.minQty}+`;
-    const isBest = i === tiers.length - 1;
-    return `<tr class="${isActive ? 'bt-active' : ''}">
-      <td class="bt-qty">${label} qty${isBest ? '<span class="bt-tag">BEST</span>' : ''}</td>
-      <td class="bt-price">₹${t.price}</td>
-    </tr>`;
-  }).join('');
-  return `<table class="bulk-table">${rows}</table>`;
-}
-
 function pCard(p) {
-  const qty = cart[p.id] || 0;
-  const price = getPrice(p, qty || 1);
-  const bulkTable = buildBulkTable(p, qty || 1);
-  const mrp = p.mrp && p.mrp > price ? p.mrp : null;
-  const offPct = mrp ? Math.round((mrp - price) / mrp * 100) : 0;
-  return `<div class="pcard">
-    <div class="pc-img">${p.imageUrl ? `<img src="${p.imageUrl}" loading="lazy">` : '<span style="font-size:2.2rem">📦</span>'}</div>
+  const selVid = window._selVariant?.[p.id] || defaultVariant(p)?.id;
+  const v = getVariant(p, selVid);
+  if (!v) return '';
+  const qty = cart[cartKey(p.id, selVid)] || 0;
+  const price = getPrice(v.priceTiers, qty || 1);
+  const mrp = v.mrp && v.mrp > price ? v.mrp : null;
+  const off = offPct(price, mrp);
+  const hasMultiVariants = p.variants.length > 1;
+  const bulkHint = getBulkHint(v.priceTiers, qty || 1);
+  const imgUrl = v.imageUrl || p.imageUrl || '';
+
+  // Variant selector
+  const variantSel = hasMultiVariants
+    ? `<select class="pc-variant-sel" onchange="onVariantChange(${p.id}, this.value)" onclick="event.stopPropagation()">
+        ${p.variants.map(vv => `<option value="${vv.id}" ${vv.id===selVid?'selected':''}>${vv.label}</option>`).join('')}
+      </select>`
+    : `<div class="pc-variant-label">${v.label}</div>`;
+
+  const addCtrl = qty > 0
+    ? `<div class="qty-ctrl">
+        <button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button>
+        <span>${qty}</span>
+        <button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button>
+       </div>`
+    : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
+
+  return `<div class="pcard" onclick="openProductDetail(${p.id})">
+    <div class="pc-img-wrap">
+      ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : '<span style="font-size:2.5rem">📦</span>'}
+      ${off > 0 ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
+      ${p.isNew ? `<span class="pc-new-badge">NEW</span>` : ''}
+    </div>
     <div class="pc-body">
-      <div class="pc-unit">${p.unit || ''}</div>
+      ${variantSel}
       <div class="pc-name">${p.name}</div>
-      ${bulkTable}
-      <div class="pc-bot">
-        <div>
-          ${mrp ? `<div style="display:flex;align-items:center;gap:3px;margin-bottom:1px">
-            <span class="pc-mrp">₹${mrp}</span>
-            <span class="pc-off">${offPct}% off</span>
-          </div>` : ''}
-          <span class="pc-price">₹${price}</span>
-        </div>
-        <div id="pc-${p.id}">${ctrlHTML(p.id, qty)}</div>
+      <div class="pc-delivery">⚡ 30 min delivery</div>
+      <div class="pc-price-row">
+        <span class="pc-price">₹${price}</span>
+        ${mrp ? `<span class="pc-mrp">₹${mrp}</span><span class="pc-off">${off}% off</span>` : ''}
       </div>
+      ${bulkHint ? `<div class="pc-bulk-hint">📦 ${bulkHint}</div>` : ''}
+      <div class="pc-bot">${addCtrl}</div>
     </div>
   </div>`;
 }
-function ctrlHTML(id,qty) {
-  return qty>0
-    ?`<div class="qty-ctrl"><button onclick="chQty(${id},-1)">−</button><span>${qty}</span><button onclick="chQty(${id},1)">+</button></div>`
-    :`<button class="add-btn" onclick="addItem(${id})">ADD</button>`;
+
+function getBulkHint(tiers, qty) {
+  if (!tiers || tiers.length <= 1) return '';
+  const sorted = [...tiers].sort((a,b) => a.minQty - b.minQty);
+  const curPrice = getPrice(tiers, qty);
+  for (const t of sorted) {
+    if (t.minQty > qty && t.price < curPrice) return `Buy ${t.minQty}+ @ ₹${t.price}`;
+  }
+  const best = sorted[sorted.length-1];
+  if (best.minQty <= 1) return '';
+  return `Buy ${best.minQty}+ @ ₹${best.price}`;
 }
 
-// ── PRICING ───────────────────────────────────────────────────────────────────
-function getPrice(p,qty) {
-  if(!p.priceTiers?.length) return 0;
-  const sorted=[...p.priceTiers].sort((a,b)=>b.minQty-a.minQty);
-  for(const t of sorted) if(qty>=t.minQty) return t.price;
-  return p.priceTiers[0].price;
-}
-function tierNote(p) {
-  if(!p.priceTiers||p.priceTiers.length<=1) return '';
-  const best=[...p.priceTiers].sort((a,b)=>b.minQty-a.minQty)[0];
-  return `Buy ${best.minQty}+ = ₹${best.price} each`;
-}
-
-// ── CART ACTIONS ──────────────────────────────────────────────────────────────
-function addItem(id) {
-  cart[id]=(cart[id]||0)+1;
-  refresh(id); updateCart();
-  // Bounce the float cart pill
-  const fc=document.getElementById('fcart');
-  fc.classList.remove('bounce');
-  void fc.offsetWidth; // reflow
-  fc.classList.add('bounce');
-  fc.addEventListener('animationend',()=>fc.classList.remove('bounce'),{once:true});
-}
-function chQty(id,d) {
-  cart[id]=(cart[id]||0)+d;
-  if(cart[id]<=0) delete cart[id];
-  refresh(id); updateCart();
-  if(document.getElementById('cartDrawer').classList.contains('open')) renderCart();
-}
-function refresh(id) {
-  const qty = cart[id] || 0;
-  const p = prods.find(x => x.id == id);
-  if (!p) return;
-  document.querySelectorAll(`[id="pc-${id}"]`).forEach(el => {
-    el.innerHTML = ctrlHTML(id, qty);
-    const card = el.closest('.pcard');
-    if (!card) return;
-    // Update bulk table active highlights
-    const oldTable = card.querySelector('.bulk-table');
-    if (oldTable) oldTable.outerHTML = buildBulkTable(p, qty || 1);
-    // Update selling price (tier may have changed)
-    const priceEl = card.querySelector('.pc-price');
-    if (priceEl) priceEl.textContent = '₹' + getPrice(p, qty || 1);
-    // Update % off badge (selling price changes, MRP stays)
-    const newPrice = getPrice(p, qty || 1);
-    const mrp = p.mrp && p.mrp > newPrice ? p.mrp : null;
-    const offEl = card.querySelector('.pc-off');
-    if (offEl && mrp) offEl.textContent = Math.round((mrp - newPrice) / mrp * 100) + '% off';
+// ── VARIANT CHANGE ────────────────────────────────────────────────────────────
+window._selVariant = {};
+function onVariantChange(pid, vid) {
+  window._selVariant[pid] = vid;
+  // Re-render product cards wherever this product appears
+  document.querySelectorAll('.pcard, .fp-grid .pcard').forEach(el => {
+    // Refresh by rebuilding the grid sections that contain this product
   });
-}
-// ── GIFT HELPERS ─────────────────────────────────────────────────────────────
-
-/** Returns the active freeGift config or null */
-function giftCfg() {
-  const fg = settings.freeGift;
-  if (!fg || !fg.threshold || !fg.productId) return null;
-  const prod = prods.find(p => p.id === fg.productId);
-  if (!prod) return null;
-  // discountPrice: 0 = free, >0 = special offer price (e.g. ₹5 potatoes)
-  const discountPrice = typeof fg.discountPrice === 'number' ? fg.discountPrice : 0;
-  const isFree = discountPrice === 0;
-  return { ...fg, prod, discountPrice, isFree };
+  // Quick approach: re-render the current page
+  const fpOpen = document.getElementById('fpage')?.classList.contains('open');
+  if (fpOpen) {
+    const catId = window._openCatId;
+    if (catId) renderFPContent(catId);
+  } else {
+    renderHome();
+  }
 }
 
-/** Items total (no gift) — used as threshold comparison base */
+// ── OPEN FP ───────────────────────────────────────────────────────────────────
+window._openCatId = null;
+function openFP(catId) {
+  window._openCatId = catId;
+  const cat = cats.find(c => c.id === catId);
+  document.getElementById('fpTitle').textContent = cat?.name || '';
+  renderFPContent(catId);
+  document.getElementById('fpage').classList.add('open');
+  document.getElementById('searchPage').classList.remove('open');
+}
+function renderFPContent(catId) {
+  const ps = prods.filter(p => p.catId === catId && p.variants?.some(v=>v.inStock));
+  document.getElementById('fpGrid').innerHTML = ps.length
+    ? ps.map(pCard).join('')
+    : '<div class="empty-state"><div class="ei">🛒</div><p>No products in this category.</p></div>';
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────────────────
+let searchTimer = null;
+function onSearch(q) {
+  clearTimeout(searchTimer);
+  if (!q.trim()) { closeSearch(); return; }
+  searchTimer = setTimeout(() => {
+    const results = prods.filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
+    document.getElementById('searchGrid').innerHTML = results.length
+      ? results.map(pCard).join('')
+      : `<div class="empty-state" style="grid-column:1/-1"><div class="ei">🔍</div><p>No results for "${q}"</p></div>`;
+    document.getElementById('searchPage').classList.add('open');
+    document.getElementById('fpage').classList.remove('open');
+  }, 200);
+}
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  closeSearch();
+}
+
+// ── PRODUCT DETAIL MODAL ──────────────────────────────────────────────────────
+function openProductDetail(pid) {
+  const p = prods.find(x => x.id === pid);
+  if (!p) return;
+  const selVid = window._selVariant?.[pid] || defaultVariant(p)?.id;
+  const v = getVariant(p, selVid);
+  if (!v) return;
+
+  const existing = document.getElementById('pdModal');
+  if (existing) existing.remove();
+
+  const qty = cart[cartKey(pid, selVid)] || 0;
+  const price = getPrice(v.priceTiers, qty || 1);
+  const mrp = v.mrp && v.mrp > price ? v.mrp : null;
+  const off = offPct(price, mrp);
+  const imgUrl = v.imageUrl || p.imageUrl || '';
+  const tiers = v.priceTiers || [];
+  const sorted = [...tiers].sort((a,b) => a.minQty - b.minQty);
+
+  const tiersHTML = sorted.length > 1 ? `
+    <div style="margin-top:12px">
+      <div style="font-size:.7rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Bulk Pricing</div>
+      <div style="background:var(--bg3);border-radius:10px;overflow:hidden;border:1px solid var(--border)">
+        ${sorted.map((t,i) => {
+          const next = sorted[i+1]?.minQty;
+          const label = next ? `${t.minQty}–${next-1} units` : `${t.minQty}+ units`;
+          const isActive = t.price === price;
+          const isBest = i === sorted.length - 1;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);${i===sorted.length-1?'border:none':''}${isActive?'background:rgba(45,211,111,.08)':''}">
+            <span style="font-size:.82rem;color:${isActive?'var(--green)':'var(--text2)'};">${label}${isBest?` <span style="font-size:.65rem;background:rgba(45,211,111,.15);color:var(--green);padding:1px 5px;border-radius:4px;font-weight:800">BEST</span>`:''}${isActive?` <span style="font-size:.65rem;color:var(--green);font-weight:700">← current</span>`:''}</span>
+            <span style="font-size:.88rem;font-weight:800;color:${isActive?'var(--green)':'var(--text)'};">₹${t.price}/unit</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  const variantHTML = p.variants.length > 1 ? `
+    <div style="margin-top:12px">
+      <div style="font-size:.7rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Select Variant</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        ${p.variants.map(vv => {
+          const vp = getPrice(vv.priceTiers, 1);
+          const isActive = vv.id === selVid;
+          return `<button onclick="selectDetailVariant(${pid},'${vv.id}')" style="padding:7px 12px;border-radius:9px;font-size:.8rem;font-weight:700;border:1.5px solid ${isActive?'var(--green)':'var(--border)'};background:${isActive?'rgba(45,211,111,.12)':'var(--bg3)'};color:${isActive?'var(--green)':'var(--text2)'};cursor:pointer;">${vv.label} · ₹${vp}</button>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  const addCtrl = qty > 0
+    ? `<div style="display:flex;align-items:center;gap:12px;flex:1">
+        <div class="qty-ctrl" style="flex:1;justify-content:space-between;padding:0">
+          <button onclick="chQtyModal(${pid},'${selVid}',-1)" style="padding:10px 16px;font-size:1.2rem">−</button>
+          <span style="font-size:1rem">${qty}</span>
+          <button onclick="chQtyModal(${pid},'${selVid}',1)" style="padding:10px 16px;font-size:1.2rem">+</button>
+        </div>
+       </div>`
+    : `<button onclick="chQtyModal(${pid},'${selVid}',1)" style="flex:1;background:var(--green);color:#000;border:none;border-radius:12px;padding:14px;font-size:.92rem;font-weight:900;cursor:pointer">+ ADD TO CART</button>`;
+
+  const modal = document.createElement('div');
+  modal.id = 'pdModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.7);backdrop-filter:blur(4px)';
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border-radius:22px 22px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,0)">
+      <div style="width:40px;height:4px;background:var(--bg5);border-radius:2px;margin:10px auto 0"></div>
+      <div style="padding:16px 16px 20px">
+        <div style="display:flex;gap:14px;margin-bottom:14px">
+          <div style="width:100px;height:100px;border-radius:14px;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)">
+            ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:contain;padding:6px">` : '<span style="font-size:2.5rem">📦</span>'}
+          </div>
+          <div style="flex:1;min-width:0">
+            ${p.isNew ? '<div style="display:inline-block;font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:20px;background:#3b82f6;color:#fff;margin-bottom:5px">NEW ARRIVAL</div>' : ''}
+            <div style="font-size:1rem;font-weight:800;line-height:1.3;margin-bottom:4px">${p.name}</div>
+            <div style="font-size:.8rem;color:var(--text3);margin-bottom:8px">${v.label}</div>
+            <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap">
+              <span style="font-size:1.3rem;font-weight:900">₹${price}</span>
+              ${mrp ? `<span style="font-size:.85rem;color:var(--text3);text-decoration:line-through">₹${mrp}</span><span style="font-size:.75rem;background:rgba(255,71,87,.15);color:var(--red);padding:2px 6px;border-radius:4px;font-weight:800">${off}% off</span>` : ''}
+            </div>
+            <div style="font-size:.75rem;color:var(--green);font-weight:600;margin-top:4px">⚡ 30 min delivery</div>
+          </div>
+        </div>
+        ${variantHTML}
+        ${tiersHTML}
+        <div style="display:flex;gap:10px;margin-top:16px;align-items:center">
+          ${addCtrl}
+        </div>
+      </div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+function selectDetailVariant(pid, vid) {
+  window._selVariant[pid] = vid;
+  document.getElementById('pdModal')?.remove();
+  openProductDetail(pid);
+  // Also refresh home/page
+  const fpOpen = document.getElementById('fpage')?.classList.contains('open');
+  if (fpOpen && window._openCatId) renderFPContent(window._openCatId);
+  else renderHome();
+}
+
+function chQtyModal(pid, vid, delta) {
+  chQty(pid, vid, delta);
+  document.getElementById('pdModal')?.remove();
+  openProductDetail(pid);
+}
+
+// ── CART OPERATIONS ───────────────────────────────────────────────────────────
+function chQty(pid, vid, delta) {
+  const key = cartKey(pid, vid);
+  const cur = cart[key] || 0;
+  const nw = Math.max(0, cur + delta);
+  if (nw === 0) delete cart[key]; else cart[key] = nw;
+  updateCart();
+  // Re-render affected product cards
+  const fpOpen = document.getElementById('fpage')?.classList.contains('open');
+  if (fpOpen && window._openCatId) renderFPContent(window._openCatId);
+  else renderHome();
+  // Bounce pill
+  const fc = document.getElementById('fcart');
+  if (delta > 0) { fc.classList.add('bounce'); setTimeout(() => fc.classList.remove('bounce'), 500); }
+}
+
 function itemsTotal() {
-  return Object.entries(cart).reduce((s, [id, qty]) => {
-    const p = prods.find(x => x.id == id);
-    return s + (p ? getPrice(p, qty) * qty : 0);
+  return Object.entries(cart).reduce((s, [k, qty]) => {
+    const { pid, vid } = parseKey(k);
+    const p = prods.find(x => x.id === pid);
+    if (!p) return s;
+    const v = getVariant(p, vid);
+    if (!v) return s;
+    return s + getPrice(v.priceTiers, qty) * qty;
   }, 0);
 }
 
-/** Grand total = items + offer price of injected gift (₹0 if free) */
+function giftCfg() {
+  const fg = settings.freeGift;
+  if (!fg || !fg.threshold) return null;
+  const p = prods.find(x => x.id === fg.productId);
+  if (!p) return null;
+  const v = fg.variantId ? getVariant(p, fg.variantId) : defaultVariant(p);
+  return { ...fg, prod: p, variant: v, isFree: fg.discountPrice === 0 };
+}
+
 function total() {
   const base = itemsTotal();
   const cfg = giftCfg();
-  const giftCharge = (giftState.injected && cfg && cfg.discountPrice > 0)
-    ? cfg.discountPrice * (cfg.qty || 1)
-    : 0;
+  const giftCharge = (giftState.injected && cfg && cfg.discountPrice > 0) ? cfg.discountPrice * (cfg.qty || 1) : 0;
   return base + giftCharge;
 }
 
-/** Real item count — excludes the locked gift item */
-function count() { return Object.values(cart).reduce((a, b) => a + b, 0); }
+function count() { return Object.values(cart).reduce((a,b) => a+b, 0); }
 
 function updateCart() {
-  // Evaluate gift before updating UI
   evaluateGift();
   const n = count(), t = total();
   const badge = document.getElementById('cartBadge');
@@ -1421,1264 +923,593 @@ function updateCart() {
   badge.textContent = n;
   const fc = document.getElementById('fcart');
   fc.classList.toggle('show', n > 0);
-  document.getElementById('fcCnt').textContent = n + (n === 1 ? ' item' : ' items');
+  document.getElementById('fcCnt').textContent = n + (n===1?' item':' items');
   document.getElementById('fcAmt').textContent = '₹' + t;
 }
 
-/**
- * Core gift evaluation — called on every cart mutation.
- * Handles auto-add, auto-remove, unlock celebration.
- */
 function evaluateGift() {
   const cfg = giftCfg();
-  if (!cfg || !cfg.threshold) {
-    // No gift configured — clean up any stale state
-    if (giftState.injected) { giftState.injected = false; giftState.claimed = false; }
-    return;
-  }
-
-  const t = itemsTotal();  // threshold checks against items only, not gift charge
+  if (!cfg || !cfg.threshold) { if (giftState.injected) { giftState.injected=false; giftState.claimed=false; } return; }
+  const t = itemsTotal();
   const unlocked = t >= cfg.threshold;
-
-  // ── AUTO-ADD MODE ──────────────────────────────────────────────────────────
   if (cfg.autoAdd) {
-    if (unlocked && !giftState.injected) {
-      // Inject gift
-      giftState.injected = true;
-      giftState.claimed  = true;
-      // Fire celebration only on first unlock in this session
-      if (!giftState.prevUnlocked) {
-        giftState.prevUnlocked = true;
-        _celebrateGift(cfg);
-      }
-    } else if (!unlocked && giftState.injected) {
-      // Remove gift when cart drops below threshold
-      giftState.injected = false;
-      giftState.claimed  = false;
-      giftState.prevUnlocked = false;
-    }
-  }
-
-  // ── MANUAL CLAIM MODE ─────────────────────────────────────────────────────
-  if (!cfg.autoAdd) {
-    if (!unlocked && giftState.injected) {
-      // Threshold no longer met — remove
-      giftState.injected = false;
-      giftState.claimed  = false;
-    }
-    if (unlocked && !giftState.prevUnlocked) {
-      giftState.prevUnlocked = true;
-      // toast cue so user knows to claim
-      showToast('🎁 Tap to claim your free gift!');
-    }
-    if (!unlocked) giftState.prevUnlocked = false;
+    if (unlocked && !giftState.injected) { giftState.injected=true; giftState.claimed=true; if (!giftState.prevUnlocked) { giftState.prevUnlocked=true; _celebrateGift(cfg); } }
+    else if (!unlocked && giftState.injected) { giftState.injected=false; giftState.claimed=false; giftState.prevUnlocked=false; }
+  } else {
+    if (!unlocked && giftState.injected) { giftState.injected=false; giftState.claimed=false; }
+    if (unlocked && !giftState.prevUnlocked) { giftState.prevUnlocked=true; showToast('🎁 Tap to claim your free gift!'); }
+    if (!unlocked) giftState.prevUnlocked=false;
   }
 }
-
-/** Celebration: confetti burst + context-aware toast */
-function _celebrateGift(cfg) {
-  fireConfetti();
-  const name = cfg.label || cfg.prod?.name || 'Gift';
-  const msg = cfg.isFree
-    ? `🎁 ${name} added FREE to your cart!`
-    : `🎁 ${name} added at just ₹${cfg.discountPrice}!`;
-  showToast(msg);
-}
-
-/** Called when user taps "Claim" button (manual mode) */
-function claimGift() {
-  const cfg = giftCfg();
-  if (!cfg || giftState.injected) return;
-  giftState.injected = true;
-  giftState.claimed  = true;
-  _celebrateGift(cfg);
-  renderCart();
-}
-
-/** User manually removes the gift/offer from their cart */
-function removeGift() {
-  giftState.injected     = false;
-  giftState.claimed      = false;
-  giftState.prevUnlocked = false;  // reset so they can re-claim if they want
-  updateCart();
-  renderCart();
-  showToast('Offer removed from cart');
-}
+function _celebrateGift(cfg) { fireConfetti(); showToast(cfg.isFree ? `🎁 ${cfg.label||'Free Gift'} added FREE!` : `🔥 ${cfg.label} added at ₹${cfg.discountPrice}!`); }
+function claimGift() { const cfg=giftCfg(); if(!cfg||giftState.injected) return; giftState.injected=true; giftState.claimed=true; _celebrateGift(cfg); renderCart(); }
+function removeGift() { giftState.injected=false; giftState.claimed=false; giftState.prevUnlocked=false; updateCart(); renderCart(); showToast('Offer removed'); }
 
 // ── CART DRAWER ───────────────────────────────────────────────────────────────
 function openCart() {
-  if (!count()) {
-    showToast('Your cart is empty');
-    return;
-  }
-
+  if (!count()) { showToast('Your cart is empty'); return; }
   renderCart();
-
   document.getElementById('cartOverlay').classList.add('open');
   document.getElementById('cartDrawer').classList.add('open');
-
-  // 🔥 HIDE BOTTOM NAV
-  document.querySelector('.bnav').style.display = 'none';
+  document.querySelector('.bnav').style.display='none';
 }
 function closeCart() {
   document.getElementById('cartOverlay').classList.remove('open');
   document.getElementById('cartDrawer').classList.remove('open');
-
-  // 🔥 SHOW BOTTOM NAV BACK
-  document.querySelector('.bnav').style.display = '';
-}
-// ── CONFETTI ───────────────────────────────────────────────────────────────────
-function fireConfetti() {
-  const colors = ['#2dd36f','#ffd700','#ff6b6b','#60a5fa','#f59e0b','#a78bfa','#fb923c'];
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight * 0.25;
-  for (let i = 0; i < 32; i++) {
-    const el = document.createElement('div');
-    el.className = 'cpiece';
-    const size = 5 + Math.random() * 6;
-    el.style.cssText = `left:${cx-70+Math.random()*140}px;top:${cy}px;width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};animation-delay:${Math.random()*.35}s;animation-duration:${.7+Math.random()*.55}s;`;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 1400);
-  }
-}
-
-// ── ONE-SCREEN CHECKOUT: remember user details ─────────────────────────────────
-const UD_KEY = 'bsc_ud_v1';
-function loadUD() { try { return JSON.parse(localStorage.getItem(UD_KEY)) || {}; } catch { return {}; } }
-function saveUD(d) { try { localStorage.setItem(UD_KEY, JSON.stringify(d)); } catch {} }
-function clearUD() { localStorage.removeItem(UD_KEY); renderCart(); }
-
-// ── TIER COACH ─────────────────────────────────────────────────────────────────
-function getTierCoach(p, qty) {
-  if (!p.priceTiers || p.priceTiers.length <= 1) return '';
-  const sorted = [...p.priceTiers].sort((a,b) => a.minQty - b.minQty);
-  const curPrice = getPrice(p, qty);
-  for (const tier of sorted) {
-    if (tier.minQty > qty && tier.price < curPrice) {
-      return `Buy ${tier.minQty - qty} more → ₹${tier.price} each 🔥`;
-    }
-  }
-  return '';
+  document.querySelector('.bnav').style.display='';
 }
 
 function renderCart() {
   evaluateGift();
   const cfg = giftCfg();
-  const items = Object.entries(cart)
-    .map(([id, qty]) => ({ p: prods.find(x => x.id == id), qty }))
-    .filter(x => x.p);
+  const items = Object.entries(cart).map(([k,qty]) => {
+    const { pid, vid } = parseKey(k);
+    const p = prods.find(x => x.id===pid);
+    const v = p ? getVariant(p, vid) : null;
+    return p && v ? { p, v, vid, qty, key:k } : null;
+  }).filter(Boolean);
   const hasGift = giftState.injected && cfg;
 
   if (!items.length && !hasGift) {
-    document.getElementById('cartBody').innerHTML = `
-      <div style="text-align:center;padding:60px 20px">
-        <div style="font-size:3rem;margin-bottom:10px">🛒</div>
-        <div style="font-weight:900;margin-bottom:6px">Your cart is empty</div>
-        <div style="color:var(--text3);font-size:.8rem;margin-bottom:18px">Add something tasty to get started</div>
-        <button onclick="closeCart()" style="background:var(--green);color:#000;border:none;border-radius:10px;padding:10px 20px;font-weight:800;font-size:.85rem;">Browse items</button>
-      </div>`;
-    document.getElementById('cartFoot').innerHTML = '';
+    document.getElementById('cartBody').innerHTML=`<div style="text-align:center;padding:50px 20px"><div style="font-size:3rem;margin-bottom:10px">🛒</div><div style="font-weight:900;margin-bottom:6px">Cart is empty</div><div style="color:var(--text3);font-size:.8rem;margin-bottom:18px">Add something to get started</div><button onclick="closeCart()" style="background:var(--green);color:#000;border:none;border-radius:10px;padding:10px 20px;font-weight:800;font-size:.85rem;">Browse items</button></div>`;
+    document.getElementById('cartFoot').innerHTML='';
     return;
   }
 
-  const t = total();
-  const itemsT = itemsTotal();
-  const min = settings.minOrder || 99;
-  const fdMin = settings.freeDeliveryMin || min;
-  const n = count();
+  const t = total(), itemsT = itemsTotal();
+  const fdMin = settings.freeDeliveryMin || settings.minOrder || 99;
   const fdUnlocked = t >= fdMin;
-
+  const n = count();
   if (fdUnlocked && !window._fdUnlocked) { window._fdUnlocked=true; fireConfetti(); showToast('🎉 Free delivery unlocked!'); }
-  if (!fdUnlocked) window._fdUnlocked = false;
+  if (!fdUnlocked) window._fdUnlocked=false;
 
-  let mrpTotal = 0, actualTotal = 0;
-  items.forEach(({p, qty}) => {
-    const base = p.priceTiers?.[0]?.price || 0;
-    mrpTotal  += (p.mrp && p.mrp > base ? p.mrp : base) * qty;
-    actualTotal += getPrice(p, qty) * qty;
-  });
-  const saved = Math.max(0, mrpTotal - actualTotal);
+  document.getElementById('cartHdCount').textContent = n + ' item' + (n!==1?'s':'');
 
-  document.getElementById('cartHdCount').textContent = n + ' item' + (n !== 1 ? 's' : '');
-
-  // ── CART ITEMS ─────────────────────────────────────────────────────────────
-  const regularItemsHTML = items.map(({p, qty}) => {
-    const pr = getPrice(p, qty);
-    const coach = getTierCoach(p, qty);
-    return `
-    <div class="ci">
-      <div class="ci-img">${p.imageUrl ? `<img src="${p.imageUrl}">` : '<span style="font-size:1.5rem">📦</span>'}</div>
+  // Items
+  const regularHTML = items.map(({ p, v, vid, qty, key }) => {
+    const pr = getPrice(v.priceTiers, qty);
+    const coach = getBulkCoach(v.priceTiers, qty);
+    const imgUrl = v.imageUrl || p.imageUrl || '';
+    return `<div class="ci">
+      <div class="ci-img">${imgUrl?`<img src="${imgUrl}">`:'<span style="font-size:1.5rem">📦</span>'}</div>
       <div class="ci-info">
         <div class="ci-name">${p.name}</div>
-        <div class="ci-meta">${p.unit || ''}</div>
+        <div class="ci-meta">${v.label}</div>
         <div class="ci-price-row">
-          <span class="ci-total">₹${pr * qty}</span>
+          <span class="ci-total">₹${pr*qty}</span>
           <span class="ci-each">${qty}×₹${pr}</span>
         </div>
         ${coach ? `<div class="tier-coach">⬆ ${coach}</div>` : ''}
       </div>
       <div class="ci-ctrl">
-        <button onclick="chQty(${p.id},-1)">−</button>
+        <button onclick="chQtyCart('${key}',-1)">−</button>
         <span>${qty}</span>
-        <button onclick="chQty(${p.id},1)">+</button>
+        <button onclick="chQtyCart('${key}',1)">+</button>
       </div>
     </div>`;
   }).join('');
 
-  // ── GIFT ITEM ──────────────────────────────────────────────────────────────
-  const giftItemHTML = hasGift ? (() => {
-    const gp = cfg.prod;
-    const origPrice  = getPrice(gp, 1);
+  // Gift item
+  const giftHTML = hasGift ? (() => {
+    const gp = cfg.prod, gv = cfg.variant;
+    const origPrice = getPrice(gv?.priceTiers || gp.variants?.[0]?.priceTiers || [], 1);
     const offerPrice = cfg.discountPrice;
-    const displayPrice = offerPrice > 0 ? `₹${offerPrice}` : '₹0';
-    const badgeText = offerPrice > 0 ? `🔥 OFFER ₹${offerPrice}` : '🎁 FREE';
-    const badgeStyle = offerPrice > 0 ? 'background:rgba(255,80,60,.18);border:1px solid rgba(255,80,60,.3);color:#ff6b4a;' : '';
-    return `
-    <div class="ci ci-gift" id="cartGiftItem">
-      <div class="ci-img" style="position:relative">
-        ${gp.imageUrl ? `<img src="${gp.imageUrl}">` : '<span style="font-size:1.5rem">🎁</span>'}
-        <span style="position:absolute;bottom:-3px;right:-3px;font-size:.7rem">${offerPrice > 0 ? '🔥' : '🎁'}</span>
-      </div>
+    const imgUrl = gv?.imageUrl || gp.imageUrl || '';
+    const isFree = offerPrice === 0;
+    return `<div class="ci ci-gift">
+      <div class="ci-img">${imgUrl?`<img src="${imgUrl}">`:'<span style="font-size:1.5rem">🎁</span>'}</div>
       <div class="ci-info">
         <div class="ci-name">${gp.name}</div>
-        <div class="ci-meta">${gp.unit || ''}</div>
-        <div class="ci-price-row" style="align-items:center">
-          <span class="ci-gift-price" style="${offerPrice > 0 ? 'color:#ff6b4a' : ''}">${displayPrice}</span>
+        <div class="ci-meta">${gv?.label||''}</div>
+        <div class="ci-price-row">
+          <span class="ci-gift-price">${isFree?'FREE':'₹'+offerPrice}</span>
           ${origPrice > offerPrice ? `<span class="ci-gift-original">₹${origPrice}</span>` : ''}
         </div>
-        <span class="ci-gift-badge" style="${badgeStyle}">${badgeText}</span>
+        <span class="ci-gift-badge">${isFree?'🎁 FREE GIFT':'🔥 SPECIAL OFFER'}</span>
       </div>
-      <button class="ci-gift-remove" onclick="removeGift()" title="Remove">✕</button>
+      <button class="ci-gift-remove" onclick="removeGift()">✕</button>
     </div>`;
   })() : '';
 
-  document.getElementById('cartBody').innerHTML = regularItemsHTML + giftItemHTML;
+  document.getElementById('cartBody').innerHTML = regularHTML + giftHTML;
 
-  // ── UPSELL STRIP ───────────────────────────────────────────────────────────
-  const upsellIds = (settings.upsellProductIds || []).map(Number);
-  const giftPid = cfg?.productId;
-  const upsells = upsellIds
-    .filter(id => id !== giftPid)
-    .map(id => prods.find(p => p.id === id))
-    .filter(p => p && p.inStock && !cart[p.id]);
-  const upsellHTML = upsells.length ? `
-    <div class="upsell-wrap">
-      <div class="upsell-label">⚡ You may also need</div>
-      <div class="upsell-scroll">
-        ${upsells.map(p => `
-          <div class="upsell-card">
-            <div class="upsell-card-img">${p.imageUrl ? `<img src="${p.imageUrl}">` : '<span style="font-size:1.1rem">📦</span>'}</div>
-            <div class="upsell-card-name">${p.name}</div>
-            <div class="upsell-card-price">₹${getPrice(p, 1)}</div>
-            <button class="upsell-add-btn" id="uadd${p.id}" onclick="upsellAdd(${p.id})">+ Add</button>
-          </div>`).join('')}
-      </div>
-    </div>` : '';
+  // Upsell
+  const upsellIds = (settings.upsellProductIds||[]).map(Number);
+  const upsells = upsellIds.map(id => prods.find(p=>p.id===id)).filter(p => {
+    if (!p) return false;
+    const dv = defaultVariant(p);
+    return dv?.inStock && !cart[cartKey(p.id, dv.id)];
+  });
+  const upsellHTML = upsells.length ? `<div class="upsell-wrap">
+    <div class="upsell-label">⚡ You may also need</div>
+    <div class="upsell-scroll">${upsells.map(p => {
+      const dv = defaultVariant(p);
+      const pr = getPrice(dv.priceTiers, 1);
+      const imgUrl = dv.imageUrl || p.imageUrl || '';
+      return `<div class="upsell-card">
+        <div class="upsell-card-img">${imgUrl?`<img src="${imgUrl}">`:'<span style="font-size:1.1rem">📦</span>'}</div>
+        <div class="upsell-card-name">${p.name}</div>
+        <div class="upsell-card-price">₹${pr}</div>
+        <button class="upsell-add-btn" id="uadd${p.id}" onclick="upsellAdd(${p.id})">+ Add</button>
+      </div>`;
+    }).join('')}</div></div>` : '';
 
-  // ── FREE DELIVERY BAR ──────────────────────────────────────────────────────
-  const fdPct = Math.min(100, Math.round(t / fdMin * 100));
+  // Free delivery bar
+  const fdPct = Math.min(100, Math.round(t/fdMin*100));
   const fdBarHTML = fdUnlocked
     ? `<div class="fd-wrap"><div class="fd-header"><span class="fd-label unlocked">🚚 Free delivery unlocked!</span></div><div class="fd-track"><div class="fd-fill unlocked" style="width:100%"></div></div></div>`
-    : `<div class="fd-wrap"><div class="fd-header"><span class="fd-label pending">Add <em>₹${fdMin - t}</em> for free delivery</span><span class="fd-pct">${fdPct}%</span></div><div class="fd-track"><div class="fd-fill pending" style="width:${fdPct}%"></div></div></div>`;
+    : `<div class="fd-wrap"><div class="fd-header"><span class="fd-label pending">Add <em>₹${fdMin-t}</em> for free delivery</span><span class="fd-pct">${fdPct}%</span></div><div class="fd-track"><div class="fd-fill pending" style="width:${fdPct}%"></div></div></div>`;
 
+  // Gift bar
   const giftBarHTML = _buildGiftUI(itemsT, cfg);
 
-  const savingsHTML = saved > 0
-    ? `<div style="padding:8px 18px 0"><div class="savings-strip">🎉 You're saving <strong style="margin:0 3px">₹${saved}</strong> on bulk pricing!</div></div>`
-    : '';
+  // Savings
+  let savedAmt = 0;
+  items.forEach(({p,v,qty}) => {
+    const base = (v.priceTiers?.[0]?.price || 0);
+    const mrp2 = v.mrp && v.mrp > base ? v.mrp : base;
+    savedAmt += (mrp2 - getPrice(v.priceTiers,qty)) * qty;
+  });
+  const savingsHTML = savedAmt > 0 ? `<div style="padding:8px 16px 0"><div class="savings-strip">🎉 Saving <strong style="margin:0 3px">₹${savedAmt}</strong> on this order!</div></div>` : '';
 
-  // ── STEP 1 FOOTER: progress bars + single checkout CTA ────────────────────
   document.getElementById('cartFoot').innerHTML = `
-    ${upsellHTML}
-    ${fdBarHTML}
-    ${giftBarHTML}
-    ${savingsHTML}
+    ${upsellHTML}${fdBarHTML}${giftBarHTML}${savingsHTML}
     <div class="cart-cta-bar">
       <button class="cart-cta-btn" onclick="openCkoPage()">
-        <div class="cart-cta-left">
-          <span class="cart-cta-icon">🛒</span>
-          <span class="cart-cta-label">Checkout</span>
-        </div>
+        <span>Proceed to Checkout</span>
         <span class="cart-cta-total">₹${t}</span>
       </button>
     </div>`;
 }
 
-/**
- * Builds the gift progress card or unlock banner.
- * Called from renderCart — pure function, returns HTML string.
- */
-function _buildGiftUI(cartTotal, cfg) {
-  if (!cfg || !cfg.threshold) return '';
-
-  const threshold    = cfg.threshold;
-  const unlocked     = cartTotal >= threshold;
-  const pct          = Math.min(100, Math.round(cartTotal / threshold * 100));
-  const remaining    = threshold - cartTotal;
-  const near         = pct >= 70 && !unlocked;
-  const offerPrice   = cfg.discountPrice;   // 0 = free, >0 = discount
-  const isFree       = offerPrice === 0;
-
-  // Labels change based on free vs discount offer
-  const pillText       = isFree ? 'FREE' : `₹${offerPrice}`;
-  const pillStyle      = isFree
-    ? ''   // default amber from CSS
-    : 'background:rgba(255,80,60,.18);border:1px solid rgba(255,80,60,.3);color:#ff6b4a;';
-  const bannerEmoji    = isFree ? '🎁' : '🔥';
-  const unlockedTitle  = isFree
-    ? `${cfg.label || cfg.prod?.name || 'Free Gift'} — Yours Free!`
-    : `${cfg.label || cfg.prod?.name || 'Offer'} — Just ₹${offerPrice}!`;
-  const unlockedSub    = cfg.autoAdd
-    ? (isFree ? 'Added to your cart at ₹0' : `Added to your cart at ₹${offerPrice} (save ₹${Math.max(0, getPrice(cfg.prod,1) - offerPrice)})`)
-    : (giftState.claimed ? 'Claimed · Added to your cart' : `Tap below to claim`);
-  const claimBtnText   = isFree ? '🎁 Claim Free Gift' : `🔥 Claim at ₹${offerPrice}`;
-  const progressTitle  = isFree
-    ? `Add <em>₹${remaining}</em> more — get <em>${cfg.label || 'free gift'}</em> FREE`
-    : `Add <em>₹${remaining}</em> more — get <em>${cfg.label || cfg.prod?.name}</em> at just <em>₹${offerPrice}</em>`;
-
-  if (unlocked) {
-    return `
-      <div class="fd-wrap" style="padding-top:10px">
-        <div class="gift-unlocked-banner" style="${isFree ? '' : 'background:linear-gradient(135deg,rgba(255,80,60,.1),rgba(255,60,40,.05));border-color:rgba(255,80,60,.25)'}">
-          <div class="gift-unlocked-icon" style="${isFree ? '' : 'background:rgba(255,80,60,.12);border-color:rgba(255,80,60,.2)'}">${bannerEmoji}</div>
-          <div class="gift-unlocked-body">
-            <div class="gift-unlocked-title" style="${isFree ? '' : 'color:#ff6b4a'}">${unlockedTitle}</div>
-            <div class="gift-unlocked-sub">${unlockedSub}</div>
-          </div>
-          <span class="gift-free-pill" style="${pillStyle}">${pillText}</span>
-        </div>
-        ${!cfg.autoAdd && !giftState.injected ? `
-          <button class="gift-claim-btn" onclick="claimGift()" style="margin:8px 0 0;${isFree ? '' : 'background:rgba(255,80,60,.12);border-color:rgba(255,80,60,.3);color:#ff6b4a'}" id="giftClaimBtn">
-            ${claimBtnText}
-          </button>` : ''}
-      </div>`;
-  }
-
-  // ── PROGRESS STATE ──────────────────────────────────────────────────────────
-  const barColor = isFree
-    ? 'background:linear-gradient(90deg,#f59e0b,#fbbf24)'
-    : 'background:linear-gradient(90deg,#f43f5e,#ff6b4a)';
-  const cardBorder = isFree
-    ? 'rgba(251,191,36,.18)'
-    : 'rgba(255,80,60,.18)';
-  const nearColor = isFree
-    ? 'rgba(251,191,36,.4)'
-    : 'rgba(255,80,60,.4)';
-
-  return `
-    <div class="fd-wrap" style="padding-top:10px">
-      <div class="gift-progress-card${near ? ' near' : ''}" style="border-color:${near ? nearColor : cardBorder}">
-        <div class="gift-progress-header">
-          <div class="gift-progress-emoji">${bannerEmoji}</div>
-          <div class="gift-progress-text">
-            <div class="gift-progress-title">${progressTitle}</div>
-            <div class="gift-progress-remaining">₹${cartTotal} of ₹${threshold} · ${pct}% there</div>
-          </div>
-        </div>
-        <div class="gift-progress-bar-track">
-          <div class="gift-progress-bar-fill" style="width:${pct}%;${barColor}"></div>
-        </div>
-      </div>
-    </div>`;
+function getBulkCoach(tiers, qty) {
+  if (!tiers || tiers.length <= 1) return '';
+  const sorted = [...tiers].sort((a,b) => a.minQty-b.minQty);
+  const curPrice = getPrice(tiers, qty);
+  for (const t of sorted) { if (t.minQty > qty && t.price < curPrice) return `Buy ${t.minQty-qty} more → ₹${t.price} each 🔥`; }
+  return '';
 }
 
+function chQtyCart(key, delta) {
+  const cur = cart[key] || 0;
+  const nw = Math.max(0, cur + delta);
+  if (nw===0) delete cart[key]; else cart[key]=nw;
+  updateCart(); renderCart();
+  const { pid, vid } = parseKey(key);
+  if (document.getElementById('fpage')?.classList.contains('open') && window._openCatId) renderFPContent(window._openCatId);
+  else renderHome();
+}
 
 function upsellAdd(id) {
+  const p = prods.find(x=>x.id===id); if(!p) return;
+  const dv = defaultVariant(p); if(!dv) return;
+  const key = cartKey(id, dv.id);
+  cart[key] = (cart[key]||0)+1;
+  updateCart(); renderCart();
   const btn = document.getElementById('uadd'+id);
   if (btn) { btn.textContent='✓ Added'; btn.classList.add('added'); btn.onclick=null; }
-  addItem(id);
-  setTimeout(renderCart, 300);
 }
 
-// ── CHECKOUT PAGE (STEP 2) ─────────────────────────────────────────────────────
+function _buildGiftUI(cartTotal, cfg) {
+  if (!cfg || !cfg.threshold) return '';
+  const threshold=cfg.threshold, unlocked=cartTotal>=threshold;
+  const pct=Math.min(100,Math.round(cartTotal/threshold*100));
+  const remaining=threshold-cartTotal;
+  const near=pct>=70 && !unlocked;
+  const offerPrice=cfg.discountPrice, isFree=offerPrice===0;
+  const pillText=isFree?'FREE':`₹${offerPrice}`;
+  const bannerEmoji=isFree?'🎁':'🔥';
+  const progressTitle=isFree
+    ?`Add <em>₹${remaining}</em> more — get <em>${cfg.label||'free gift'}</em> FREE`
+    :`Add <em>₹${remaining}</em> more — get <em>${cfg.label}</em> at just <em>₹${offerPrice}</em>`;
+  if (unlocked) return `<div class="fd-wrap" style="padding-top:8px">
+    <div class="gift-unlocked-banner">
+      <div class="gift-unlocked-icon">${bannerEmoji}</div>
+      <div class="gift-unlocked-body">
+        <div class="gift-unlocked-title">${cfg.label||cfg.prod?.name} ${isFree?'— Free!':'— ₹'+offerPrice+'!'}</div>
+        <div class="gift-unlocked-sub">${cfg.autoAdd?(isFree?'Auto-added to cart':'Added at ₹'+offerPrice):(giftState.claimed?'Claimed':'Tap to claim')}</div>
+      </div>
+      <span class="gift-free-pill">${pillText}</span>
+    </div>
+    ${!cfg.autoAdd && !giftState.injected?`<button class="gift-claim-btn" onclick="claimGift()">${isFree?'🎁 Claim Free Gift':'🔥 Claim at ₹'+offerPrice}</button>`:''}
+  </div>`;
+  return `<div class="fd-wrap" style="padding-top:8px">
+    <div class="gift-progress-card${near?' near':''}">
+      <div class="gift-progress-header">
+        <div style="font-size:1.3rem">${bannerEmoji}</div>
+        <div class="gift-progress-text">
+          <div class="gift-progress-title">${progressTitle}</div>
+          <div class="gift-progress-remaining">₹${cartTotal} of ₹${threshold} · ${pct}%</div>
+        </div>
+      </div>
+      <div class="gift-progress-bar-track"><div class="gift-progress-bar-fill" style="width:${pct}%"></div></div>
+    </div>
+  </div>`;
+}
+
+// ── CHECKOUT ─────────────────────────────────────────────────────────────────
+const UD_KEY='bsc_ud_v1';
+function loadUD() { try{return JSON.parse(localStorage.getItem(UD_KEY))||{};}catch{return{};} }
+function saveUD(d) { try{localStorage.setItem(UD_KEY,JSON.stringify(d));}catch{} }
 
 function openCkoPage() {
   renderCkoPage();
   document.getElementById('ckoPage').classList.add('open');
-  // close cart drawer so checkout slides in on top
-  document.getElementById('cartDrawer').classList.remove('open');
-  document.getElementById('cartOverlay').classList.remove('open');
+  document.querySelector('.bnav').style.display='none';
+  closeCart();
 }
-
 function closeCkoPage() {
   document.getElementById('ckoPage').classList.remove('open');
-  // re-open cart drawer so user can edit
-  renderCart();
-  document.getElementById('cartOverlay').classList.add('open');
-  document.getElementById('cartDrawer').classList.add('open');
+  document.querySelector('.bnav').style.display='';
 }
 
 function renderCkoPage() {
-  const t = total();
-  const itemsT = itemsTotal();
-  const fdMin = settings.freeDeliveryMin || settings.minOrder || 99;
-  const fdUnlocked = t >= fdMin;
-  const ud = loadUD();
-  const hasUD = !!(ud.name && ud.phone && ud.block && ud.villa);
-  const hasUPI = !!(settings.upiId?.trim());
+  const t=total(), ud=loadUD(), fdMin=settings.freeDeliveryMin||settings.minOrder||99, fdUnlocked=t>=fdMin;
+  document.getElementById('ckoTopSub').textContent = Object.keys(cart).length + ' items · ₹' + t;
+  document.getElementById('ckPlaceAmt').textContent = '₹' + t;
+
+  const hasAddr = ud.name && ud.phone && ud.block && ud.villa;
+  const dlvCardHTML = `<div class="ck-dlv-card ${hasAddr?'has-data':''} ${!hasAddr?'editing':''}" id="ckDlvCard">
+    <div class="ck-dlv-collapsed" onclick="ckToggleDlv()">
+      <div class="ck-dlv-addr-icon">📍</div>
+      <div class="ck-dlv-addr-body">
+        <div class="ck-dlv-addr-line1">${hasAddr?`Block ${ud.block} · Villa ${ud.villa}`:'Add delivery address'}</div>
+        <div class="ck-dlv-addr-line2">${hasAddr?`${ud.name} · ${ud.phone}`:'Tap to fill details'}</div>
+      </div>
+      ${hasAddr?`<button class="ck-dlv-change" onclick="event.stopPropagation();ckOpenDlv()">Change</button>`:''}
+    </div>
+    <div class="ck-dlv-form"><div class="ck-dlv-form-inner">${_ckDlvFields(ud)}</div></div>
+  </div>`;
+
+  const payMethods = [
+    { id:'cod',  icon:'💵', title:'Cash on Delivery', sub:'Pay when we arrive' },
+    { id:'upi',  icon:'📱', title:'UPI Payment',       sub: settings.upiId || 'Pay via UPI', badge:'Instant' },
+  ];
+  const selPay = window._payMethod || 'cod';
+  const payHTML = `<div class="ck-pay-cards">${payMethods.map(m => `
+    <div class="ck-pay-card ${m.id===selPay?'selected':''}" data-pay="${m.id}" onclick="ckSelectPay('${m.id}')">
+      <div class="ck-pay-card-icon">${m.icon}</div>
+      <div class="ck-pay-card-body">
+        <div class="ck-pay-card-title">${m.title}</div>
+        <div class="ck-pay-card-sub">${m.sub}</div>
+      </div>
+      <div class="ck-pay-radio"></div>
+    </div>`).join('')}</div>`;
+
   const cfg = giftCfg();
+  const giftCharge = giftState.injected && cfg && cfg.discountPrice > 0 ? cfg.discountPrice*(cfg.qty||1) : 0;
+  const items = Object.entries(cart).map(([k,qty]) => {
+    const { pid, vid } = parseKey(k);
+    const p = prods.find(x=>x.id===pid);
+    const v = p ? getVariant(p,vid) : null;
+    return p&&v ? { p, v, qty } : null;
+  }).filter(Boolean);
 
-  // Savings calc
-  const items = Object.entries(cart).map(([id,qty])=>({p:prods.find(x=>x.id==id),qty})).filter(x=>x.p);
-  let mrpTotal=0, actualTotal=0;
-  items.forEach(({p,qty})=>{
-    const base=p.priceTiers?.[0]?.price||0;
-    mrpTotal+=(p.mrp&&p.mrp>base?p.mrp:base)*qty;
-    actualTotal+=getPrice(p,qty)*qty;
-  });
-  const saved = Math.max(0, mrpTotal - actualTotal);
-  const giftCharge = (giftState.injected && cfg && cfg.discountPrice > 0)
-    ? cfg.discountPrice * (cfg.qty || 1) : 0;
-
-  // Subtitle
-  document.getElementById('ckoTopSub').textContent =
-    `${Object.values(cart).reduce((a,b)=>a+b,0)} items · ₹${t}`;
-
-  // Delivery card
-  const dlvCardHTML = hasUD ? `
-    <div class="ck-dlv-card has-data" id="ckDlvCard">
-      <div class="ck-dlv-collapsed" onclick="ckToggleDlv()">
-        <div class="ck-dlv-addr-icon">📍</div>
-        <div class="ck-dlv-addr-body">
-          <div class="ck-dlv-addr-line1">Block ${ud.block} · Villa ${ud.villa}</div>
-          <div class="ck-dlv-addr-line2">${ud.name} · ${ud.phone}</div>
-        </div>
-        <button class="ck-dlv-change" onclick="event.stopPropagation();ckOpenDlv()">Change</button>
-      </div>
-      <div class="ck-dlv-form">
-        <div class="ck-dlv-form-inner">${_ckDlvFields(ud)}</div>
-      </div>
-    </div>` : `
-    <div class="ck-dlv-card editing" id="ckDlvCard">
-      <div class="ck-dlv-collapsed" onclick="ckToggleDlv()">
-        <div class="ck-dlv-addr-icon">📍</div>
-        <div class="ck-dlv-addr-body">
-          <div class="ck-dlv-addr-line1">Add delivery address</div>
-          <div class="ck-dlv-addr-line2">Required to place order</div>
-        </div>
-      </div>
-      <div class="ck-dlv-form">
-        <div class="ck-dlv-form-inner">${_ckDlvFields(ud)}</div>
-      </div>
-    </div>`;
-
-  // Payment cards
-  const method = window._payMethod || 'cod';
-  const payHTML = `
-    <div class="ck-pay-cards" id="ckPayCards">
-      <div class="ck-pay-card${method==='cod'?' selected':''}" data-pay="cod" onclick="ckSelectPay('cod')">
-        <div class="ck-pay-icon">💵</div>
-        <div class="ck-pay-body">
-          <div class="ck-pay-title">Pay on Delivery</div>
-          <div class="ck-pay-sub">Cash or UPI when we arrive</div>
-        </div>
-        <div class="ck-pay-radio"></div>
-      </div>
-      ${hasUPI ? `
-      <div class="ck-pay-card${method==='upi'?' selected':''}" data-pay="upi" onclick="ckSelectPay('upi')">
-        <div class="ck-pay-badge">FAST</div>
-        <div class="ck-pay-icon">⚡</div>
-        <div class="ck-pay-body">
-          <div class="ck-pay-title">Pay via UPI</div>
-          <div class="ck-pay-sub">Pay ₹${t} digitally before delivery</div>
-        </div>
-        <div class="ck-pay-radio"></div>
-      </div>` : ''}
-      <div class="ck-pay-card${method==='later'?' selected':''}" data-pay="later" onclick="ckSelectPay('later')">
-        <div class="ck-pay-icon">📒</div>
-        <div class="ck-pay-body">
-          <div class="ck-pay-title">Store Credit (Pay Later)</div>
-          <div class="ck-pay-sub">Added to your account · Settled monthly</div>
-        </div>
-        <div class="ck-pay-radio"></div>
-      </div>
-    </div>`;
-
-
- const summaryHTML = `
-  <div class="ck-summary-card">
-
-    <div class="ck-sum-row">
-      <span>Subtotal (MRP)</span>
-      <span>₹${mrpTotal}</span>
-    </div>
-
-    ${saved > 0 ? `
-    <div class="ck-sum-row saving">
-      <span>Savings</span>
-      <span>−₹${saved}</span>
-    </div>` : ''}
-
-    ${giftCharge > 0 ? `
-    <div class="ck-sum-row" style="color:#ff6b4a">
-      <span>🔥 Add-on — ${cfg.prod?.name}</span>
-      <span>₹${giftCharge}</span>
-    </div>` : ''}
-
-    <div class="ck-sum-row ${fdUnlocked ? 'free-dlv' : ''}">
-      <span>Delivery</span>
-      <span>${fdUnlocked ? 'FREE' : 'Paid on delivery'}</span>
-    </div>
-
+  const summaryHTML = `<div class="ck-sum-box">
+    ${items.map(({ p, v, qty }) => {
+      const pr = getPrice(v.priceTiers, qty);
+      return `<div class="ck-sum-row"><span>${p.name} (${v.label}) ×${qty}</span><span>₹${pr*qty}</span></div>`;
+    }).join('')}
+    ${giftCharge > 0 ? `<div class="ck-sum-row" style="color:#ff6b4a"><span>🔥 ${cfg.label}</span><span>₹${giftCharge}</span></div>` : ''}
+    <div class="ck-sum-row ${fdUnlocked?'free-dlv':''}"><span>Delivery</span><span>${fdUnlocked?'FREE ✓':'Paid on delivery'}</span></div>
     <div class="ck-sum-divider"></div>
-
-    <div class="ck-sum-total">
-      <span>💰 To Pay</span>
-      <span class="ck-sum-total-num">₹${t}</span>
-    </div>
-
+    <div class="ck-sum-total"><span>💰 Total to Pay</span><span class="ck-sum-total-num">₹${t}</span></div>
   </div>`;
 
   document.getElementById('ckoBody').innerHTML = `
-    <div class="cko-section">
-      <div class="cko-sec-label">Delivery details</div>
-      ${dlvCardHTML}
-    </div>
-    <div class="cko-section" style="padding-top:14px">
-      <div class="cko-sec-label">Payment method</div>
-      ${payHTML}
-    </div>
-    <div class="cko-section" style="padding-top:14px">
-      <div class="cko-sec-label">Order summary</div>
-      ${summaryHTML}
-    </div>`;
-
-  // Update place button
-  document.getElementById('ckPlaceAmt').textContent = '₹' + t;
+    <div class="cko-section"><div class="cko-sec-label">Delivery address</div>${dlvCardHTML}</div>
+    <div class="cko-section" style="padding-top:14px"><div class="cko-sec-label">Payment method</div>${payHTML}</div>
+    <div class="cko-section" style="padding-top:14px"><div class="cko-sec-label">Order summary</div>${summaryHTML}</div>`;
 }
 
 function _ckDlvFields(ud) {
-  return `
-    <div class="ck-field-row">
-      <div class="ck-field">
-        <label class="ck-label">Name</label>
-        <input class="ck-inp" id="ckName" placeholder="Your name" value="${ud.name||''}">
-      </div>
-      <div class="ck-field">
-        <label class="ck-label">Phone</label>
-        <input class="ck-inp" type="tel" id="ckPhone" placeholder="10-digit" maxlength="10" value="${ud.phone||''}">
-      </div>
-    </div>
-    <div class="ck-field-row">
-      <div class="ck-field">
-        <label class="ck-label">Block</label>
-        <select class="ck-inp" id="ckBlock">
-          <option value="">Select</option>
-          ${['A','B','C','D','E','F'].map(b=>`<option ${ud.block===b?'selected':''}>${b}</option>`).join('')}
-        </select>
-      </div>
-      <div class="ck-field">
-        <label class="ck-label">Villa No.</label>
-        <input class="ck-inp" id="ckVilla" placeholder="e.g. 42" value="${ud.villa||''}">
-      </div>
-    </div>
-    <div class="ck-field" style="margin-bottom:10px">
-      <label class="ck-label">Delivery note (optional)</label>
-      <input class="ck-inp" id="ckNote" placeholder="Leave at door, etc." value="${ud.note||''}">
-    </div>
-    <button class="ck-save-btn" onclick="ckSaveDlv()">✓ Save address</button>`;
+  return `<div class="ck-field-row">
+    <div class="ck-field"><label class="ck-label">Name</label><input class="ck-inp" id="ckName" placeholder="Your name" value="${ud.name||''}"></div>
+    <div class="ck-field"><label class="ck-label">Phone</label><input class="ck-inp" type="tel" id="ckPhone" placeholder="10-digit" maxlength="10" value="${ud.phone||''}"></div>
+  </div>
+  <div class="ck-field-row">
+    <div class="ck-field"><label class="ck-label">Block</label><select class="ck-inp" id="ckBlock"><option value="">Select</option>${['A','B','C','D','E','F'].map(b=>`<option ${ud.block===b?'selected':''}>${b}</option>`).join('')}</select></div>
+    <div class="ck-field"><label class="ck-label">Villa No.</label><input class="ck-inp" id="ckVilla" placeholder="e.g. 42" value="${ud.villa||''}"></div>
+  </div>
+  <div class="ck-field" style="margin-bottom:10px"><label class="ck-label">Note (optional)</label><input class="ck-inp" id="ckNote" placeholder="Leave at door, etc." value="${ud.note||''}"></div>
+  <button class="ck-save-btn" onclick="ckSaveDlv()">✓ Save address</button>`;
 }
 
-function ckToggleDlv() {
-  const card = document.getElementById('ckDlvCard');
-  if (!card) return;
-  card.classList.toggle('editing');
-}
-function ckOpenDlv() {
-  const card = document.getElementById('ckDlvCard');
-  if (card) card.classList.add('editing');
-}
+function ckToggleDlv() { document.getElementById('ckDlvCard')?.classList.toggle('editing'); }
+function ckOpenDlv() { document.getElementById('ckDlvCard')?.classList.add('editing'); }
 function ckSaveDlv() {
-  const name  = (document.getElementById('ckName')?.value||'').trim();
-  const phone = (document.getElementById('ckPhone')?.value||'').trim();
-  const block = document.getElementById('ckBlock')?.value||'';
-  const villa = (document.getElementById('ckVilla')?.value||'').trim();
-  const note  = (document.getElementById('ckNote')?.value||'').trim();
-  if (!name)               { showToast('⚠️ Enter your name'); return; }
-  if (!phone||phone.length<10) { showToast('⚠️ Enter valid phone'); return; }
-  if (!block)              { showToast('⚠️ Select your block'); return; }
-  if (!villa)              { showToast('⚠️ Enter villa number'); return; }
-  saveUD({ name, phone, block, villa, note });
-  // Update collapsed view in-place
-  const card = document.getElementById('ckDlvCard');
+  const name=(document.getElementById('ckName')?.value||'').trim();
+  const phone=(document.getElementById('ckPhone')?.value||'').trim();
+  const block=document.getElementById('ckBlock')?.value||'';
+  const villa=(document.getElementById('ckVilla')?.value||'').trim();
+  const note=(document.getElementById('ckNote')?.value||'').trim();
+  if (!name) { showToast('⚠️ Enter your name'); return; }
+  if (!phone||phone.length<10) { showToast('⚠️ Valid phone required'); return; }
+  if (!block) { showToast('⚠️ Select block'); return; }
+  if (!villa) { showToast('⚠️ Enter villa number'); return; }
+  saveUD({name,phone,block,villa,note});
+  const card=document.getElementById('ckDlvCard');
   if (card) {
-    const collapsed = card.querySelector('.ck-dlv-collapsed');
-    if (collapsed) {
-      collapsed.innerHTML = `
-        <div class="ck-dlv-addr-icon">📍</div>
-        <div class="ck-dlv-addr-body">
-          <div class="ck-dlv-addr-line1">Block ${block} · Villa ${villa}</div>
-          <div class="ck-dlv-addr-line2">${name} · ${phone}</div>
-        </div>
-        <button class="ck-dlv-change" onclick="event.stopPropagation();ckOpenDlv()">Change</button>`;
-      collapsed.onclick = ckToggleDlv;
-    }
-    card.classList.add('has-data');
-    card.classList.remove('editing');
+    card.querySelector('.ck-dlv-collapsed').innerHTML=`<div class="ck-dlv-addr-icon">📍</div><div class="ck-dlv-addr-body"><div class="ck-dlv-addr-line1">Block ${block} · Villa ${villa}</div><div class="ck-dlv-addr-line2">${name} · ${phone}</div></div><button class="ck-dlv-change" onclick="event.stopPropagation();ckOpenDlv()">Change</button>`;
+    card.classList.add('has-data'); card.classList.remove('editing');
   }
   showToast('✓ Address saved');
 }
 
 function ckSelectPay(method) {
-  window._payMethod = method;
-  document.querySelectorAll('.ck-pay-card').forEach(card => {
-    card.classList.toggle('selected', card.dataset.pay === method);
-  });
-}
-
-function ckoCollect() {
-  const ud = loadUD();
-  const card = document.getElementById('ckDlvCard');
-  const isEditing = card && card.classList.contains('editing');
-  if (!isEditing && ud.name && ud.phone && ud.block && ud.villa) return ud;
-  return {
-    name:  (document.getElementById('ckName')?.value||'').trim(),
-    phone: (document.getElementById('ckPhone')?.value||'').trim(),
-    block: document.getElementById('ckBlock')?.value||'',
-    villa: (document.getElementById('ckVilla')?.value||'').trim(),
-    note:  (document.getElementById('ckNote')?.value||'').trim(),
-  };
+  window._payMethod=method;
+  document.querySelectorAll('.ck-pay-card').forEach(c=>c.classList.toggle('selected',c.dataset.pay===method));
 }
 
 function ckoValidate() {
-  const ud = loadUD();
-  const card = document.getElementById('ckDlvCard');
-  const isEditing = card && card.classList.contains('editing');
-  if (!isEditing && ud.name && ud.phone && ud.block && ud.villa) return ud;
-  const d = ckoCollect();
-  if (!d.name)               { showToast('⚠️ Enter your name'); ckOpenDlv(); return null; }
-  if (!d.phone||d.phone.length<10) { showToast('⚠️ Enter valid phone'); ckOpenDlv(); return null; }
-  if (!d.block)              { showToast('⚠️ Select your block'); ckOpenDlv(); return null; }
-  if (!d.villa)              { showToast('⚠️ Enter villa number'); ckOpenDlv(); return null; }
-  saveUD(d);
-  return d;
-}
-
-function ckoPayUPI() {
-  const d = ckoValidate(); if (!d) return;
-  const t = total(), upi = settings.upiId||'';
-  if (!upi) { showToast('UPI not configured'); return; }
-  window.location.href = `upi://pay?pa=${upi}&pn=${encodeURIComponent(settings.storeName||'BSC Store')}&am=${t}&cu=INR&tn=BSC+Order`;
-  setTimeout(()=>showToast('Complete payment, then tap Place Order'), 1800);
+  const ud=loadUD(); const card=document.getElementById('ckDlvCard');
+  if (!card?.classList.contains('editing') && ud.name&&ud.phone&&ud.block&&ud.villa) return ud;
+  const name=(document.getElementById('ckName')?.value||'').trim();
+  const phone=(document.getElementById('ckPhone')?.value||'').trim();
+  const block=document.getElementById('ckBlock')?.value||'';
+  const villa=(document.getElementById('ckVilla')?.value||'').trim();
+  const note=(document.getElementById('ckNote')?.value||'').trim();
+  if (!name){showToast('⚠️ Enter name');ckOpenDlv();return null;}
+  if (!phone||phone.length<10){showToast('⚠️ Valid phone');ckOpenDlv();return null;}
+  if (!block){showToast('⚠️ Select block');ckOpenDlv();return null;}
+  if (!villa){showToast('⚠️ Enter villa');ckOpenDlv();return null;}
+  saveUD({name,phone,block,villa,note}); return {name,phone,block,villa,note};
 }
 
 function ckoPlace() {
-  const method = window._payMethod || 'cod';
-  if (method === 'upi' && settings.upiId?.trim()) {
-    const d = ckoValidate(); if (!d) return;
-    ckoPayUPI();
-    setTimeout(() => _doPlaceOrder(method), 800);
-    return;
+  const method=window._payMethod||'cod';
+  if (method==='upi' && settings.upiId?.trim()) {
+    const d=ckoValidate(); if(!d) return;
+    window.location.href=`upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.storeName||'BSC Store')}&am=${total()}&cu=INR&tn=BSC+Order`;
+    setTimeout(()=>_doPlaceOrder(method),800); return;
   }
   _doPlaceOrder(method);
 }
 
 function _doPlaceOrder(method) {
-  const d = ckoValidate(); if (!d) return;
-  const t = total();
-  const items = Object.entries(cart).map(([id, qty]) => {
-    const p = prods.find(x => x.id == id);
-    return p ? { productId: p.id, name: p.name, qty, price: getPrice(p, qty) } : null;
+  const d=ckoValidate(); if(!d) return;
+  const t=total();
+  const items=Object.entries(cart).map(([k,qty]) => {
+    const { pid, vid } = parseKey(k);
+    const p=prods.find(x=>x.id===pid); const v=p?getVariant(p,vid):null;
+    return p&&v ? { productId:p.id, variantId:vid, name:p.name, variant:v.label, qty, price:getPrice(v.priceTiers,qty) } : null;
   }).filter(Boolean);
 
-  const cfg = giftCfg();
+  const cfg=giftCfg();
   if (giftState.injected && cfg) {
-    items.push({
-      productId: cfg.productId, name: cfg.prod.name,
-      qty: cfg.qty || 1, price: cfg.discountPrice || 0,
-      isFreeGift: true, isOffer: cfg.discountPrice > 0,
-    });
+    items.push({ productId:cfg.productId, variantId:cfg.variantId||'v1', name:cfg.prod.name, variant:cfg.variant?.label||'', qty:cfg.qty||1, price:cfg.discountPrice||0, isFreeGift:true, isOffer:cfg.discountPrice>0 });
   }
+  const freeGiftLabel=(giftState.injected&&cfg)?(cfg.label||cfg.prod.name):null;
 
-  const freeGiftLabel = (giftState.injected && cfg) ? (cfg.label || cfg.prod.name) : null;
-
-  // Build WhatsApp message
-  const wa = settings.whatsapp||'';
+  // WhatsApp
+  const wa=settings.whatsapp||'';
   if (wa) {
-    let msg = `🛒 *New Order — ${settings.storeName||'BSC Store'}*
-
-👤 *${d.name}*
-📞 ${d.phone}
-🏠 Block ${d.block}, Villa ${d.villa}
-`;
-    if (d.note) msg += `📝 ${d.note}
-`;
-    msg += `
-*Items:*
-`;
-    Object.entries(cart).forEach(([id,qty])=>{const p=prods.find(x=>x.id==id);if(p)msg+=`• ${p.name} ×${qty} = ₹${getPrice(p,qty)*qty}
-`;});
-    if (giftState.injected && cfg) {
-      const gLabel = cfg.discountPrice > 0 ? `₹${cfg.discountPrice} (offer)` : '₹0 (FREE)';
-      msg += `• ${cfg.discountPrice > 0 ? '🔥' : '🎁'} ${cfg.prod.name} ×${cfg.qty||1} = ${gLabel}
-`;
-    }
-    msg += `
-💰 *Total: ₹${t}*`;
-    msg += `
-💳 *Payment: ${method==='later'?'Store Credit (Pay Later)':method==='upi'?'UPI':'Pay on Delivery'}*`;
-    if (giftState.injected && cfg) {
-      msg += `
-${cfg.isFree ? `🎁 *Free gift: ${cfg.label||cfg.prod.name}*` : `🔥 *Offer: ${cfg.label||cfg.prod.name} at ₹${cfg.discountPrice}*`}`;
-    }
-    window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`,'_blank');
+    const lineItems=items.map(i=>`  • ${i.name}${i.variant?' ('+i.variant+')':''} × ${i.qty} = ₹${i.price*i.qty}`).join('\n');
+    let msg=`🛒 *New Order — ${settings.storeName||'BSC Store'}*\n\n👤 *${d.name}*\n📞 ${d.phone}\n📍 Block ${d.block}, Villa ${d.villa}${d.note?'\n📝 '+d.note:''}\n\n📦 *Items:*\n${lineItems}\n\n${freeGiftLabel?`🎁 Free Gift: ${freeGiftLabel}\n\n`:''}💰 *Total: ₹${t}*\n💳 Payment: ${method.toUpperCase()}\n\n_Sent from BSC Store App_`;
+    setTimeout(()=>{ window.open('https://wa.me/'+wa+'?text='+encodeURIComponent(msg),'_blank'); },300);
   }
 
-  fetch('/api/orders', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      customerName: d.name, phone: d.phone, block: d.block,
-      villa: d.villa, note: d.note, items, total: t,
-      freeGift: freeGiftLabel, paymentMethod: method
-    })
-  });
-
-  // Reset
-  cart = {};
-  giftState = { injected: false, claimed: false, prevUnlocked: false };
-  document.getElementById('ckoPage').classList.remove('open');
-  document.querySelector('.bnav').style.display = '';
-  closeCart();
-  updateCart();
-  fireConfetti();
-  const methodLabel = method==='later'?'Store Credit (Pay Later)':method==='upi'?'UPI':'Pay on Delivery';
-  document.getElementById('successMsg').textContent = `Order confirmed!
-Block ${d.block}, Villa ${d.villa} 🚀
-Payment: ${methodLabel}`;
-  document.getElementById('success').classList.add('show');
+  fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:d.name,phone:d.phone,block:d.block,villa:d.villa,note:d.note,items,total:t,freeGift:freeGiftLabel,paymentMethod:method})})
+  .then(()=>{
+    cart={}; giftState={injected:false,claimed:false,prevUnlocked:false}; window._fdUnlocked=false;
+    closeCkoPage();
+    document.getElementById('successMsg').innerHTML=`Order for <strong>${d.name}</strong> placed!<br>Block ${d.block}, Villa ${d.villa} · ₹${t}<br>We'll deliver soon 🚀`;
+    document.getElementById('success').classList.add('show');
+    updateCart(); renderHome();
+  }).catch(()=>showToast('Error placing order. Try again.'));
 }
 
-// Legacy stubs (kept for compat)
-function toggleDlv(){}
-function openDlv(){}
-function saveDlv(){}
-function selectPay(m){window._payMethod=m;}
-function openCheckout(){}
-function closeModal(){}
-function placeOrder(){}
-function sendWhatsApp(){}
-function ckoWhatsApp(){}
+function closeSuccess() { document.getElementById('success').classList.remove('show'); }
 
-function closeSuccess() {
-  document.getElementById('success').classList.remove('show');
-  document.getElementById('ckoPage').classList.remove('open');
-  document.querySelector('.bnav').style.display = '';
-  renderHome();
+// ── ACCOUNT / MILK PAGE ───────────────────────────────────────────────────────
+function openMilkPage() { setNav('bn3'); document.getElementById('milkPage').classList.add('open'); switchMilkTab(0); }
+function closeMilkPage() { document.getElementById('milkPage').classList.remove('open'); setNav('bn0'); }
+function switchMilkTab(n) {
+  [0,1].forEach(i => { document.getElementById('mtab'+i)?.classList.toggle('active',i===n); });
+  if (n===0) renderMilkDash(); else renderMilkReg();
 }
 
-// ── FULL PAGE ─────────────────────────────────────────────────────────────────
-function openFP(catId) {
-  const cat=cats.find(c=>c.id==catId);
-  const ps=prods.filter(p=>p.catId==catId&&p.inStock);
-  document.getElementById('fpTitle').textContent=cat?.name||'Products';
-  document.getElementById('fpGrid').innerHTML=ps.length
-    ?ps.map(pCard).join('')
-    :'<div class="empty-state" style="grid-column:1/-1"><div class="ei">📦</div><p>No products yet</p></div>';
-  document.getElementById('fpage').classList.add('open');
-  setNavActive('bn1');
-}
-function closeFP() {
-  document.getElementById('fpage').classList.remove('open');
-  document.querySelectorAll('.ctab').forEach((t,i)=>t.classList.toggle('active',i===0));
-  setNavActive('bn0');
-}
-function openCatsPage() {
+const MILK_KEY='bsc_milk_tok';
+function getMilkToken() { try{return localStorage.getItem(MILK_KEY);}catch{return null;} }
+function setMilkToken(t) { try{localStorage.setItem(MILK_KEY,t);}catch{} }
+function clearMilkToken() { try{localStorage.removeItem(MILK_KEY);}catch{} }
 
-  // 🔥 CLOSE OTHER PAGES
-  closeAllPages();
+async function renderMilkDash() {
+  const tok=getMilkToken();
+  if (!tok) { renderMilkLogin(); return; }
+  const body=document.getElementById('milkBody');
+  body.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Loading...</div>';
+  try {
+    const r=await fetch('/api/customer/dashboard',{headers:{Authorization:'Bearer '+tok}});
+    if (!r.ok) { clearMilkToken(); renderMilkLogin(); return; }
+    const data=await r.json();
+    renderMilkDashData(data);
+  } catch { body.innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot load data</p></div>'; }
+}
 
-  document.getElementById('fpTitle').textContent = 'All Categories';
-  document.getElementById('fpGrid').innerHTML = cats.map(c=>`
-    <div class="cat-card" onclick="closeFP();openFP(${c.id})" style="width:100%">
-      <div class="cc-img" style="aspect-ratio:16/9">
-        ${c.imageUrl?`<img src="${c.imageUrl}">`:'<span style="font-size:1.4rem">📂</span>'}
+function renderMilkLogin() {
+  document.getElementById('milkBody').innerHTML=`
+    <div class="acc-card">
+      <div class="acc-card-hero"><span class="acc-hero-emoji">🥛</span><div class="acc-hero-title">Milk Delivery Login</div><div class="acc-hero-sub">Track your deliveries & orders</div></div>
+      <div class="acc-form-body">
+        <div class="acc-field"><label class="acc-label">Phone Number</label><input class="acc-inp" type="tel" id="mlPhone" placeholder="10-digit number" maxlength="10"></div>
+        <div class="acc-field"><label class="acc-label">Password</label><input class="acc-inp" type="password" id="mlPass" placeholder="Your password" onkeydown="if(event.key==='Enter')doMilkLogin()"></div>
+        <button class="acc-btn acc-btn-green" onclick="doMilkLogin()">Login</button>
+        <button class="acc-btn acc-btn-outline" onclick="switchMilkTab(1)">Register New Account</button>
       </div>
-      <div class="cc-name" style="padding:8px;font-size:.82rem">${c.name}</div>
-    </div>`).join('');
-
-  document.getElementById('fpage').classList.add('open');
-  setNavActive('bn1');
+    </div>`;
 }
-function goHome() {
 
-  // 🔥 CLOSE EVERYTHING
-  closeAllPages();
-
-  document.getElementById('scroll').scrollTop = 0;
-  setNavActive('bn0');
-
-  // Restore logo bar
-  document.querySelector('.top-row')?.classList.remove('hidden');
+async function doMilkLogin() {
+  const phone=document.getElementById('mlPhone')?.value.trim();
+  const pass=document.getElementById('mlPass')?.value;
+  if (!phone||phone.length<10) {showToast('Enter valid phone');return;}
+  if (!pass) {showToast('Enter password');return;}
+  try {
+    const r=await fetch('/api/milk/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password:pass})});
+    if (!r.ok) {showToast('Wrong credentials');return;}
+    const d=await r.json();
+    setMilkToken(d.token);
+    renderMilkDash();
+  } catch {showToast('Error. Try again.');}
 }
+
+function renderMilkReg() {
+  document.getElementById('milkBody').innerHTML=`
+    <div class="acc-card">
+      <div class="acc-card-hero"><span class="acc-hero-emoji">✨</span><div class="acc-hero-title">Register for Milk Delivery</div><div class="acc-hero-sub">Get daily milk delivered to your door</div></div>
+      <div class="acc-form-body">
+        <div class="acc-field"><label class="acc-label">Full Name</label><input class="acc-inp" id="rnName" placeholder="Your name"></div>
+        <div class="acc-field"><label class="acc-label">Phone</label><input class="acc-inp" type="tel" id="rnPhone" placeholder="10-digit" maxlength="10"></div>
+        <div class="acc-field"><label class="acc-label">Address</label><input class="acc-inp" id="rnAddr" placeholder="Block & Villa number"></div>
+        <div class="acc-field"><label class="acc-label">Default Daily Qty (litres)</label>
+          <div class="qty-grid">
+            ${[0.5,1,1.5,2,2.5,3].map(q=>`<div class="qty-opt ${q===1?'selected':''}" onclick="selQty(this,${q})">${q}L</div>`).join('')}
+          </div>
+          <input type="hidden" id="rnQty" value="1">
+        </div>
+        <button class="acc-btn acc-btn-green" onclick="doMilkReg()">Register</button>
+      </div>
+    </div>`;
+}
+
+function selQty(el, q) {
+  document.querySelectorAll('.qty-opt').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('rnQty').value=q;
+}
+
+async function doMilkReg() {
+  const name=(document.getElementById('rnName')?.value||'').trim();
+  const phone=(document.getElementById('rnPhone')?.value||'').trim();
+  const address=(document.getElementById('rnAddr')?.value||'').trim();
+  const qty=parseFloat(document.getElementById('rnQty')?.value)||1;
+  if (!name){showToast('Enter name');return;}
+  if (!phone||phone.length<10){showToast('Valid phone required');return;}
+  try {
+    const r=await fetch('/api/milk/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone,address,defaultQty:qty})});
+    if (!r.ok){const d=await r.json();showToast(d.error||'Error');return;}
+    const d=await r.json();
+    showToast('✓ Registered! Password: '+d.password);
+    setTimeout(()=>switchMilkTab(0),2000);
+  } catch {showToast('Error. Try again.');}
+}
+
+function renderMilkDashData(data) {
+  const { customer:c, log, totalLitres, milkAmt, milkPaid, pricePerLitre, month, orders, udharEntries, udharPayments, totalUdhar, totalUdharPaid, udharBalance } = data;
+  const milkDue=Math.max(0,milkAmt-milkPaid), monthLabel=new Date(month+'-01').toLocaleString('default',{month:'long',year:'numeric'});
+
+  const milkRows=log.length>0?log.sort((a,b)=>b.date.localeCompare(a.date)).map(l=>{
+    const d=new Date(l.date+'T12:00:00'); return `<div class="milk-log-row">
+      <div class="mlog-day"><div class="mlog-day-num">${d.getDate()}</div><div class="mlog-day-name">${d.toLocaleString('default',{weekday:'short'})}</div></div>
+      <div class="mlog-divider"></div>
+      <div class="mlog-info"><div class="mlog-qty">${l.qty}L delivered</div><div class="mlog-amt">₹${(l.qty*(l.price||pricePerLitre)).toFixed(0)}</div></div>
+      <span class="mlog-pill">✓</span>
+    </div>`;}).join(''):`<div class="milk-log-empty">No deliveries yet</div>`;
+
+  const udharRows=udharEntries.length>0?udharEntries.map(e=>`<div class="grocery-item-card">
+    <div class="gi-icon">📒</div>
+    <div class="gi-info"><div class="gi-name">${(e.items||[]).map(i=>i.name).join(', ')||e.note||'Purchase'}</div><div class="gi-sub">${new Date(e.date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</div></div>
+    <div class="gi-amt" style="color:var(--red)">-₹${e.amount.toFixed(0)}</div>
+  </div>`).join(''):`<div style="text-align:center;padding:16px;color:var(--text3);font-size:.82rem">No entries</div>`;
+
+  const payRows=udharPayments.length>0?`<div style="margin-top:8px">${udharPayments.map(p=>`<div class="grocery-item-card">
+    <div class="gi-icon">💚</div>
+    <div class="gi-info"><div class="gi-name">Payment — ${p.method||'Cash'}</div><div class="gi-sub">${new Date(p.paidAt).toLocaleDateString('default',{day:'numeric',month:'short'})}</div></div>
+    <div class="gi-amt">+₹${p.amount.toFixed(0)}</div>
+  </div>`).join('')}</div>`:'' ;
+
+  const orderRows=orders.length>0?orders.slice(0,5).map(o=>`<div class="grocery-item-card">
+    <div class="gi-icon">🛒</div>
+    <div class="gi-info"><div class="gi-name">${(o.items||[]).slice(0,2).map(i=>i.name).join(', ')||'Order'}</div><div class="gi-sub">${new Date(o.createdAt).toLocaleDateString('default',{day:'numeric',month:'short'})} · ${o.status||'pending'}</div></div>
+    <div class="gi-amt">₹${o.total}</div>
+  </div>`).join(''):`<div style="text-align:center;padding:16px;color:var(--text3);font-size:.82rem">No orders</div>`;
+
+  document.getElementById('milkBody').innerHTML=`
+    <div class="dash-profile">
+      <div class="dash-avatar-row">
+        <div class="dash-avatar">👤</div>
+        <div><div class="dash-name">${c.name}</div><div class="dash-phone">${c.phone}${c.address?' · '+c.address:''}</div></div>
+      </div>
+      <div class="dash-chips">
+        <span class="dash-chip g">✓ Active</span>
+        ${c.defaultQty>0?`<span class="dash-chip">${c.defaultQty}L/day</span>`:''}
+      </div>
+    </div>
+    <div class="dash-stats">
+      <div class="dash-stat"><div class="ds-num g">₹${milkDue.toFixed(0)}</div><div class="ds-lbl">Milk Due</div></div>
+      <div class="dash-stat"><div class="ds-num b">${totalLitres}L</div><div class="ds-lbl">This Month</div></div>
+      <div class="dash-stat"><div class="ds-num y">₹${udharBalance.toFixed(0)}</div><div class="ds-lbl">Udhar</div></div>
+    </div>
+    <div class="su2">
+      <div class="sec-row"><div class="sec-label">📒 Udhar Ledger</div><div class="sec-count">${udharEntries.length} entries</div></div>
+      <div class="milk-log-wrap">${udharRows}</div>${payRows}
+    </div>
+    ${c.defaultQty>0?`<div class="su3"><div class="sec-row"><div class="sec-label">🥛 Milk — ${monthLabel}</div><div class="sec-count">${totalLitres}L</div></div><div class="milk-log-wrap">${milkRows}</div></div>`:''}
+    <div class="su4">
+      <div class="sec-row"><div class="sec-label">🛒 Recent Orders</div><div class="sec-count">${orders.length}</div></div>
+      <div class="milk-log-wrap">${orderRows}</div>
+    </div>
+    <button class="acc-btn acc-btn-danger" onclick="logoutMilk()" style="margin-top:8px">Logout</button>`;
+}
+
+function logoutMilk() { clearMilkToken(); renderMilkLogin(); showToast('Logged out'); }
 
 // ── BANNER ────────────────────────────────────────────────────────────────────
+function startBanner() {
+  clearInterval(bTimer);
+  if (banners.length <= 1) return;
+  bTimer = setInterval(() => { bIdx=(bIdx+1)%banners.length; goBanner(bIdx); }, 4000);
+}
 function goBanner(i) {
   bIdx=i;
-  const t=document.getElementById('btrack'); if(t) t.style.transform=`translateX(-${i*100}%)`;
+  const track=document.getElementById('btrack'); if(track) track.style.transform=`translateX(-${i*100}%)`;
   document.querySelectorAll('.bdot').forEach((d,j)=>d.classList.toggle('active',j===i));
-}
-function startBanner() {
-  if(bTimer) clearInterval(bTimer);
-  if(banners.length<=1) return;
-  bTimer=setInterval(()=>{bIdx=(bIdx+1)%banners.length;goBanner(bIdx);},3500);
 }
 function bannerClick(id) {
   const b=banners.find(x=>x.id===id); if(!b?.action) return;
-  if(b.action.type==='category') openFP(b.action.catId);
-  else if(b.action.type==='products') {
-    const ps=(b.action.productIds||[]).map(id=>prods.find(p=>p.id===id)).filter(Boolean);
-    document.getElementById('fpTitle').textContent=b.title||'Products';
-    document.getElementById('fpGrid').innerHTML=ps.map(pCard).join('');
-    document.getElementById('fpage').classList.add('open');
+  if (b.action.type==='category') openFP(b.action.catId);
+}
+
+// ── CONFETTI & TOAST ─────────────────────────────────────────────────────────
+function fireConfetti() {
+  const colors=['#2dd36f','#ffd700','#ff6b6b','#60a5fa','#f59e0b','#a78bfa'];
+  const cx=window.innerWidth/2, cy=window.innerHeight*.2;
+  for (let i=0;i<28;i++) {
+    const el=document.createElement('div'); el.className='cpiece';
+    const sz=5+Math.random()*6;
+    el.style.cssText=`left:${cx-60+Math.random()*120}px;top:${cy}px;width:${sz}px;height:${sz}px;background:${colors[~~(Math.random()*colors.length)]};animation-delay:${Math.random()*.3}s;animation-duration:${.7+Math.random()*.5}s;`;
+    document.body.appendChild(el); setTimeout(()=>el.remove(),1400);
   }
 }
 
-// ── SEARCH ────────────────────────────────────────────────────────────────────
-function onSearch(q) {
-  if(!q.trim()){closeSearch();return;}
-  const res=prods.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())&&p.inStock);
-  document.getElementById('searchTitle').textContent=`"${q}" — ${res.length} found`;
-  document.getElementById('searchGrid').innerHTML=res.length
-    ?res.map(pCard).join('')
-    :'<div class="empty-state" style="grid-column:1/-1"><div class="ei">🔍</div><p>No results found</p></div>';
-  document.getElementById('searchPage').classList.add('open');
-}
-function clearSearch(){document.getElementById('searchInput').value='';closeSearch();}
-function closeSearch(){document.getElementById('searchPage').classList.remove('open');}
-
-// ── TOAST ─────────────────────────────────────────────────────────────────────
-let tt;
-function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2000);}
-
-// ── MILK ──────────────────────────────────────────────────────────────────────
-let milkTab = 0;
-let selectedMilkQty = 0.5;
-
-function openMilkPage() {
-
-  // 🔥 CLOSE OTHER PAGES
-  closeAllPages();
-
-  // OPEN ACCOUNT
-  document.getElementById('milkPage').classList.add('open');
-
-  setNavActive('bn3');
-
-  localStorage.getItem('milk_token')
-    ? loadMilkDashboard()
-    : (milkTab = 0, renderMilkTab());
-}
-function closeMilkPage() {
-  document.getElementById('milkPage').classList.remove('open');
-  ['bn0','bn1','bn2','bn3'].forEach(id=>{ const e=document.getElementById(id); if(e) e.classList.remove('active'); });
-  document.getElementById('bn0').classList.add('active');
-}
-function switchMilkTab(t) {
-  milkTab = t;
-  document.querySelectorAll('.acc-tab').forEach((el,i)=>el.classList.toggle('active',i===t));
-  renderMilkTab();
-}
-function renderMilkTab() {
-  if (milkTab===0) renderMilkLogin(); else renderMilkRegister();
-}
-function selectMilkQty(q) {
-  selectedMilkQty = q;
-  document.querySelectorAll('.qty-opt').forEach(el=>el.classList.toggle('selected', parseFloat(el.dataset.q)==q));
+let toastTimer;
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
 }
 
-/* ── LOGIN ── */
-function renderMilkLogin() {
-  document.getElementById('milkBody').innerHTML = `
-    <div class="acc-card su0">
-      <div class="acc-card-hero">
-        <span class="acc-hero-emoji">👤</span>
-        <div class="acc-hero-title">Welcome Back</div>
-        <div class="acc-hero-sub">Login to view your account, deliveries and payment history</div>
-      </div>
-      <div class="acc-form-body">
-        <div class="acc-field">
-          <label class="acc-label">📱 Phone Number</label>
-          <input class="acc-inp" id="lPhone" type="tel" placeholder="10-digit number" maxlength="10">
-        </div>
-        <div class="acc-field">
-          <label class="acc-label">🔒 Password</label>
-          <input class="acc-inp" id="lPass" type="password" placeholder="Your password">
-        </div>
-        <button class="acc-btn acc-btn-green" onclick="loginMilk()">Login to My Account</button>
-        <button class="acc-btn acc-btn-outline" onclick="switchMilkTab(1)">New? Register here</button>
-      </div>
-    </div>`;
-}
-
-async function loginMilk() {
-  const phone=document.getElementById('lPhone').value.trim();
-  const password=document.getElementById('lPass').value.trim();
-  if(!phone||!password){showToast('Enter phone and password');return;}
-  try {
-    const res=await fetch('/api/customer/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password})});
-    const data=await res.json();
-    if(!res.ok){showToast(data.error||'Login failed');return;}
-    localStorage.setItem('milk_token',data.token);
-    loadMilkDashboard();
-  } catch{showToast('Server error');}
-}
-
-/* ── REGISTER ── */
-function renderMilkRegister() {
-  document.getElementById('milkBody').innerHTML = `
-    <div class="acc-card su0">
-      <div class="acc-card-hero">
-        <span class="acc-hero-emoji">📒</span>
-        <div class="acc-hero-title">Create Account</div>
-        <div class="acc-hero-sub">Register to track your deliveries, udhar balance & payments.</div>
-      </div>
-      <div class="acc-form-body">
-        <div class="acc-field"><label class="acc-label">👤 Full Name</label><input class="acc-inp" id="rName" placeholder="Your name"></div>
-        <div class="acc-field"><label class="acc-label">📱 Phone Number</label><input class="acc-inp" id="rPhone" type="tel" placeholder="10-digit number" maxlength="10"></div>
-        <div class="acc-field"><label class="acc-label">📍 Address / Villa No.</label><input class="acc-inp" id="rAddr" placeholder="e.g. Block B, Villa 42"></div>
-        <div class="acc-field"><label class="acc-label">🔒 Create Password</label><input class="acc-inp" id="rPass" type="password" placeholder="Set your account password"></div>
-        <div style="background:rgba(45,211,111,.06);border:1px solid rgba(45,211,111,.15);border-radius:12px;padding:12px 14px;font-size:.75rem;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:4px">
-          💡 <strong style="color:rgba(255,255,255,.7)">No milk? No problem.</strong> Register to get access to your full ledger — admin will track your deliveries (milk, grocery, etc.) and you can view your balance anytime.
-        </div>
-        <button class="acc-btn acc-btn-green" onclick="registerMilkSecure()" style="margin-top:4px">Create Account</button>
-        <button class="acc-btn acc-btn-outline" onclick="switchMilkTab(0)">Already registered? Login</button>
-      </div>
-    </div>`;
-}
-
-async function registerMilkSecure() {
-  const name=document.getElementById('rName').value.trim();
-  const phone=document.getElementById('rPhone').value.trim();
-  const address=document.getElementById('rAddr').value.trim();
-  const password=document.getElementById('rPass').value.trim();
-  if(!name||!phone||!password){showToast('Name, phone and password required');return;}
-  if(phone.length<10){showToast('Enter valid 10-digit phone');return;}
-  const res=await fetch('/api/customer/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone,address,defaultQty:0,password})});
-  const data=await res.json();
-  if(!res.ok){showToast(data.error||'Registration failed');return;}
-  showToast('Account created! Please login.');
-  switchMilkTab(0);
-}
-
-/* ── DASHBOARD ── */
-async function loadMilkDashboard() {
-  document.getElementById('milkBody').innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Loading…</div>';
-  const token=localStorage.getItem('milk_token');
-  if(!token){renderMilkLogin();return;}
-  const res=await fetch('/api/customer/dashboard',{headers:{Authorization:'Bearer '+token}});
-  const data=await res.json();
-  if(!res.ok){showToast('Session expired');localStorage.removeItem('milk_token');renderMilkLogin();return;}
-  renderMilkRecord(data);
-  document.getElementById('mtab1').style.display='none';
-}
-
-function logoutMilk() {
-  localStorage.removeItem('milk_token');
-  showToast('Logged out');
-  document.getElementById('mtab1').style.display='block';
-  milkTab=0;
-  document.querySelectorAll('.acc-tab').forEach((el,i)=>el.classList.toggle('active',i===0));
-  renderMilkLogin();
-}
-
-function renderMilkRecord(data) {
-  const c = data.customer;
-  const logs = data.log || [];
-  const orders = data.orders || [];
-  const udharEntries = data.udharEntries || [];
-  const udharPayments = data.udharPayments || [];
-  const udharBalance = data.udharBalance || 0;
-  const milkAmt = data.milkAmt || 0;
-  const milkPaid = data.milkPaid || 0;
-  const milkDue = milkAmt - milkPaid;
-  const monthLabel = new Date(data.month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
-
-  // ── UDHAR BALANCE CARD ──────────────────────────────────────────────────────
-  const balanceColor = udharBalance > 0 ? '#f87171' : '#4ade80';
-  const balanceLabel = udharBalance > 0 ? 'You Owe' : udharBalance < 0 ? 'Credit' : 'Settled';
-  const udharCard = `
-    <div style="background:linear-gradient(145deg,#1a0a0a,#2a1010,#1a0808);border-radius:20px;padding:20px;margin-bottom:12px;position:relative;overflow:hidden;border:1px solid rgba(248,113,113,.15)">
-      <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(248,113,113,.15),transparent 70%)"></div>
-      <div style="font-size:.68rem;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Udhar Balance</div>
-      <div style="font-size:2.2rem;font-weight:900;color:${balanceColor};letter-spacing:-.5px;margin-bottom:4px">Rs.${Math.abs(udharBalance).toFixed(0)}</div>
-      <div style="font-size:.76rem;color:rgba(255,255,255,.4)">${balanceLabel} · Updated live</div>
-      ${udharBalance > 0 ? `<div style="margin-top:14px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:8px 12px;font-size:.74rem;color:#fca5a5">Visit the store or pay via UPI to clear your balance</div>` : ''}
-    </div>`;
-
-  // ── STATS ROW ───────────────────────────────────────────────────────────────
-  const statsRow = `
-    <div class="dash-stats su1">
-      <div class="dash-stat">
-        <div class="ds-num" style="color:#f87171">Rs.${udharBalance.toFixed(0)}</div>
-        <div class="ds-lbl">Udhar Due</div>
-      </div>
-      ${c.defaultQty > 0 ? `
-      <div class="dash-stat">
-        <div class="ds-num" style="color:#60a5fa">Rs.${milkDue.toFixed(0)}</div>
-        <div class="ds-lbl">Milk Due</div>
-      </div>
-      <div class="dash-stat">
-        <div class="ds-num" style="color:#fbbf24">Rs.${(udharBalance + milkDue).toFixed(0)}</div>
-        <div class="ds-lbl">Total Due</div>
-      </div>` : ''}
-    </div>`;
-
-  // ── UDHAR ENTRIES ───────────────────────────────────────────────────────────
-  const udharRows = udharEntries.length === 0
-    ? `<div style="text-align:center;padding:22px;color:var(--text3);font-size:.82rem">No udhar entries. All clear! ✅</div>`
-    : udharEntries.map((e, i) => {
-        const dt = new Date(e.date + 'T12:00:00').toLocaleDateString('default', { day: 'numeric', month: 'short' });
-        const itemList = (e.items || []).map(it => `${it.name}${it.qty > 1 ? ' ×' + it.qty : ''}`).join(', ');
-        return `<div class="milk-log-row" style="animation-delay:${i * 0.03}s">
-          <div class="mlog-day"><div class="mlog-day-num">${dt.split(' ')[0]}</div><div class="mlog-day-name">${dt.split(' ')[1] || ''}</div></div>
-          <div class="mlog-divider"></div>
-          <div class="mlog-info">
-            <div class="mlog-qty">${itemList || e.note || 'Purchase'}</div>
-            ${e.note && itemList ? `<div class="mlog-amt">${e.note}</div>` : ''}
-          </div>
-          <span style="font-size:.84rem;font-weight:800;color:#f87171;flex-shrink:0">+Rs.${e.amount.toFixed(0)}</span>
-        </div>`;
-      }).join('');
-
-  // ── UDHAR PAYMENTS ──────────────────────────────────────────────────────────
-  const payRows = udharPayments.length === 0 ? '' :
-    `<div class="sec-row" style="margin-top:14px"><div class="sec-label">💳 Payments Made</div></div>
-     <div class="milk-log-wrap">` +
-    udharPayments.map((p, i) => {
-      const dt = new Date(p.paidAt).toLocaleDateString('default', { day: 'numeric', month: 'short' });
-      return `<div class="milk-log-row" style="animation-delay:${i * 0.03}s">
-        <div class="mlog-day"><div class="mlog-day-num">${dt.split(' ')[0]}</div><div class="mlog-day-name">${dt.split(' ')[1] || ''}</div></div>
-        <div class="mlog-divider"></div>
-        <div class="mlog-info"><div class="mlog-qty">Payment — ${p.method || 'Cash'}</div>${p.note ? `<div class="mlog-amt">${p.note}</div>` : ''}</div>
-        <span style="font-size:.84rem;font-weight:800;color:#4ade80;flex-shrink:0">-Rs.${p.amount.toFixed(0)}</span>
-      </div>`;
-    }).join('') + '</div>';
-
-  // ── MILK LOG ────────────────────────────────────────────────────────────────
-  const milkRows = logs.length === 0
-    ? `<div class="milk-log-empty">No milk deliveries recorded yet this month.</div>`
-    : [...logs].sort((a, b) => b.date.localeCompare(a.date)).map((l, i) => {
-        const d = new Date(l.date + 'T12:00:00');
-        return `<div class="milk-log-row" style="animation-delay:${i * 0.04}s">
-          <div class="mlog-day"><div class="mlog-day-num">${d.getDate()}</div><div class="mlog-day-name">${d.toLocaleString('default',{weekday:'short'})}</div></div>
-          <div class="mlog-divider"></div>
-          <div class="mlog-info"><div class="mlog-qty">${l.qty}L delivered</div><div class="mlog-amt">Rs.${(l.qty*(l.price||data.pricePerLitre)).toFixed(0)}</div></div>
-          <span class="mlog-pill">Done</span>
-        </div>`;
-      }).join('');
-
-  // ── APP ORDERS ──────────────────────────────────────────────────────────────
-  const orderRows = orders.length === 0
-    ? `<div style="text-align:center;padding:22px;color:var(--text3);font-size:.82rem">No app orders yet</div>`
-    : orders.map((o, i) => {
-        const dt = new Date(o.createdAt).toLocaleDateString('default', { day: 'numeric', month: 'short', year: 'numeric' });
-        const items = (o.items || []).map(it => `${it.name} ×${it.qty}`).join(', ');
-        return `<div class="milk-log-row" style="animation-delay:${i*0.03}s">
-          <div style="width:34px;height:34px;border-radius:9px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">🛒</div>
-          <div class="mlog-info" style="margin-left:10px">
-            <div class="mlog-qty">${items || 'Order #' + o.id}</div>
-            <div class="mlog-amt">${dt} · #${o.id}</div>
-          </div>
-          <span style="font-size:.84rem;font-weight:800;color:var(--green);flex-shrink:0">Rs.${o.total}</span>
-        </div>`;
-      }).join('');
-
-  document.getElementById('milkBody').innerHTML = `
-    <!-- PROFILE -->
-    <div class="dash-profile su0">
-      <div class="dash-avatar-row">
-        <div class="dash-avatar">👤</div>
-        <div><div class="dash-name">${c.name}</div><div class="dash-phone">${c.phone}${c.address ? ' · ' + c.address : ''}</div></div>
-      </div>
-      <div class="dash-chips">
-        ${c.defaultQty > 0 ? `<span class="dash-chip g">🥛 Milk Active</span><span class="dash-chip">${c.defaultQty}L/day</span>` : '<span class="dash-chip">📒 Credit Account</span>'}
-        <span class="dash-chip">${monthLabel}</span>
-      </div>
-    </div>
-
-    <!-- UDHAR BALANCE -->
-    <div class="su0">${udharCard}</div>
-
-    <!-- STATS -->
-    ${statsRow}
-
-    <!-- UDHAR LEDGER -->
-    <div class="su2">
-      <div class="sec-row">
-        <div class="sec-label">📒 Udhar Ledger</div>
-        <div class="sec-count">${udharEntries.length} entries</div>
-      </div>
-      <div class="milk-log-wrap">${udharRows}</div>
-      ${payRows}
-    </div>
-
-    <!-- MILK LOG (only if customer has milk subscription) -->
-    ${c.defaultQty > 0 ? `
-    <div class="su3">
-      <div class="sec-row"><div class="sec-label">🥛 Milk Deliveries</div><div class="sec-count">${monthLabel}</div></div>
-      <div class="milk-log-wrap">${milkRows}</div>
-    </div>` : ''}
-
-    <!-- APP ORDERS -->
-    <div class="su4">
-      <div class="sec-row"><div class="sec-label">🛒 App Orders</div><div class="sec-count">${orders.length} orders</div></div>
-      <div class="milk-log-wrap">${orderRows}</div>
-    </div>
-
-    <!-- BILL BUTTON -->
-    <button class="acc-btn acc-btn-green su4" onclick="generateBill()" style="margin-top:16px">📄 Generate Monthly Bill</button>
-    <button class="acc-btn acc-btn-danger" onclick="logoutMilk()" style="margin-top:8px">Logout</button>
-  `;
-
-  // Store data for bill generation
-  window._billData = { c, data, monthLabel, udharEntries, udharPayments, udharBalance, logs, orders, milkAmt, milkPaid, milkDue };
-}
-
-function generateBill() {
-  const { c, data, monthLabel, udharEntries, udharPayments, udharBalance, logs, orders, milkAmt, milkPaid, milkDue } = window._billData || {};
-  if (!c) return;
-
-  const totalDue = udharBalance + milkDue;
-  const today = new Date().toLocaleDateString('default', { day: 'numeric', month: 'long', year: 'numeric' });
-
-  const udharRows = udharEntries.map(e => `
-    <tr>
-      <td>${new Date(e.date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
-      <td>${(e.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ') || e.note || 'Purchase'}</td>
-      <td style="text-align:right;color:#dc2626;font-weight:600">Rs.${e.amount.toFixed(0)}</td>
-    </tr>`).join('');
-
-  const payRows = udharPayments.map(p => `
-    <tr>
-      <td>${new Date(p.paidAt).toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
-      <td>Payment — ${p.method || 'Cash'}${p.note ? ' (' + p.note + ')' : ''}</td>
-      <td style="text-align:right;color:#16a34a;font-weight:600">-Rs.${p.amount.toFixed(0)}</td>
-    </tr>`).join('');
-
-  const milkRowsHTML = logs.map(l => `
-    <tr>
-      <td>${new Date(l.date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
-      <td>${l.qty}L @ Rs.${l.price||data.pricePerLitre}/L</td>
-      <td style="text-align:right">Rs.${(l.qty*(l.price||data.pricePerLitre)).toFixed(0)}</td>
-    </tr>`).join('');
-
-  const appOrderRows = orders.map(o => {
-    const items = (o.items||[]).map(i=>`${i.name} ×${i.qty}`).join(', ');
-    return `<tr>
-      <td>${new Date(o.createdAt).toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
-      <td>${items}</td>
-      <td style="text-align:right">Rs.${o.total}</td>
-    </tr>`;
-  }).join('');
-
-  const billHTML = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Bill — ${c.name} — ${monthLabel}</title>
-<style>
-
-
-  *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;padding:0;}
-  .page{max-width:680px;margin:0 auto;padding:32px 28px;}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #f0f0f0;}
-  .store-name{font-size:1.5rem;font-weight:900;color:#111;}
-  .store-name span{color:#16a34a;}
-  .store-sub{font-size:.78rem;color:#888;margin-top:3px;}
-  .bill-meta{text-align:right;}
-  .bill-title{font-size:1.1rem;font-weight:800;color:#111;}
-  .bill-date{font-size:.75rem;color:#888;margin-top:3px;}
-  .customer-box{background:#f9fafb;border-radius:10px;padding:14px 18px;margin-bottom:24px;border:1px solid #e8eaed;}
-  .customer-name{font-size:1rem;font-weight:700;}
-  .customer-meta{font-size:.78rem;color:#666;margin-top:3px;}
-  .section{margin-bottom:22px;}
-  .section-title{font-size:.72rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
-  table{width:100%;border-collapse:collapse;}
-  th{font-size:.72rem;font-weight:600;color:#888;text-transform:uppercase;padding:7px 10px;background:#f9fafb;text-align:left;border-bottom:1px solid #e8eaed;}
-  td{padding:9px 10px;border-bottom:1px solid #f0f0f0;font-size:.85rem;}
-  tr:last-child td{border:none;}
-  .summary-box{background:#f9fafb;border-radius:12px;padding:18px;margin-top:20px;border:1px solid #e8eaed;}
-  .sum-row{display:flex;justify-content:space-between;font-size:.88rem;padding:5px 0;}
-  .sum-row.total{border-top:2px solid #e8eaed;margin-top:8px;padding-top:12px;font-size:1.05rem;font-weight:800;}
-  .sum-row.total .amt{color:#dc2626;}
-  .due-banner{background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;padding:16px 18px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;}
-  .due-label{font-size:.82rem;font-weight:600;color:#dc2626;}
-  .due-amt{font-size:1.6rem;font-weight:900;color:#dc2626;}
-  .settled-banner{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:16px 18px;margin-top:16px;text-align:center;color:#16a34a;font-weight:700;font-size:.95rem;}
-  .footer{margin-top:32px;padding-top:16px;border-top:1px solid #f0f0f0;font-size:.72rem;color:#aaa;text-align:center;}
-  @media print{body{padding:0;}.page{max-width:100%;padding:20px;}}
-</style>
-</head>
-<body>
-<div class="page">
-  <div class="header">
-    <div>
-      <div class="store-name">BSC <span>Store</span></div>
-      <div class="store-sub">Local Grocery & Milk Delivery</div>
-    </div>
-    <div class="bill-meta">
-      <div class="bill-title">Monthly Bill</div>
-      <div class="bill-date">${monthLabel} &nbsp;·&nbsp; Generated ${today}</div>
-    </div>
-  </div>
-
-  <div class="customer-box">
-    <div class="customer-name">${c.name}</div>
-    <div class="customer-meta">${c.phone}${c.address ? ' &nbsp;·&nbsp; ' + c.address : ''}</div>
-  </div>
-
-  ${udharEntries.length > 0 || udharPayments.length > 0 ? `
-  <div class="section">
-    <div class="section-title">📒 Udhar Ledger</div>
-    <table>
-      <thead><tr><th>Date</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
-      <tbody>${udharRows}${payRows}</tbody>
-    </table>
-  </div>` : ''}
-
-  ${logs.length > 0 ? `
-  <div class="section">
-    <div class="section-title">🥛 Milk Deliveries — ${monthLabel}</div>
-    <table>
-      <thead><tr><th>Date</th><th>Details</th><th style="text-align:right">Amount</th></tr></thead>
-      <tbody>${milkRowsHTML}</tbody>
-    </table>
-  </div>` : ''}
-
-  ${orders.length > 0 ? `
-  <div class="section">
-    <div class="section-title">🛒 App Orders</div>
-    <table>
-      <thead><tr><th>Date</th><th>Items</th><th style="text-align:right">Amount</th></tr></thead>
-      <tbody>${appOrderRows}</tbody>
-    </table>
-  </div>` : ''}
-
-  <div class="summary-box">
-    <div class="sum-row"><span>Udhar (credit purchases)</span><span>Rs.${(data.totalUdhar||0).toFixed(0)}</span></div>
-    <div class="sum-row"><span>Paid against udhar</span><span style="color:#16a34a">-Rs.${(data.totalUdharPaid||0).toFixed(0)}</span></div>
-    <div class="sum-row"><span>Milk bill (${monthLabel})</span><span>Rs.${milkAmt.toFixed(0)}</span></div>
-    ${milkPaid > 0 ? `<div class="sum-row"><span>Milk paid</span><span style="color:#16a34a">-Rs.${milkPaid.toFixed(0)}</span></div>` : ''}
-    <div class="sum-row total"><span>Total Outstanding</span><span class="amt">Rs.${totalDue.toFixed(0)}</span></div>
-  </div>
-
-  ${totalDue > 0
-    ? `<div class="due-banner"><div><div class="due-label">Amount Due</div><div style="font-size:.72rem;color:#dc2626;margin-top:2px">Please pay at earliest convenience</div></div><div class="due-amt">Rs.${totalDue.toFixed(0)}</div></div>`
-    : `<div class="settled-banner">✅ All settled — No outstanding balance</div>`
-  }
-
-  <div class="footer">BSC Store &nbsp;·&nbsp; ${monthLabel} bill &nbsp;·&nbsp; Thank you for your business!</div>
-</div>
-`;
-
-  const win = window.open('', '_blank');
-  win.document.write(billHTML);
-  win.document.close();
-}
-
-
+// ── INIT ──────────────────────────────────────────────────────────────────────
 init();
 </script>
 </body>
