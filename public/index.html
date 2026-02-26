@@ -313,9 +313,16 @@ select.ck-inp option{background:var(--bg2);}
 .ck-sum-row{display:flex;justify-content:space-between;align-items:center;font-size:.84rem;padding:5px 0;color:var(--text2);}
 .ck-sum-row span:last-child{font-weight:700;color:var(--text);}
 .ck-sum-row.free-dlv span:last-child{color:var(--green);}
-.ck-sum-divider{height:1px;background:var(--border);margin:6px 0;}
+.ck-sum-row.ck-row-save span:last-child{color:var(--green);}
+.ck-sum-row.ck-row-save span:first-child{color:var(--text2);}
+.ck-sum-row.ck-row-free span:last-child{color:var(--green);font-weight:800;}
+.ck-sum-row.ck-row-gift span:last-child{color:#f59e0b;}
+.ck-sum-divider{height:1px;background:var(--border);margin:8px 0;}
 .ck-sum-total{display:flex;justify-content:space-between;align-items:center;font-size:.95rem;font-weight:900;padding:4px 0;}
-.ck-sum-total-num{color:var(--green);font-size:1.05rem;}
+.ck-sum-total span:first-child{color:var(--text2);font-size:.82rem;font-weight:600;}
+.ck-sum-total-num{color:var(--green);font-size:1.15rem;}
+/* Locked pay card (account not logged in) */
+.ck-pay-locked{opacity:.55;}
 
 /* Place order bar */
 .ck-place-bar{flex-shrink:0;padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom,12px));border-top:1px solid var(--border);background:var(--bg);}
@@ -1405,40 +1412,67 @@ function renderCkoPage() {
     <div class="ck-dlv-form"><div class="ck-dlv-form-inner">${_ckDlvFields(ud)}</div></div>
   </div>`;
 
-  const payMethods = [
-    { id:'cod',  icon:'💵', title:'Cash on Delivery', sub:'Pay when we arrive' },
-    { id:'upi',  icon:'📱', title:'UPI Payment',       sub: settings.upiId || 'Pay via UPI', badge:'Instant' },
-  ];
+  // Payment methods
   const selPay = window._payMethod || 'cod';
+  const acctTok = getMilkToken();
+  const payMethods = [
+    { id:'cod',  icon:'💵', title:'Cash on Delivery', sub:'Pay in cash when we arrive' },
+    { id:'upi',  icon:'📱', title:'UPI Payment', sub: settings.upiId || 'Pay via UPI' },
+    { id:'account', icon:'📒', title:'Add to Account', sub: acctTok ? 'Charged to your BSC account' : 'Login to use — order added to your khata' },
+  ];
   const payHTML = `<div class="ck-pay-cards">${payMethods.map(m => `
-    <div class="ck-pay-card ${m.id===selPay?'selected':''}" data-pay="${m.id}" onclick="ckSelectPay('${m.id}')">
+    <div class="ck-pay-card ${m.id===selPay?'selected':''} ${m.id==='account'&&!acctTok?'ck-pay-locked':''}" data-pay="${m.id}" onclick="ckSelectPay('${m.id}')">
       <div class="ck-pay-card-icon">${m.icon}</div>
       <div class="ck-pay-card-body">
-        <div class="ck-pay-card-title">${m.title}</div>
+        <div class="ck-pay-card-title">${m.title}${m.id==='account'&&!acctTok?' <span style="font-size:.6rem;color:#f59e0b;font-weight:800;background:rgba(245,158,11,.1);border-radius:4px;padding:1px 5px">Login required</span>':''}</div>
         <div class="ck-pay-card-sub">${m.sub}</div>
       </div>
       <div class="ck-pay-radio"></div>
     </div>`).join('')}</div>`;
 
+  // Build price breakdown for summary
   const cfg = giftCfg();
   const giftCharge = giftState.injected && cfg && cfg.discountPrice > 0 ? cfg.discountPrice*(cfg.qty||1) : 0;
-  const items = Object.entries(cart).map(([k,qty]) => {
+  const cartItems = Object.entries(cart).map(([k,qty]) => {
     const { pid, vid } = parseKey(k);
     const p = prods.find(x=>x.id===pid);
     const v = p ? getVariant(p,vid) : null;
     return p&&v ? { p, v, qty } : null;
   }).filter(Boolean);
 
-  const summaryHTML = `<div class="ck-sum-box">
-    ${items.map(({ p, v, qty }) => {
-      const pr = getPrice(v.priceTiers, qty);
-      return `<div class="ck-sum-row"><span>${p.name} (${v.label}) ×${qty}</span><span>₹${pr*qty}</span></div>`;
-    }).join('')}
-    ${giftCharge > 0 ? `<div class="ck-sum-row" style="color:#ff6b4a"><span>🔥 ${cfg.label}</span><span>₹${giftCharge}</span></div>` : ''}
-    <div class="ck-sum-row ${fdUnlocked?'free-dlv':''}"><span>Delivery</span><span>${fdUnlocked?'FREE ✓':'Paid on delivery'}</span></div>
-    <div class="ck-sum-divider"></div>
-    <div class="ck-sum-total"><span>💰 Total to Pay</span><span class="ck-sum-total-num">₹${t}</span></div>
-  </div>`;
+  // Calculate MRP total (base price tier 1 or mrp field)
+  let mrpTotal = 0, sellingTotal = 0, discountTotal = 0;
+  cartItems.forEach(({ p, v, qty }) => {
+    const selPrice = getPrice(v.priceTiers, qty);
+    const mrpPrice = v.mrp && v.mrp > selPrice ? v.mrp : (v.priceTiers?.[0]?.price || selPrice);
+    mrpTotal += mrpPrice * qty;
+    sellingTotal += selPrice * qty;
+    discountTotal += (mrpPrice - selPrice) * qty;
+  });
+  const totalItems = cartItems.reduce((s,{qty})=>s+qty,0);
+
+  // Build clean breakdown rows
+  let sumRows = '';
+  sumRows += `<div class="ck-sum-row"><span>MRP (${totalItems} item${totalItems!==1?'s':''})</span><span>₹${mrpTotal.toFixed(0)}</span></div>`;
+  if (discountTotal > 0) {
+    sumRows += `<div class="ck-sum-row ck-row-save"><span>Product discount</span><span>−₹${discountTotal.toFixed(0)}</span></div>`;
+  }
+  if (giftState.injected && cfg) {
+    if (cfg.discountPrice === 0) {
+      sumRows += `<div class="ck-sum-row ck-row-save"><span>🎁 ${cfg.label||'Free gift'}</span><span>FREE</span></div>`;
+    } else {
+      sumRows += `<div class="ck-sum-row ck-row-gift"><span>🔥 ${cfg.label} (offer)</span><span>+₹${giftCharge.toFixed(0)}</span></div>`;
+    }
+  }
+  sumRows += `<div class="ck-sum-row ${fdUnlocked?'ck-row-free':''}"><span>Delivery</span><span>${fdUnlocked?'FREE ✓':'Paid on delivery'}</span></div>`;
+  sumRows += `<div class="ck-sum-divider"></div>`;
+  const finalTotal = sellingTotal + giftCharge;
+  sumRows += `<div class="ck-sum-total"><span>Total to Pay</span><span class="ck-sum-total-num">₹${finalTotal.toFixed(0)}</span></div>`;
+  if (discountTotal > 0) {
+    sumRows += `<div style="margin-top:8px;background:rgba(45,211,111,.07);border:1px solid rgba(45,211,111,.15);border-radius:10px;padding:8px 10px;font-size:.75rem;font-weight:700;color:var(--green);text-align:center">🎉 You save ₹${discountTotal.toFixed(0)} on this order!</div>`;
+  }
+
+  const summaryHTML = `<div class="ck-sum-box">${sumRows}</div>`;
 
   document.getElementById('ckoBody').innerHTML = `
     <div class="cko-section"><div class="cko-sec-label">Delivery address</div>${dlvCardHTML}</div>
@@ -1481,6 +1515,10 @@ function ckSaveDlv() {
 }
 
 function ckSelectPay(method) {
+  if (method === 'account' && !getMilkToken()) {
+    showToast('Login to your account first to use this option');
+    return;
+  }
   window._payMethod=method;
   document.querySelectorAll('.ck-pay-card').forEach(c=>c.classList.toggle('selected',c.dataset.pay===method));
 }
@@ -1502,6 +1540,10 @@ function ckoValidate() {
 
 function ckoPlace() {
   const method=window._payMethod||'cod';
+  if (method==='account' && !getMilkToken()) {
+    showToast('Please login to your account first');
+    return;
+  }
   if (method==='upi' && settings.upiId?.trim()) {
     const d=ckoValidate(); if(!d) return;
     window.location.href=`upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.storeName||'BSC Store')}&am=${total()}&cu=INR&tn=BSC+Order`;
@@ -1525,19 +1567,25 @@ function _doPlaceOrder(method) {
   }
   const freeGiftLabel=(giftState.injected&&cfg)?(cfg.label||cfg.prod.name):null;
 
-  // WhatsApp
+  // WhatsApp notification
   const wa=settings.whatsapp||'';
   if (wa) {
-    const lineItems=items.map(i=>`  • ${i.name}${i.variant?' ('+i.variant+')':''} × ${i.qty} = ₹${i.price*i.qty}`).join('\n');
-    let msg=`🛒 *New Order — ${settings.storeName||'BSC Store'}*\n\n👤 *${d.name}*\n📞 ${d.phone}\n📍 Block ${d.block}, Villa ${d.villa}${d.note?'\n📝 '+d.note:''}\n\n📦 *Items:*\n${lineItems}\n\n${freeGiftLabel?`🎁 Free Gift: ${freeGiftLabel}\n\n`:''}💰 *Total: ₹${t}*\n💳 Payment: ${method.toUpperCase()}\n\n_Sent from BSC Store App_`;
+    const lineItems=items.filter(i=>!i.isFreeGift).map(i=>`  • ${i.name}${i.variant?' ('+i.variant+')':''} × ${i.qty} = ₹${i.price*i.qty}`).join('\n');
+    const payLabel = method==='account'?'Add to Account (Khata)':method==='upi'?'UPI':'Cash on Delivery';
+    let msg=`🛒 *New Order — ${settings.storeName||'BSC Store'}*\n\n👤 *${d.name}*\n📞 ${d.phone}\n📍 Block ${d.block}, Villa ${d.villa}${d.note?'\n📝 '+d.note:''}\n\n📦 *Items:*\n${lineItems}\n\n${freeGiftLabel?`🎁 Free Gift: ${freeGiftLabel}\n\n`:''}💰 *Total: ₹${t}*\n💳 Payment: ${payLabel}${method==='account'?' (added to khata)':''}\n\n_Sent from BSC Store App_`;
     setTimeout(()=>{ window.open('https://wa.me/'+wa+'?text='+encodeURIComponent(msg),'_blank'); },300);
   }
 
   fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:d.name,phone:d.phone,block:d.block,villa:d.villa,note:d.note,items,total:t,freeGift:freeGiftLabel,paymentMethod:method})})
-  .then(()=>{
+  .then(r=>r.json())
+  .then(resp=>{
     cart={}; giftState={injected:false,claimed:false,prevUnlocked:false}; window._fdUnlocked=false;
     closeCkoPage();
-    document.getElementById('successMsg').innerHTML=`Order for <strong>${d.name}</strong> placed!<br>Block ${d.block}, Villa ${d.villa} · ₹${t}<br>We'll deliver soon 🚀`;
+    // Refresh account data if logged in (so passbook is up to date)
+    if (method==='account') { _accData=null; }
+    const addedToAcc = resp?.order?.addedToAccount;
+    const accMsg = addedToAcc ? '<br><span style="color:#4ade80;font-size:.78rem">✓ Added to your account khata</span>' : '';
+    document.getElementById('successMsg').innerHTML=`Order for <strong>${d.name}</strong> placed!<br>Block ${d.block}, Villa ${d.villa} · ₹${t}<br>We'll deliver soon 🚀${accMsg}`;
     document.getElementById('success').classList.add('show');
     updateCart(); renderHome();
   }).catch(()=>showToast('Error placing order. Try again.'));

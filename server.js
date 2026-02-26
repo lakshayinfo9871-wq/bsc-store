@@ -207,7 +207,37 @@ app.post('/api/orders', (req, res) => {
     items, total, freeGift: freeGift||null, paymentMethod: paymentMethod||'cod',
     status: 'pending', createdAt: new Date().toISOString()
   };
-  db.orders.push(order); writeDB(db); res.json({ ok: true, order });
+  db.orders.push(order);
+
+  // If payment method is 'account', auto-create udhar entry for the matching customer
+  if (paymentMethod === 'account' && phone) {
+    if (!db.udharEntries) db.udharEntries = [];
+    if (!db.nextUdharId) db.nextUdharId = 1;
+    const customer = (db.milkCustomers || []).find(c => c.phone === phone);
+    if (customer) {
+      const udharItems = (items || []).filter(i => !i.isFreeGift).map(i => ({
+        name: i.name + (i.variant ? ' (' + i.variant + ')' : ''),
+        qty: i.qty,
+        price: i.price
+      }));
+      const udharEntry = {
+        id: db.nextUdharId++,
+        customerId: customer.id,
+        items: udharItems,
+        amount: parseFloat(total),
+        date: new Date().toISOString().slice(0, 10),
+        note: 'App Order #' + order.id,
+        type: 'app_order',
+        orderId: order.id,
+        createdAt: new Date().toISOString()
+      };
+      db.udharEntries.push(udharEntry);
+      order.addedToAccount = true;
+      order.customerId = customer.id;
+    }
+  }
+
+  writeDB(db); res.json({ ok: true, order });
 });
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
