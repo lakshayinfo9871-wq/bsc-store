@@ -32,14 +32,16 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 
 /* ══════════════════════ TOPBAR ══════════════════════ */
 .topbar{flex-shrink:0;background:var(--bg);padding:0 16px;padding-top:max(env(safe-area-inset-top),0px);position:sticky;top:0;z-index:90;border-bottom:1px solid var(--border);}
-.top-row{display:flex;align-items:center;justify-content:space-between;height:52px;}
-.logo{font-size:1.15rem;font-weight:900;letter-spacing:-.5px;}
+.top-row{display:flex;align-items:center;justify-content:space-between;height:48px;}
+.logo{font-size:1.2rem;font-weight:900;letter-spacing:-.5px;}
 .logo span{color:var(--green);}
-.logo-sub{font-size:.6rem;color:var(--text3);font-weight:500;display:block;margin-top:-2px;}
 .icon-btn{width:38px;height:38px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;position:relative;}
 .cart-badge{position:absolute;top:-5px;right:-5px;background:var(--green);color:#000;font-size:.55rem;font-weight:900;min-width:17px;height:17px;border-radius:50%;display:none;align-items:center;justify-content:center;border:2px solid var(--bg);}
 
-.search-bar{background:var(--bg2);border-radius:12px;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);margin:0 0 10px;}
+/* Search bar — collapses on scroll */
+.search-wrap{overflow:hidden;transition:max-height .3s cubic-bezier(.4,0,.2,1),opacity .25s,margin .3s cubic-bezier(.4,0,.2,1);max-height:60px;opacity:1;margin-bottom:8px;}
+.search-wrap.hidden{max-height:0;opacity:0;margin-bottom:0;}
+.search-bar{background:var(--bg2);border-radius:12px;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);}
 .search-bar:focus-within{border-color:var(--green);}
 .search-bar input{flex:1;background:none;border:none;outline:none;font-size:13.5px;color:var(--text);}
 .search-bar input::placeholder{color:var(--text3);}
@@ -108,7 +110,7 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .pc-body{padding:8px 10px 10px;}
 .pc-variant-label{font-size:10px;color:var(--text3);font-weight:600;margin-bottom:2px;}
 .pc-name{font-size:12px;font-weight:700;line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;letter-spacing:-.2px;}
-.pc-delivery{font-size:9.5px;color:var(--green);font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:3px;}
+.pc-delivery{display:none;}
 .pc-price-row{display:flex;align-items:baseline;gap:4px;flex-wrap:wrap;margin-bottom:2px;}
 .pc-price{font-size:14px;font-weight:900;letter-spacing:-.4px;}
 .pc-mrp{font-size:10px;color:var(--text3);text-decoration:line-through;}
@@ -122,7 +124,19 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .qty-ctrl span{color:#000;font-size:11px;font-weight:900;min-width:18px;text-align:center;}
 
 /* Variant selector inside card */
-.pc-variant-sel{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 8px;font-size:11px;color:var(--text);font-weight:600;margin-bottom:6px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;}
+.pc-variant-btn{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 8px;font-size:11px;color:var(--text);font-weight:600;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left;transition:border-color .2s;}
+.pc-variant-btn:active{border-color:var(--green);background:rgba(45,211,111,.06);}
+.pc-variant-btn .vb-arrow{font-size:.7rem;color:var(--text3);transition:transform .3s cubic-bezier(.4,0,.2,1);}
+.pc-variant-btn.open .vb-arrow{transform:rotate(180deg);}
+/* Variant dropdown */
+.pc-variant-dropdown{overflow:hidden;max-height:0;opacity:0;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .22s ease;background:var(--bg3);border-radius:8px;border:1px solid var(--border);margin-bottom:6px;}
+.pc-variant-dropdown.open{max-height:200px;opacity:1;}
+.pc-vd-option{padding:7px 10px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);transition:background .15s;}
+.pc-vd-option:last-child{border:none;}
+.pc-vd-option:active{background:rgba(45,211,111,.1);}
+.pc-vd-option.selected{color:var(--green);}
+.pc-vd-option .vd-price{font-size:10px;color:var(--text3);font-weight:500;}
+.pc-vd-option.selected .vd-price{color:var(--green);}
 
 /* ══════════════════════ PRODUCT FULL PAGE (category page) ══════════════════════ */
 .fp-head{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:max(env(safe-area-inset-top,10px),10px);background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
@@ -412,13 +426,15 @@ select.ck-inp option{background:var(--bg2);}
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="top-row">
-    <div class="logo">🛒 <span>BSC</span> Store<span class="logo-sub">Fast delivery · Best prices</span></div>
+    <div class="logo">🛒 <span>BSC</span></div>
     <div class="icon-btn" onclick="openCart()">🛒<div class="cart-badge" id="cartBadge">0</div></div>
   </div>
-  <div class="search-bar">
-    <span class="search-icon">🔍</span>
-    <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value)">
-    <span style="color:var(--text3);cursor:pointer;font-size:.8rem" onclick="clearSearch()">✕</span>
+  <div class="search-wrap" id="searchWrap">
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value)">
+      <span style="color:var(--text3);cursor:pointer;font-size:.8rem" onclick="clearSearch()">✕</span>
+    </div>
   </div>
   <div class="cat-tabs" id="catTabs"></div>
 </div>
@@ -561,8 +577,13 @@ async function init() {
     document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
   }
   const scroller = document.getElementById('scroll');
+  let _lastScrollY = 0;
   scroller.addEventListener('scroll', () => {
-    document.querySelector('.topbar').classList.toggle('scrolled', scroller.scrollTop > 40);
+    const y = scroller.scrollTop;
+    const searchWrap = document.getElementById('searchWrap');
+    // Hide search bar after scrolling down 40px
+    if (searchWrap) searchWrap.classList.toggle('hidden', y > 40);
+    _lastScrollY = y;
   }, { passive:true });
 }
 
@@ -661,12 +682,24 @@ function pCard(p) {
   const hasMultiVariants = p.variants.length > 1;
   const bulkHint = getBulkHint(v.priceTiers, qty || 1);
   const imgUrl = v.imageUrl || p.imageUrl || '';
+  const dropId = 'vdrop_' + p.id;
+  const btnId  = 'vbtn_' + p.id;
 
-  // Variant selector
-  const variantSel = hasMultiVariants
-    ? `<select class="pc-variant-sel" onchange="onVariantChange(${p.id}, this.value)" onclick="event.stopPropagation()">
-        ${p.variants.map(vv => `<option value="${vv.id}" ${vv.id===selVid?'selected':''}>${vv.label}</option>`).join('')}
-      </select>`
+  // Premium variant button + smooth dropdown (no native select)
+  const variantBlock = hasMultiVariants
+    ? `<button class="pc-variant-btn" id="${btnId}" onclick="event.stopPropagation();toggleVariantDrop(${p.id},'${dropId}','${btnId}')">
+        <span>${v.label}</span>
+        <span class="vb-arrow">▾</span>
+      </button>
+      <div class="pc-variant-dropdown" id="${dropId}">
+        ${p.variants.map(vv => {
+          const vp = getPrice(vv.priceTiers, 1);
+          return `<div class="pc-vd-option ${vv.id===selVid?'selected':''}" onclick="event.stopPropagation();pickVariant(${p.id},'${vv.id}','${dropId}','${btnId}')">
+            <span>${vv.label}</span>
+            <span class="vd-price">₹${vp}</span>
+          </div>`;
+        }).join('')}
+      </div>`
     : `<div class="pc-variant-label">${v.label}</div>`;
 
   const addCtrl = qty > 0
@@ -684,9 +717,8 @@ function pCard(p) {
       ${p.isNew ? `<span class="pc-new-badge">NEW</span>` : ''}
     </div>
     <div class="pc-body">
-      ${variantSel}
+      ${variantBlock}
       <div class="pc-name">${p.name}</div>
-      <div class="pc-delivery">⚡ 30 min delivery</div>
       <div class="pc-price-row">
         <span class="pc-price">₹${price}</span>
         ${mrp ? `<span class="pc-mrp">₹${mrp}</span><span class="pc-off">${off}% off</span>` : ''}
@@ -709,22 +741,109 @@ function getBulkHint(tiers, qty) {
   return `Buy ${best.minQty}+ @ ₹${best.price}`;
 }
 
-// ── VARIANT CHANGE ────────────────────────────────────────────────────────────
+// ── VARIANT CHANGE & DROPDOWN ─────────────────────────────────────────────────
 window._selVariant = {};
+window._openDropId = null;
+
+// Close any open dropdown
+function closeAllDropdowns() {
+  if (window._openDropId) {
+    const d = document.getElementById(window._openDropId);
+    if (d) d.classList.remove('open');
+    const b = document.getElementById(window._openDropId.replace('vdrop_','vbtn_'));
+    if (b) b.classList.remove('open');
+    window._openDropId = null;
+  }
+}
+
+// Toggle dropdown — smooth open/close, NO page re-render, NO scroll
+function toggleVariantDrop(pid, dropId, btnId) {
+  const drop = document.getElementById(dropId);
+  const btn  = document.getElementById(btnId);
+  if (!drop) return;
+  const isOpen = drop.classList.contains('open');
+  closeAllDropdowns();
+  if (!isOpen) {
+    drop.classList.add('open');
+    btn?.classList.add('open');
+    window._openDropId = dropId;
+  }
+}
+
+// User picks a variant from dropdown — update in-place, NO full re-render
+function pickVariant(pid, vid, dropId, btnId) {
+  closeAllDropdowns();
+  window._selVariant[pid] = vid;
+
+  // Find the card and update it in-place
+  const btnEl  = document.getElementById(btnId);
+  const dropEl = document.getElementById(dropId);
+  const p = prods.find(x=>x.id===pid);
+  if (!p || !btnEl || !dropEl) { reRenderCurrentPage(); return; }
+  const v = getVariant(p, vid);
+  if (!v) return;
+
+  // Update button label
+  btnEl.querySelector('span:first-child').textContent = v.label;
+
+  // Update option highlights
+  dropEl.querySelectorAll('.pc-vd-option').forEach(opt => {
+    const optVid = opt.getAttribute('onclick')?.match(/'([^']+)'/g)?.[1]?.replace(/'/g,'');
+    opt.classList.toggle('selected', optVid === vid);
+  });
+
+  // Find the card containing this button and update price/controls in-place
+  const card = btnEl.closest('.pcard');
+  if (card) updateCardInPlace(card, p, vid);
+}
+
+function updateCardInPlace(card, p, vid) {
+  const qty   = cart[cartKey(p.id, vid)] || 0;
+  const v     = getVariant(p, vid);
+  if (!v) return;
+  const price = getPrice(v.priceTiers, qty || 1);
+  const mrp   = v.mrp && v.mrp > price ? v.mrp : null;
+  const off   = offPct(price, mrp);
+  const bulkHint = getBulkHint(v.priceTiers, qty || 1);
+
+  // Update price row
+  const priceRow = card.querySelector('.pc-price-row');
+  if (priceRow) priceRow.innerHTML = `<span class="pc-price">₹${price}</span>${mrp?`<span class="pc-mrp">₹${mrp}</span><span class="pc-off">${off}% off</span>`:''}`;
+
+  // Update bulk hint
+  const hintEl = card.querySelector('.pc-bulk-hint');
+  if (hintEl) hintEl.textContent = bulkHint ? '📦 '+bulkHint : '';
+
+  // Update discount badge
+  const badge = card.querySelector('.pc-discount-badge');
+  if (badge) badge.textContent = off > 0 ? off+'% OFF' : '';
+
+  // Update add/qty control
+  const bot = card.querySelector('.pc-bot');
+  if (bot) {
+    if (qty > 0) {
+      bot.innerHTML = `<div class="qty-ctrl"><button onclick="event.stopPropagation();chQty(${p.id},'${vid}',-1)">−</button><span>${qty}</span><button onclick="event.stopPropagation();chQty(${p.id},'${vid}',1)">+</button></div>`;
+    } else {
+      bot.innerHTML = `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${vid}',1)">ADD</button>`;
+    }
+  }
+
+  // Update image if variant has own image
+  const img = card.querySelector('.pc-img-wrap img');
+  const imgUrl = v.imageUrl || p.imageUrl || '';
+  if (img && imgUrl) img.src = imgUrl;
+}
+
+function reRenderCurrentPage() {
+  const fpOpen = document.getElementById('fpage')?.classList.contains('open');
+  if (fpOpen && window._openCatId) renderFPContent(window._openCatId);
+  else renderHome();
+}
+
+// Legacy — no longer called but keep for safety
 function onVariantChange(pid, vid) {
   window._selVariant[pid] = vid;
-  // Re-render product cards wherever this product appears
-  document.querySelectorAll('.pcard, .fp-grid .pcard').forEach(el => {
-    // Refresh by rebuilding the grid sections that contain this product
-  });
-  // Quick approach: re-render the current page
-  const fpOpen = document.getElementById('fpage')?.classList.contains('open');
-  if (fpOpen) {
-    const catId = window._openCatId;
-    if (catId) renderFPContent(catId);
-  } else {
-    renderHome();
-  }
+  reRenderCurrentPage();
 }
 
 // ── OPEN FP ───────────────────────────────────────────────────────────────────
@@ -840,7 +959,7 @@ function openProductDetail(pid) {
               <span style="font-size:1.3rem;font-weight:900">₹${price}</span>
               ${mrp ? `<span style="font-size:.85rem;color:var(--text3);text-decoration:line-through">₹${mrp}</span><span style="font-size:.75rem;background:rgba(255,71,87,.15);color:var(--red);padding:2px 6px;border-radius:4px;font-weight:800">${off}% off</span>` : ''}
             </div>
-            <div style="font-size:.75rem;color:var(--green);font-weight:600;margin-top:4px">⚡ 30 min delivery</div>
+            
           </div>
         </div>
         ${variantHTML}
@@ -877,10 +996,24 @@ function chQty(pid, vid, delta) {
   const nw = Math.max(0, cur + delta);
   if (nw === 0) delete cart[key]; else cart[key] = nw;
   updateCart();
-  // Re-render affected product cards
-  const fpOpen = document.getElementById('fpage')?.classList.contains('open');
-  if (fpOpen && window._openCatId) renderFPContent(window._openCatId);
-  else renderHome();
+
+  // Update card in-place (no scroll, no full re-render)
+  const p = prods.find(x=>x.id===pid);
+  if (p) {
+    // Find all cards for this product and update their controls
+    document.querySelectorAll('.pcard').forEach(card => {
+      // Identify if this card is for pid by checking its ADD/qty buttons
+      const addBtn = card.querySelector(`.add-btn[onclick*="chQty(${pid},'${vid}",`);
+      const qtyBtn = card.querySelector(`.qty-ctrl button[onclick*="chQty(${pid},'${vid}",`);
+      if (addBtn || qtyBtn) updateCardInPlace(card, p, vid);
+    });
+    // Also update fp-grid cards
+    document.querySelectorAll('.fp-grid .pcard').forEach(card => {
+      const hasRef = card.innerHTML.includes("chQty("+pid+",'"+vid+"'");
+      if (hasRef) updateCardInPlace(card, p, vid);
+    });
+  }
+
   // Bounce pill
   const fc = document.getElementById('fcart');
   if (delta > 0) { fc.classList.add('bounce'); setTimeout(() => fc.classList.remove('bounce'), 500); }
@@ -1508,6 +1641,17 @@ function showToast(msg) {
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
 }
+
+// ── CLOSE DROPDOWNS ON OUTSIDE CLICK ─────────────────────────────────────────
+document.addEventListener('click', (e) => {
+  if (window._openDropId) {
+    const drop = document.getElementById(window._openDropId);
+    const btn  = document.getElementById(window._openDropId.replace('vdrop_','vbtn_'));
+    if (drop && !drop.contains(e.target) && !btn?.contains(e.target)) {
+      closeAllDropdowns();
+    }
+  }
+}, true);
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 init();
