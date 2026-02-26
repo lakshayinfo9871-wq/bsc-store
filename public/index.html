@@ -110,7 +110,7 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .pc-img-wrap img{width:100%;height:100%;object-fit:contain;}
 .pc-discount-badge{position:absolute;top:7px;left:7px;background:var(--green);color:#000;font-size:.6rem;font-weight:900;padding:2px 6px;border-radius:5px;letter-spacing:.02em;}
 .pc-new-badge{position:absolute;top:7px;right:7px;background:#3b82f6;color:#fff;font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:5px;}
-.pc-body{padding:8px 10px 10px;}
+.pc-body{padding:8px 10px 10px;display:flex;flex-direction:column;}
 .pc-variant-label{font-size:10px;color:var(--text3);font-weight:600;margin-bottom:2px;}
 .pc-name{font-size:12px;font-weight:700;line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;letter-spacing:-.2px;}
 .pc-delivery{display:none;}
@@ -119,12 +119,15 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .pc-mrp{font-size:10px;color:var(--text3);text-decoration:line-through;}
 .pc-off{font-size:9px;background:rgba(255,71,87,.15);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:800;}
 .pc-bulk-hint{font-size:9px;color:var(--green);font-weight:600;margin-bottom:5px;}
-.pc-bot{display:flex;align-items:center;justify-content:space-between;margin-top:4px;}
-.add-btn{background:none;border:1.5px solid var(--green);color:var(--green);border-radius:8px;padding:5px 14px;font-size:12px;font-weight:800;transition:all .15s;}
-.add-btn:active{background:var(--green);color:#000;}
-.qty-ctrl{display:flex;align-items:center;background:var(--green);border-radius:8px;overflow:hidden;}
-.qty-ctrl button{background:none;color:#000;font-size:15px;font-weight:900;padding:4px 9px;border:none;line-height:1;}
-.qty-ctrl span{color:#000;font-size:11px;font-weight:900;min-width:18px;text-align:center;}
+.pc-bot{margin-top:6px;}
+/* ADD button — full width */
+.add-btn{width:100%;background:none;border:1.5px solid var(--green);color:var(--green);border-radius:9px;padding:7px 0;font-size:12px;font-weight:900;letter-spacing:.04em;transition:background .15s,color .15s,transform .1s;display:block;text-align:center;}
+.add-btn:active{background:var(--green);color:#000;transform:scale(.97);}
+/* Qty control — full width, − N + layout */
+.qty-ctrl{display:flex;align-items:center;justify-content:space-between;background:var(--green);border-radius:9px;overflow:hidden;width:100%;}
+.qty-ctrl button{background:none;color:#000;font-size:17px;font-weight:900;padding:5px 11px;border:none;line-height:1;flex-shrink:0;}
+.qty-ctrl button:active{background:rgba(0,0,0,.12);}
+.qty-ctrl span{color:#000;font-size:12px;font-weight:900;flex:1;text-align:center;}
 
 /* Variant selector inside card */
 .pc-variant-btn{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 8px;font-size:11px;color:var(--text);font-weight:600;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left;transition:border-color .2s;}
@@ -836,7 +839,7 @@ function pCard(p) {
        </div>`
     : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
 
-  return `<div class="pcard" onclick="openProductDetail(${p.id})">
+  return `<div class="pcard" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
     <div class="pc-img-wrap">
       ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : '<span style="font-size:2.5rem">📦</span>'}
       ${off > 0 ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
@@ -920,7 +923,10 @@ function pickVariant(pid, vid, dropId, btnId) {
 
   // Find the card containing this button and update price/controls in-place
   const card = btnEl.closest('.pcard');
-  if (card) updateCardInPlace(card, p, vid);
+  if (card) {
+    card.dataset.vid = vid; // keep data-vid in sync
+    updateCardInPlace(card, p, vid);
+  }
 }
 
 function updateCardInPlace(card, p, vid) {
@@ -953,6 +959,10 @@ function updateCardInPlace(card, p, vid) {
       bot.innerHTML = `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${vid}',1)">ADD</button>`;
     }
   }
+  // Also update price to reflect new qty-based tier pricing
+  const newPrice = getPrice(v.priceTiers, qty || 1);
+  const priceEl = card.querySelector('.pc-price');
+  if (priceEl) priceEl.textContent = '₹' + newPrice;
 
   // Update image if variant has own image
   const img = card.querySelector('.pc-img-wrap img');
@@ -1132,17 +1142,13 @@ function chQty(pid, vid, delta) {
   // Update card in-place (no scroll, no full re-render)
   const p = prods.find(x=>x.id===pid);
   if (p) {
-    // Find all cards for this product and update their controls
-    document.querySelectorAll('.pcard').forEach(card => {
-      // Identify if this card is for pid by checking its ADD/qty buttons
-      const addBtn = card.querySelector(`.add-btn[onclick*="chQty(${pid},'${vid}",`);
-      const qtyBtn = card.querySelector(`.qty-ctrl button[onclick*="chQty(${pid},'${vid}",`);
-      if (addBtn || qtyBtn) updateCardInPlace(card, p, vid);
+    // Find all cards by data-pid + data-vid (reliable, no CSS attr selector issues)
+    document.querySelectorAll(`.pcard[data-pid="${pid}"][data-vid="${vid}"]`).forEach(card => {
+      updateCardInPlace(card, p, vid);
     });
-    // Also update fp-grid cards
-    document.querySelectorAll('.fp-grid .pcard').forEach(card => {
-      const hasRef = card.innerHTML.includes("chQty("+pid+",'"+vid+"'");
-      if (hasRef) updateCardInPlace(card, p, vid);
+    // Fallback: any card whose innerHTML references this pid+vid
+    document.querySelectorAll('.pcard:not([data-pid])').forEach(card => {
+      if (card.innerHTML.includes("chQty("+pid+",'"+vid+"'")) updateCardInPlace(card, p, vid);
     });
   }
 
