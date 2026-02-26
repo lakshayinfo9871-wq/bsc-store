@@ -419,6 +419,86 @@ select.ck-inp option{background:var(--bg2);}
 
 /* Udhar rows */
 .su2,.su3,.su4{margin-bottom:12px;}
+
+/* ══════════════════════ CALENDAR LEDGER ══════════════════════ */
+/* Month list */
+.month-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.month-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s;}
+.month-card:active{transform:scale(.98);border-color:var(--green);}
+.month-card-left{display:flex;flex-direction:column;gap:3px;}
+.month-card-name{font-size:.9rem;font-weight:800;}
+.month-card-meta{font-size:.68rem;color:var(--text3);}
+.month-card-right{display:flex;align-items:center;gap:8px;}
+.month-card-amt{font-size:.82rem;font-weight:800;color:var(--red);}
+.month-card-arr{font-size:.8rem;color:var(--text3);}
+.month-card.current{border-color:rgba(45,211,111,.3);background:rgba(45,211,111,.04);}
+
+/* Calendar grid */
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;}
+.cal-header-title{font-size:1rem;font-weight:900;}
+.cal-nav-btn{width:34px;height:34px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.9rem;cursor:pointer;color:var(--text);}
+.cal-summary-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;}
+.cs-item{text-align:center;}
+.cs-val{font-size:.82rem;font-weight:900;}
+.cs-lbl{font-size:.55rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:1px;}
+.cs-val.red{color:var(--red);}
+.cs-val.grn{color:var(--green);}
+.cs-val.yel{color:#fbbf24;}
+.cal-grid-wrap{padding:8px 12px 0;flex-shrink:0;}
+.cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px;}
+.cal-dow{font-size:.58rem;font-weight:700;color:var(--text3);text-align:center;padding:3px 0;text-transform:uppercase;}
+.cal-cells{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-cell{min-height:48px;border-radius:10px;display:flex;flex-direction:column;align-items:center;padding:4px 2px;cursor:pointer;position:relative;border:1.5px solid transparent;transition:all .15s;}
+.cal-cell.empty{cursor:default;}
+.cal-cell.today{border-color:rgba(45,211,111,.4);background:rgba(45,211,111,.06);}
+.cal-cell.selected{border-color:var(--green);background:rgba(45,211,111,.12);}
+.cal-cell:not(.empty):active{transform:scale(.94);}
+.cal-cell-day{font-size:.72rem;font-weight:700;color:var(--text);line-height:1.2;margin-bottom:2px;}
+.cal-cell.empty .cal-cell-day{color:transparent;}
+.cal-cell-dots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;align-items:center;}
+.cal-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.dot-milk{background:#60a5fa;}
+.dot-order{background:#a78bfa;}
+.dot-udhar{background:#f59e0b;}
+.dot-payment{background:var(--green);}
+.cal-cell-total{font-size:.55rem;font-weight:800;color:var(--text3);margin-top:2px;line-height:1;}
+
+/* Daily ledger */
+.day-ledger{flex:1;overflow-y:auto;padding:12px 12px 90px;}
+.day-header{padding:10px 14px;background:var(--bg2);border-radius:14px;border:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.day-date-title{font-size:.92rem;font-weight:900;}
+.day-total-chip{font-size:.72rem;font-weight:800;padding:4px 10px;border-radius:20px;background:rgba(255,71,87,.08);color:var(--red);border:1px solid rgba(255,71,87,.15);}
+.day-total-chip.zero{background:var(--green-dim);color:var(--green);border-color:rgba(45,211,111,.2);}
+.ledger-entry{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;}
+.le-icon-wrap{width:36px;height:36px;border-radius:10px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;border:1px solid var(--border);}
+.le-body{flex:1;min-width:0;}
+.le-source-row{display:flex;align-items:center;gap:6px;margin-bottom:2px;}
+.le-source{font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:.04em;}
+.src-app{background:rgba(167,139,250,.12);color:#a78bfa;}
+.src-store{background:rgba(245,158,11,.12);color:#f59e0b;}
+.src-sub{background:rgba(96,165,250,.12);color:#60a5fa;}
+.src-pay{background:rgba(45,211,111,.12);color:var(--green);}
+.le-time{font-size:.6rem;color:var(--text3);}
+.le-desc{font-size:.84rem;font-weight:700;line-height:1.35;margin-bottom:2px;}
+.le-note{font-size:.7rem;color:var(--text3);}
+.le-amt{flex-shrink:0;text-align:right;}
+.le-amt-val{font-size:.92rem;font-weight:900;}
+.le-amt-val.debit{color:var(--red);}
+.le-amt-val.credit{color:var(--green);}
+.le-amt-type{font-size:.6rem;color:var(--text3);font-weight:600;}
+.legend-row{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:.65rem;color:var(--text3);font-weight:600;}
+
+/* Outstanding badge */
+.outstanding-banner{background:rgba(255,71,87,.06);border:1px solid rgba(255,71,87,.15);border-radius:14px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.ob-label{font-size:.72rem;color:var(--text3);font-weight:600;}
+.ob-amount{font-size:1.4rem;font-weight:900;color:var(--red);}
+.ob-amount.clear{color:var(--green);}
+
+/* Cal view toggle */
+.cal-view-tabs{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg);}
+.cal-vtab{flex:1;padding:8px 4px;text-align:center;font-size:.75rem;font-weight:700;cursor:pointer;color:var(--text3);border-radius:9px;border:1.5px solid transparent;transition:all .18s;}
+.cal-vtab.active{color:var(--green);border-color:rgba(45,211,111,.3);background:rgba(45,211,111,.07);}
 </style>
 </head>
 <body>
@@ -447,9 +527,15 @@ select.ck-inp option{background:var(--bg2);}
   </div>
   <div class="acc-tabs">
     <div class="acc-tab active" id="mtab0" onclick="switchMilkTab(0)">My Record</div>
+    <div class="acc-tab" id="mtab2" onclick="switchMilkTab(2)">📅 Khata</div>
     <div class="acc-tab" id="mtab1" onclick="switchMilkTab(1)">Register</div>
   </div>
   <div class="acc-body" id="milkBody"></div>
+</div>
+
+<!-- CALENDAR LEDGER PAGE (full page overlay) -->
+<div class="acc-page" id="calLedgerPage">
+  <div id="calLedgerInner" style="display:flex;flex-direction:column;height:100%;overflow:hidden;"></div>
 </div>
 
 <!-- MAIN SCROLL -->
@@ -1458,8 +1544,10 @@ function closeSuccess() { document.getElementById('success').classList.remove('s
 function openMilkPage() { setNav('bn3'); document.getElementById('milkPage').classList.add('open'); switchMilkTab(0); }
 function closeMilkPage() { document.getElementById('milkPage').classList.remove('open'); setNav('bn0'); }
 function switchMilkTab(n) {
-  [0,1].forEach(i => { document.getElementById('mtab'+i)?.classList.toggle('active',i===n); });
-  if (n===0) renderMilkDash(); else renderMilkReg();
+  [0,1,2].forEach(i => { document.getElementById('mtab'+i)?.classList.toggle('active',i===n); });
+  if (n===0) renderMilkDash();
+  else if (n===1) renderMilkReg();
+  else if (n===2) renderKhataView();
 }
 
 const MILK_KEY='bsc_milk_tok';
@@ -1607,6 +1695,289 @@ function renderMilkDashData(data) {
 }
 
 function logoutMilk() { clearMilkToken(); renderMilkLogin(); showToast('Logged out'); }
+
+// ══════════════════════ CALENDAR LEDGER (KHATA) ══════════════════════
+
+// State
+let _cal = {
+  months: [],
+  selMonth: null,
+  entries: [],
+  summary: {},
+  selDate: null,
+  view: 'months'   // 'months' | 'calendar' | 'day'
+};
+
+async function renderKhataView() {
+  const tok = getMilkToken();
+  if (!tok) {
+    document.getElementById('milkBody').innerHTML = `
+      <div class="acc-card">
+        <div class="acc-card-hero"><span class="acc-hero-emoji">📒</span><div class="acc-hero-title">Khata Book</div><div class="acc-hero-sub">Login to view your account ledger</div></div>
+        <div class="acc-form-body"><button class="acc-btn acc-btn-green" onclick="switchMilkTab(0)">Login First</button></div>
+      </div>`;
+    return;
+  }
+  document.getElementById('milkBody').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Loading...</div>';
+  try {
+    const r = await fetch('/api/customer/ledger/months', { headers: { Authorization: 'Bearer ' + tok } });
+    if (!r.ok) { clearMilkToken(); switchMilkTab(0); return; }
+    const d = await r.json();
+    _cal.months = d.months || [];
+    _cal.view = 'months';
+    _cal.selMonth = null;
+    renderKhataMonthList();
+  } catch { document.getElementById('milkBody').innerHTML = '<div class="empty-state"><div class="ei">⚠️</div><p>Cannot load ledger</p></div>'; }
+}
+
+function renderKhataMonthList() {
+  _cal.view = 'months';
+  const curMonth = new Date().toISOString().slice(0, 7);
+  document.getElementById('milkBody').innerHTML = `
+    <div style="padding:8px 0 4px">
+      <div style="padding:0 2px 10px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:.7rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">📅 Monthly History</div>
+        <div class="legend-row">
+          <span class="legend-item"><span class="cal-dot dot-milk" style="display:inline-block"></span>Milk</span>
+          <span class="legend-item"><span class="cal-dot dot-order" style="display:inline-block"></span>Order</span>
+          <span class="legend-item"><span class="cal-dot dot-udhar" style="display:inline-block"></span>Store</span>
+          <span class="legend-item"><span class="cal-dot dot-payment" style="display:inline-block"></span>Payment</span>
+        </div>
+      </div>
+      <div class="month-list" id="khataMonthList">
+        ${_cal.months.length ? _cal.months.map(m => {
+          const label = new Date(m + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
+          const isCur = m === curMonth;
+          return `<div class="month-card ${isCur ? 'current' : ''}" onclick="openKhataMonth('${m}')">
+            <div class="month-card-left">
+              <div class="month-card-name">${label}${isCur ? ' <span style="font-size:.6rem;background:rgba(45,211,111,.15);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:800">Current</span>' : ''}</div>
+              <div class="month-card-meta">Tap to view calendar</div>
+            </div>
+            <div class="month-card-right">
+              <span class="month-card-arr">›</span>
+            </div>
+          </div>`;
+        }).join('') : '<div class="empty-state"><div class="ei">📒</div><p>No activity recorded yet</p></div>'}
+      </div>
+    </div>`;
+}
+
+async function openKhataMonth(month) {
+  _cal.selMonth = month;
+  document.getElementById('milkBody').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Loading calendar...</div>';
+  try {
+    const tok = getMilkToken();
+    const r = await fetch('/api/customer/ledger?month=' + month, { headers: { Authorization: 'Bearer ' + tok } });
+    if (!r.ok) throw new Error('Failed');
+    const d = await r.json();
+    _cal.entries = d.entries || [];
+    _cal.summary = d.summary || {};
+    _cal.selDate = null;
+    _cal.view = 'calendar';
+    renderKhataCalendar();
+  } catch { showToast('Failed to load month'); renderKhataMonthList(); }
+}
+
+function renderKhataCalendar() {
+  _cal.view = 'calendar';
+  const month = _cal.selMonth;
+  const summary = _cal.summary;
+  const label = new Date(month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  // Build date → event types map
+  const dateMap = {};
+  _cal.entries.forEach(e => {
+    if (!dateMap[e.date]) dateMap[e.date] = { milk: 0, order: 0, udhar: 0, payment: 0, total: 0 };
+    const dm = dateMap[e.date];
+    if (e.type === 'milk') dm.milk++;
+    else if (e.type === 'order') dm.order++;
+    else if (e.type === 'udhar') dm.udhar++;
+    else if (e.type === 'payment' || e.type === 'udhar_payment') dm.payment++;
+    if (e.debit) dm.total += e.amount;
+    else dm.total -= e.amount;
+  });
+
+  // Build calendar grid
+  const firstDay = new Date(month + '-01');
+  const daysInMonth = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0).getDate();
+  const startDow = firstDay.getDay(); // 0=Sun
+  const today = new Date().toISOString().slice(0, 10);
+
+  let cells = '';
+  // empty cells before first day
+  for (let i = 0; i < startDow; i++) cells += '<div class="cal-cell empty"><div class="cal-cell-day"></div></div>';
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = month + '-' + String(d).padStart(2, '0');
+    const dm = dateMap[dateStr];
+    const isToday = dateStr === today;
+    const isSel = dateStr === _cal.selDate;
+    let dots = '';
+    if (dm) {
+      if (dm.milk > 0) dots += '<span class="cal-dot dot-milk"></span>';
+      if (dm.order > 0) dots += '<span class="cal-dot dot-order"></span>';
+      if (dm.udhar > 0) dots += '<span class="cal-dot dot-udhar"></span>';
+      if (dm.payment > 0) dots += '<span class="cal-dot dot-payment"></span>';
+    }
+    const totalText = dm ? (dm.total > 0 ? '+₹' + Math.abs(dm.total).toFixed(0) : dm.total < 0 ? '-₹' + Math.abs(dm.total).toFixed(0) : '') : '';
+    cells += `<div class="cal-cell ${isToday ? 'today' : ''} ${isSel ? 'selected' : ''}" onclick="openKhataDay('${dateStr}')">
+      <div class="cal-cell-day">${d}</div>
+      <div class="cal-cell-dots">${dots}</div>
+      ${totalText ? `<div class="cal-cell-total">${totalText}</div>` : ''}
+    </div>`;
+  }
+
+  const outstanding = summary.outstanding || 0;
+
+  document.getElementById('milkBody').innerHTML = `
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;margin:-16px;">
+
+      <!-- Header -->
+      <div class="cal-header">
+        <button class="cal-nav-btn" onclick="renderKhataMonthList()">&#8592;</button>
+        <div class="cal-header-title">${label}</div>
+        <button class="cal-nav-btn" onclick="showAllEntries()">≡</button>
+      </div>
+
+      <!-- Outstanding banner -->
+      <div style="padding:10px 12px 0;flex-shrink:0">
+        <div class="outstanding-banner">
+          <div>
+            <div class="ob-label">Outstanding Balance</div>
+            <div class="ob-amount ${outstanding <= 0 ? 'clear' : ''}">${outstanding <= 0 ? '✓ Cleared' : '₹' + outstanding.toFixed(0)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:.68rem;color:var(--text3)">Total charged: ₹${(summary.totalDebits || 0).toFixed(0)}</div>
+            <div style="font-size:.68rem;color:var(--green)">Paid: ₹${(summary.paymentsTotal || 0).toFixed(0)}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary bar -->
+      <div class="cal-summary-bar">
+        <div class="cs-item"><div class="cs-val" style="color:#60a5fa">₹${(summary.milkTotal || 0).toFixed(0)}</div><div class="cs-lbl">🥛 Milk</div></div>
+        <div class="cs-item"><div class="cs-val" style="color:#a78bfa">₹${(summary.orderTotal || 0).toFixed(0)}</div><div class="cs-lbl">🛒 Orders</div></div>
+        <div class="cs-item"><div class="cs-val" style="color:#f59e0b">₹${(summary.udharTotal || 0).toFixed(0)}</div><div class="cs-lbl">📒 Udhar</div></div>
+        <div class="cs-item"><div class="cs-val grn">₹${(summary.paymentsTotal || 0).toFixed(0)}</div><div class="cs-lbl">💚 Paid</div></div>
+      </div>
+
+      <!-- Calendar grid -->
+      <div class="cal-grid-wrap" style="flex-shrink:0">
+        <div class="cal-dow-row">
+          ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-dow">${d}</div>`).join('')}
+        </div>
+        <div class="cal-cells">${cells}</div>
+      </div>
+
+      <!-- Spacer / tap hint -->
+      <div style="flex:1;overflow-y:auto;padding:10px 12px 80px">
+        <div id="calDayDetail">
+          <div style="text-align:center;padding:20px;color:var(--text3);font-size:.8rem">Tap a date to see details</div>
+          <div class="legend-row" style="justify-content:center">
+            <span class="legend-item"><span class="cal-dot dot-milk" style="display:inline-block"></span>Milk delivery</span>
+            <span class="legend-item"><span class="cal-dot dot-order" style="display:inline-block"></span>App order</span>
+            <span class="legend-item"><span class="cal-dot dot-udhar" style="display:inline-block"></span>Store credit</span>
+            <span class="legend-item"><span class="cal-dot dot-payment" style="display:inline-block"></span>Payment</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openKhataDay(dateStr) {
+  // Mark selected on grid
+  document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('selected'));
+  const allCells = document.querySelectorAll('.cal-cell:not(.empty)');
+  const dayNum = parseInt(dateStr.slice(-2));
+  // Find cell by day number text
+  allCells.forEach(c => { if (parseInt(c.querySelector('.cal-cell-day')?.textContent) === dayNum) c.classList.add('selected'); });
+
+  _cal.selDate = dateStr;
+  const dayEntries = _cal.entries.filter(e => e.date === dateStr);
+  const d = new Date(dateStr + 'T12:00:00');
+  const dateLabel = d.toLocaleDateString('default', { weekday: 'long', day: 'numeric', month: 'long' });
+  const dayDebit = dayEntries.filter(e => e.debit).reduce((s, e) => s + e.amount, 0);
+  const dayCredit = dayEntries.filter(e => !e.debit).reduce((s, e) => s + e.amount, 0);
+  const dayNet = dayDebit - dayCredit;
+
+  const entryHTML = dayEntries.length ? dayEntries.map(e => {
+    const icons = { milk: '🥛', order: '🛒', udhar: '📒', payment: '💚', udhar_payment: '💚' };
+    const srcClass = { APP: 'src-app', STORE: 'src-store', SUBSCRIPTION: 'src-sub', PAYMENT: 'src-pay' };
+    const timeStr = e.time ? new Date(e.time).toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div class="ledger-entry">
+      <div class="le-icon-wrap">${icons[e.type] || '📄'}</div>
+      <div class="le-body">
+        <div class="le-source-row">
+          <span class="le-source ${srcClass[e.source] || ''}">${e.source}</span>
+          ${timeStr ? `<span class="le-time">${timeStr}</span>` : ''}
+        </div>
+        <div class="le-desc">${e.description}</div>
+        ${e.note ? `<div class="le-note">${e.note}</div>` : ''}
+      </div>
+      <div class="le-amt">
+        <div class="le-amt-val ${e.debit ? 'debit' : 'credit'}">${e.debit ? '-' : '+'}₹${e.amount.toFixed(0)}</div>
+        <div class="le-amt-type">${e.debit ? 'DEBIT' : 'CREDIT'}</div>
+      </div>
+    </div>`;
+  }).join('') : `<div style="text-align:center;padding:20px;color:var(--text3);font-size:.8rem">No activity on this day</div>`;
+
+  const chip = dayNet === 0
+    ? `<div class="day-total-chip zero">No charges</div>`
+    : (dayNet > 0 ? `<div class="day-total-chip">₹${dayNet.toFixed(0)} due</div>` : `<div class="day-total-chip zero">₹${Math.abs(dayNet).toFixed(0)} credit</div>`);
+
+  document.getElementById('calDayDetail').innerHTML = `
+    <div class="day-header">
+      <div class="day-date-title">${dateLabel}</div>
+      ${chip}
+    </div>
+    ${entryHTML}`;
+}
+
+function showAllEntries() {
+  // Show full ledger list for month
+  const month = _cal.selMonth;
+  const label = new Date(month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
+  const summary = _cal.summary;
+  const icons = { milk: '🥛', order: '🛒', udhar: '📒', payment: '💚', udhar_payment: '💚' };
+  const srcClass = { APP: 'src-app', STORE: 'src-store', SUBSCRIPTION: 'src-sub', PAYMENT: 'src-pay' };
+
+  const entryHTML = _cal.entries.length ? _cal.entries.map(e => {
+    const d = new Date(e.date + 'T12:00:00');
+    const dateLabel = d.toLocaleDateString('default', { day: 'numeric', month: 'short' });
+    const timeStr = e.time ? new Date(e.time).toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div class="ledger-entry">
+      <div class="le-icon-wrap">${icons[e.type] || '📄'}</div>
+      <div class="le-body">
+        <div class="le-source-row">
+          <span class="le-source ${srcClass[e.source] || ''}">${e.source}</span>
+          <span class="le-time">${dateLabel}${timeStr ? ' · ' + timeStr : ''}</span>
+        </div>
+        <div class="le-desc">${e.description}</div>
+        ${e.note ? `<div class="le-note">${e.note}</div>` : ''}
+      </div>
+      <div class="le-amt">
+        <div class="le-amt-val ${e.debit ? 'debit' : 'credit'}">${e.debit ? '-' : '+'}₹${e.amount.toFixed(0)}</div>
+        <div class="le-amt-type">${e.debit ? 'DEBIT' : 'CREDIT'}</div>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty-state"><div class="ei">📒</div><p>No entries this month</p></div>';
+
+  document.getElementById('milkBody').innerHTML = `
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;margin:-16px;">
+      <div class="cal-header">
+        <button class="cal-nav-btn" onclick="renderKhataCalendar()">&#8592;</button>
+        <div class="cal-header-title">${label} — All Entries</div>
+        <div></div>
+      </div>
+      <div class="cal-summary-bar">
+        <div class="cs-item"><div class="cs-val red">₹${(summary.totalDebits||0).toFixed(0)}</div><div class="cs-lbl">Total Due</div></div>
+        <div class="cs-item"><div class="cs-val grn">₹${(summary.paymentsTotal||0).toFixed(0)}</div><div class="cs-lbl">Paid</div></div>
+        <div class="cs-item"><div class="cs-val ${(summary.outstanding||0) > 0 ? 'red' : 'grn'}">₹${Math.abs(summary.outstanding||0).toFixed(0)}</div><div class="cs-lbl">${(summary.outstanding||0) > 0 ? 'Balance' : 'Cleared'}</div></div>
+        <div class="cs-item"><div class="cs-val">${_cal.entries.length}</div><div class="cs-lbl">Entries</div></div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:10px 12px 80px">${entryHTML}</div>
+    </div>`;
+}
 
 // ── BANNER ────────────────────────────────────────────────────────────────────
 function startBanner() {

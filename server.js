@@ -347,6 +347,139 @@ app.get('/api/admin/udhar-summary', adminAuth, (req, res) => {
   res.json((db.milkCustomers||[]).map(c => ({ customer:{id:c.id,name:c.name,phone:c.phone,address:c.address}, ...getUdharSummary(db,c.id) })));
 });
 
+// ── LEDGER / CALENDAR API ─────────────────────────────────────────────────────
+// Returns unified ledger entries for a customer across a given month
+// Each entry: { date, type:'milk'|'order'|'udhar'|'payment'|'udhar_payment', source, description, amount, debit, credit, time, note, id }
+app.get('/api/customer/ledger', customerAuth, (req, res) => {
+  const db = readDB();
+  const cid = req.user.cid;
+  const c = (db.milkCustomers || []).find(x => x.id === cid);
+  if (!c) return res.status(404).json({ error: 'Not found' });
+
+  const month = req.query.month || new Date().toISOString().slice(0, 7);
+  const entries = [];
+
+  // Milk deliveries
+  (db.milkLogs || []).filter(l => l.customerId === cid && l.month === month).forEach(l => {
+    entries.push({
+      id: 'milk_' + l.id,
+      date: l.date,
+      type: 'milk',
+      source: 'SUBSCRIPTION',
+      description: `Milk delivery — ${l.qty}L`,
+      amount: parseFloat((l.qty * (l.price || db.settings.milkPrice || 60)).toFixed(2)),
+      debit: true,
+      time: l.markedAt,
+      note: ''
+    });
+  });
+
+  // Milk payments
+  (db.milkPayments || []).filter(p => p.customerId === cid && p.month === month).forEach(p => {
+    const dateStr = p.paidAt ? p.paidAt.slice(0, 10) : month + '-01';
+    entries.push({
+      id: 'milkpay_' + dateStr + '_' + p.amount,
+      date: dateStr,
+      type: 'payment',
+      source: 'PAYMENT',
+      description: `Milk payment — ${p.note || 'Cash'}`,
+      amount: parseFloat(p.amount),
+      debit: false,
+      time: p.paidAt,
+      note: p.note || ''
+    });
+  });
+
+  // App orders
+  (db.orders || []).filter(o => o.phone === c.phone && o.createdAt && o.createdAt.slice(0, 7) === month && o.status !== 'cancelled').forEach(o => {
+    entries.push({
+      id: 'order_' + o.id,
+      date: o.createdAt.slice(0, 10),
+      type: 'order',
+      source: 'APP',
+      description: `App order #${o.id} — ${(o.items || []).slice(0, 2).map(i => i.name).join(', ')}${(o.items || []).length > 2 ? ` +${o.items.length - 2} more` : ''}`,
+      amount: parseFloat(o.total),
+      debit: true,
+      time: o.createdAt,
+      note: o.note || '',
+      orderId: o.id,
+      orderStatus: o.status
+    });
+  });
+
+  // Udhar entries
+  (db.udharEntries || []).filter(e => e.customerId === cid && e.date && e.date.slice(0, 7) === month).forEach(e => {
+    entries.push({
+      id: 'udhar_' + e.id,
+      date: e.date,
+      type: 'udhar',
+      source: 'STORE',
+      description: (e.items || []).length ? (e.items.slice(0, 2).map(i => i.name).join(', ') + ((e.items.length > 2) ? ` +${e.items.length - 2} more` : '')) : (e.note || 'Store purchase'),
+      amount: parseFloat(e.amount),
+      debit: true,
+      time: e.createdAt,
+      note: e.note || ''
+    });
+  });
+
+  // Udhar payments
+  (db.udharPayments || []).filter(p => p.customerId === cid && p.date && p.date.slice(0, 7) === month).forEach(p => {
+    entries.push({
+      id: 'udpay_' + p.id,
+      date: p.date,
+      type: 'udhar_payment',
+      source: 'PAYMENT',
+      description: `Payment received — ${p.method || 'Cash'}`,
+      amount: parseFloat(p.amount),
+      debit: false,
+      time: p.paidAt,
+      note: p.note || ''
+    });
+  });
+
+  // Sort by date then time
+  entries.sort((a, b) => {
+    const d = a.date.localeCompare(b.date);
+    if (d !== 0) return d;
+    return (a.time || '').localeCompare(b.time || '');
+  });
+
+  // Monthly summary
+  const milkTotal = entries.filter(e => e.type === 'milk').reduce((s, e) => s + e.amount, 0);
+  const orderTotal = entries.filter(e => e.type === 'order').reduce((s, e) => s + e.amount, 0);
+  const udharTotal = entries.filter(e => e.type === 'udhar').reduce((s, e) => s + e.amount, 0);
+  const paymentsTotal = entries.filter(e => e.type === 'payment' || e.type === 'udhar_payment').reduce((s, e) => s + e.amount, 0);
+  const totalDebits = milkTotal + orderTotal + udharTotal;
+  const outstanding = totalDebits - paymentsTotal;
+
+  res.json({
+    month,
+    entries,
+    summary: { milkTotal, orderTotal, udharTotal, paymentsTotal, totalDebits, outstanding }
+  });
+});
+
+// Get all months with activity for a customer
+app.get('/api/customer/ledger/months', customerAuth, (req, res) => {
+  const db = readDB();
+  const cid = req.user.cid;
+  const c = (db.milkCustomers || []).find(x => x.id === cid);
+  if (!c) return res.status(404).json({ error: 'Not found' });
+
+  const monthSet = new Set();
+  (db.milkLogs || []).filter(l => l.customerId === cid).forEach(l => monthSet.add(l.month));
+  (db.milkPayments || []).filter(p => p.customerId === cid && p.paidAt).forEach(p => monthSet.add(p.paidAt.slice(0, 7)));
+  (db.orders || []).filter(o => o.phone === c.phone && o.createdAt).forEach(o => monthSet.add(o.createdAt.slice(0, 7)));
+  (db.udharEntries || []).filter(e => e.customerId === cid && e.date).forEach(e => monthSet.add(e.date.slice(0, 7)));
+  (db.udharPayments || []).filter(p => p.customerId === cid && p.date).forEach(p => monthSet.add(p.date.slice(0, 7)));
+
+  // Always include current month
+  monthSet.add(new Date().toISOString().slice(0, 7));
+
+  const months = [...monthSet].sort().reverse();
+  res.json({ months });
+});
+
 // ── SERVE PAGES ───────────────────────────────────────────────────────────────
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
