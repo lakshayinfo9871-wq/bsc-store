@@ -68,7 +68,6 @@ input,select,textarea{font-family:'Inter',sans-serif;}
 .btn-blue{background:var(--blue-bg);color:var(--blue);border:1px solid #bfdbfe;}
 .btn-blue:hover{background:#dbeafe;}
 
-.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 table{width:100%;border-collapse:collapse;}
 th{font-size:.75rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:.75rem 1rem;background:var(--bg);text-align:left;border-bottom:1px solid var(--border);}
 td{padding:.85rem 1rem;border-bottom:1px solid var(--border);font-size:.88rem;vertical-align:middle;}
@@ -133,66 +132,86 @@ tr:hover td{background:#fafafa;}
 .empty-state p{font-size:.88rem;line-height:1.6;}
 
 @media(max-width:768px){
-  /* --- LAYOUT: hide sidebar, use bottom nav --- */
+  /* ===== BOTTOM NAV BAR ===== */
   #app{flex-direction:column;}
   .sidebar{
-    width:100%; height:auto; flex-direction:row;
-    position:fixed; bottom:0; left:0; right:0; top:auto;
-    z-index:100; border-top:1px solid rgba(255,255,255,.1);
-    box-shadow:0 -4px 20px rgba(0,0,0,.3);
+    width:100%;height:auto;flex-direction:row;
+    position:fixed;bottom:0;left:0;right:0;top:auto;
+    z-index:200;border-top:1px solid rgba(255,255,255,.12);
+    box-shadow:0 -2px 16px rgba(0,0,0,.35);
+    overflow:hidden;
   }
-  .sidebar-logo,.sidebar-footer{display:none;}
+  .sidebar-logo,.sidebar-footer{display:none!important;}
   .sidebar-nav{
-    display:flex; flex-direction:row; padding:0; width:100%;
-    justify-content:space-around; overflow-x:auto;
+    display:flex!important;flex-direction:row!important;
+    padding:0!important;width:100%!important;
+    overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
   }
+  .sidebar-nav::-webkit-scrollbar{display:none;}
   .nav-link{
-    flex-direction:column; gap:2px; padding:.5rem .4rem;
-    border-left:none; border-top:3px solid transparent;
-    font-size:.6rem; min-width:44px; text-align:center;
-    flex:1;
+    flex-direction:column!important;
+    gap:2px!important;
+    padding:.45rem .2rem!important;
+    border-left:none!important;
+    border-bottom:3px solid transparent!important;
+    flex:1!important;
+    min-width:52px!important;
+    justify-content:center!important;
+    align-items:center!important;
   }
-  .nav-link.active{border-top-color:#4ade80; border-left:none;}
-  .nav-link span:not(.icon){display:block; font-size:.58rem; color:inherit; line-height:1.2;}
-  .nav-link .icon{font-size:1.3rem; width:auto;}
-
-  /* --- MAIN: full width, bottom padding for nav bar --- */
-  .main{width:100%; padding-bottom:70px;}
-  .topbar{padding:.75rem 1rem;}
-  .topbar h1{font-size:1rem;}
-  .content{padding:.9rem .75rem;}
-
-  /* --- STATS --- */
-  .stats-grid{grid-template-columns:1fr 1fr;}
-  .stat-val{font-size:1.4rem;}
-
-  /* --- CARDS & TABLES --- */
-  .card-header{flex-wrap:wrap; gap:.5rem;}
-  .card-body{padding:1rem;}
-
-  /* Make tables horizontally scrollable */
-  .card > table, .card > div > table{
-    display:block; overflow-x:auto; -webkit-overflow-scrolling:touch;
+  .nav-link.active{
+    border-bottom-color:#4ade80!important;
+    border-left:none!important;
+    background:rgba(255,255,255,.1)!important;
   }
-  table{min-width:480px;}
+  .nav-link span:not(.icon){
+    display:block!important;
+    font-size:.52rem!important;
+    color:inherit!important;
+    line-height:1.1!important;
+  }
+  .nav-link .icon{font-size:1.25rem!important;width:auto!important;}
 
-  /* --- FORMS --- */
-  .form-row{grid-template-columns:1fr;}
-  .search-input{min-width:0; width:100%;}
+  /* ===== MAIN CONTENT ===== */
+  .main{width:100%!important;padding-bottom:72px!important;}
+  .topbar{padding:.6rem .9rem!important;}
+  .topbar h1{font-size:.95rem!important;}
+  .content{padding:.75rem!important;}
 
-  /* --- ACTION ROWS --- */
-  .actions{flex-wrap:wrap;}
+  /* ===== STATS GRID ===== */
+  .stats-grid{grid-template-columns:1fr 1fr!important;}
+  .stat-val{font-size:1.35rem!important;}
 
-  /* --- SETTINGS 2-col grid fix (inline style override) --- */
-  #content > div[style*="grid-template-columns"]{
-    display:flex !important;
-    flex-direction:column !important;
-    gap:1rem !important;
+  /* ===== CARDS ===== */
+  .card-header{flex-wrap:wrap!important;gap:.4rem!important;}
+  .card-body{padding:.9rem!important;}
+
+  /* ===== TABLES – horizontal scroll ===== */
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;}
+
+  /* ===== FORMS ===== */
+  .form-row{grid-template-columns:1fr!important;}
+
+  /* ===== SETTINGS 2-col grid ===== */
+  #content>div[style*="grid-template-columns"]{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:.9rem!important;
+    max-width:100%!important;
   }
 
-  /* --- MODALS --- */
-  .modal{border-radius:12px 12px 0 0; width:100%;}
-  .modal-overlay{align-items:flex-end; padding:0;}
+  /* ===== MODALS – slide from bottom ===== */
+  .modal-overlay{align-items:flex-end!important;padding:0!important;}
+  .modal{
+    border-radius:16px 16px 0 0!important;
+    width:100%!important;
+    max-height:88vh!important;
+  }
+
+  /* ===== ACTIONS ===== */
+  .actions{flex-wrap:wrap!important;}
+  .search-input{min-width:0!important;width:100%!important;}
 }
 </style>
 </head>
@@ -460,19 +479,18 @@ function goTo(page)
   orders: renderOrders
 };
   if (fns[page]) {
-    const result = fns[page]();
-    if (result && result.then) result.then(wrapTables); else setTimeout(wrapTables, 50);
+    const r = fns[page]();
+    if (r && r.then) r.then(() => wrapTables()); else setTimeout(wrapTables, 80);
   }
 }
 
 function wrapTables() {
   document.querySelectorAll('#content table').forEach(t => {
-    if (!t.parentElement.classList.contains('table-wrap')) {
-      const w = document.createElement('div');
-      w.className = 'table-wrap';
-      t.parentNode.insertBefore(w, t);
-      w.appendChild(t);
-    }
+    if (t.closest('.table-scroll')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'table-scroll';
+    t.parentNode.insertBefore(wrap, t);
+    wrap.appendChild(t);
   });
 }
 
