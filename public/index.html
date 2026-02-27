@@ -151,6 +151,80 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .fp-body{flex:1;overflow-y:auto;padding:14px;}
 .fp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
 
+/* ══════════════════════ BLINKIT SPLIT-PANEL CATEGORY PAGE ══════════════════════ */
+/* Filter bar */
+.fp-filter-bar{flex-shrink:0;display:flex;gap:7px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg);overflow-x:auto;}
+.fp-filter-bar::-webkit-scrollbar{display:none;}
+.filter-chip{flex-shrink:0;display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg2);font-size:.72rem;font-weight:700;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .15s;}
+.filter-chip:active{transform:scale(.95);}
+.filter-chip.active{border-color:var(--green);color:var(--green);background:rgba(45,211,111,.08);}
+.filter-chip svg,.filter-chip .fc-ico{font-size:.7rem;}
+
+/* Split panel body */
+.fp-split-body{flex:1;display:flex;overflow:hidden;}
+
+/* LEFT: subcategory panel */
+.cat-left{width:80px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;}
+.cat-left::-webkit-scrollbar{display:none;}
+.cat-left-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;cursor:pointer;border-left:2.5px solid transparent;transition:all .18s;position:relative;}
+.cat-left-item:active{background:rgba(45,211,111,.06);}
+.cat-left-item.active{border-left-color:var(--green);background:rgba(45,211,111,.06);}
+.cat-left-img{width:48px;height:48px;border-radius:12px;background:var(--bg3);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;transition:border-color .18s;}
+.cat-left-item.active .cat-left-img{border-color:rgba(45,211,111,.4);}
+.cat-left-img img{width:100%;height:100%;object-fit:cover;}
+.cat-left-label{font-size:9.5px;font-weight:700;color:var(--text3);text-align:center;line-height:1.2;padding:0 2px;}
+.cat-left-item.active .cat-left-label{color:var(--text);}
+
+/* RIGHT: products grid */
+.cat-right{flex:1;overflow-y:auto;padding:8px 8px 100px;}
+.cat-right::-webkit-scrollbar{display:none;}
+.cat-right-section{margin-bottom:16px;}
+.cat-right-section-title{font-size:.8rem;font-weight:900;color:var(--text);padding:8px 4px 10px;letter-spacing:-.2px;}
+.cat-right-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+
+/* Enhanced product card for split view */
+.pcard-blinkit{background:var(--bg2);border-radius:14px;border:1px solid var(--border);overflow:visible;position:relative;display:flex;flex-direction:column;}
+.pcard-blinkit .pc-img-wrap{height:110px;background:var(--bg3);border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:center;padding:8px;overflow:hidden;position:relative;}
+.pcard-blinkit .pc-img-wrap img{width:100%;height:100%;object-fit:contain;}
+.pcard-blinkit .pc-discount-badge{position:absolute;top:6px;left:6px;background:var(--green);color:#000;font-size:.58rem;font-weight:900;padding:2px 5px;border-radius:4px;}
+.pcard-blinkit .pc-heart{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:.65rem;cursor:pointer;backdrop-filter:blur(4px);}
+.pcard-blinkit .pc-tag-row{display:flex;gap:4px;flex-wrap:wrap;padding:6px 8px 0;}
+.pcard-blinkit .pc-tag{font-size:.58rem;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(45,211,111,.12);color:var(--green);border:1px solid rgba(45,211,111,.18);}
+.pcard-blinkit .pc-body{padding:6px 8px 8px;flex:1;display:flex;flex-direction:column;}
+.pcard-blinkit .pc-variant-label{font-size:9.5px;color:var(--text3);font-weight:600;margin-bottom:2px;}
+.pcard-blinkit .pc-name{font-size:.75rem;font-weight:700;line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.pcard-blinkit .pc-delivery{font-size:.62rem;color:var(--text3);margin-bottom:3px;display:flex;align-items:center;gap:3px;}
+.pcard-blinkit .pc-delivery .dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;}
+.pcard-blinkit .pc-price-row{display:flex;align-items:baseline;gap:3px;flex-wrap:wrap;margin-bottom:2px;}
+.pcard-blinkit .pc-price{font-size:.88rem;font-weight:900;}
+.pcard-blinkit .pc-mrp{font-size:.68rem;color:var(--text3);text-decoration:line-through;}
+.pcard-blinkit .pc-off{font-size:.6rem;color:var(--green);font-weight:800;}
+.pcard-blinkit .pc-per-unit{font-size:.6rem;color:var(--text3);margin-bottom:4px;}
+.pcard-blinkit .pc-bot{margin-top:auto;padding-top:4px;}
+.pcard-blinkit .add-btn{width:100%;background:none;border:1.5px solid var(--green);color:var(--green);border-radius:8px;padding:6px 0;font-size:.75rem;font-weight:900;letter-spacing:.04em;transition:background .15s,color .15s;display:block;text-align:center;}
+.pcard-blinkit .add-btn:active{background:var(--green);color:#000;}
+.pcard-blinkit .qty-ctrl{display:flex;align-items:center;justify-content:space-between;background:var(--green);border-radius:8px;overflow:hidden;width:100%;}
+.pcard-blinkit .qty-ctrl button{background:none;color:#000;font-size:16px;font-weight:900;padding:5px 10px;border:none;line-height:1;flex-shrink:0;}
+.pcard-blinkit .qty-ctrl button:active{background:rgba(0,0,0,.12);}
+.pcard-blinkit .qty-ctrl span{color:#000;font-size:.75rem;font-weight:900;flex:1;text-align:center;}
+.pcard-blinkit .pc-variant-btn{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:4px 7px;font-size:.68rem;color:var(--text);font-weight:600;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left;}
+.pcard-blinkit .pc-variant-dropdown{overflow:hidden;max-height:0;opacity:0;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .22s ease;background:var(--bg3);border-radius:7px;border:1px solid var(--border);margin-bottom:5px;}
+.pcard-blinkit .pc-variant-dropdown.open{max-height:200px;opacity:1;}
+.pcard-blinkit .pc-vd-option{padding:6px 8px;font-size:.68rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.pcard-blinkit .pc-vd-option:last-child{border:none;}
+.pcard-blinkit .pc-vd-option:active{background:rgba(45,211,111,.1);}
+.pcard-blinkit .pc-vd-option.selected{color:var(--green);}
+.pcard-blinkit .vb-arrow{font-size:.6rem;color:var(--text3);transition:transform .3s cubic-bezier(.4,0,.2,1);}
+.pcard-blinkit .pc-variant-btn.open .vb-arrow{transform:rotate(180deg);}
+
+/* All-cats grid page uses blinkit cat cards */
+.cats-grid-page{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px;}
+.cats-grid-card{border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s;padding:0;}
+.cats-grid-card:active{transform:scale(.93);}
+.cats-grid-img{aspect-ratio:1;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;border-radius:14px 14px 0 0;}
+.cats-grid-img img{width:100%;height:100%;object-fit:contain;}
+.cats-grid-name{font-size:10px;font-weight:800;padding:5px 4px 8px;text-align:center;line-height:1.25;color:#fff;border-radius:0 0 14px 14px;}
+
 /* ══════════════════════ BULK PRICING TABLE ══════════════════════ */
 .bulk-table{width:100%;border-collapse:collapse;margin:4px 0 2px;}
 .bulk-table tr{border-bottom:1px solid var(--border);}
@@ -565,7 +639,20 @@ select.ck-inp option{background:var(--bg2);}
     <button class="back-btn" onclick="closeFP()">&#8592;</button>
     <span class="fp-title" id="fpTitle"></span>
   </div>
-  <div class="fp-body"><div class="fp-grid" id="fpGrid"></div></div>
+  <!-- Filter bar (shown in split-panel mode) -->
+  <div class="fp-filter-bar" id="fpFilterBar" style="display:none">
+    <div class="filter-chip active" id="filterAll" onclick="fpFilterSort('all')">⊞ All</div>
+    <div class="filter-chip" id="filterInStock" onclick="fpFilterSort('instock')">✓ In Stock</div>
+    <div class="filter-chip" id="filterLowPrice" onclick="fpFilterSort('lowprice')">↑ Low Price</div>
+    <div class="filter-chip" id="filterHighPrice" onclick="fpFilterSort('highprice')">↓ High Price</div>
+  </div>
+  <!-- Split panel (for single category) -->
+  <div class="fp-split-body" id="fpSplitBody" style="display:none">
+    <div class="cat-left" id="catLeft"></div>
+    <div class="cat-right" id="catRight"></div>
+  </div>
+  <!-- Grid (for all-cats view) -->
+  <div class="fp-body" id="fpAllCatsBody" style="display:none"><div class="cats-grid-page" id="fpGrid"></div></div>
 </div>
 <div class="fpage" id="searchPage">
   <div class="fp-head">
@@ -744,10 +831,13 @@ function goHome() {
 function openCatsPage() {
   setNav('bn1');
   document.getElementById('fpTitle').textContent = 'All Categories';
+  document.getElementById('fpFilterBar').style.display = 'none';
+  document.getElementById('fpSplitBody').style.display = 'none';
+  document.getElementById('fpAllCatsBody').style.display = '';
   document.getElementById('fpGrid').innerHTML = cats.map((c,i) =>
-    `<div class="cat-card ${getCcBg(i)}" onclick="openFP(${c.id})">
-      <div class="cc-img" style="height:100px">${c.imageUrl?`<img src="${c.imageUrl}" style="width:80%;height:80%;object-fit:contain">`:`<span class="cc-emoji">📂</span>`}</div>
-      <div class="cc-name">${c.name}</div>
+    `<div class="cats-grid-card ${getCcBg(i)}" onclick="openFP(${c.id})">
+      <div class="cats-grid-img">${c.imageUrl?`<img src="${c.imageUrl}" style="width:85%;height:85%;object-fit:contain">`:`<span style="font-size:2rem">📂</span>`}</div>
+      <div class="cats-grid-name ${getCcBg(i)}">${c.name}</div>
     </div>`
   ).join('');
   document.getElementById('fpage').classList.add('open');
@@ -778,13 +868,15 @@ function renderHome() {
   if (newP.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">✨ New Arrivals</span></div><div class="pstrip">${newP.map(pCard).join('')}</div></div>`;
 
   // Category grid (Blinkit style)
-  if (cats.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">Shop by Category</span></div>
-    <div class="cat-grid">${cats.map((c,i) =>
-      `<div class="cat-card ${getCcBg(i)}" onclick="openFP(${c.id})">
-        <div class="cc-img">${c.imageUrl?`<img src="${c.imageUrl}" loading="lazy">`:`<span class="cc-emoji">📂</span>`}</div>
+  const catEmojis = {'Vegetables & Fruits':'🥦','Dairy & Eggs':'🥛','Snacks':'🍿','Drinks':'🥤','Grocery':'🛒','Atta, Rice & Dal':'🌾','Oil, Ghee & Masala':'🫙','Bakery':'🍞','Chicken, Meat & Fish':'🍗','default':'📦'};
+  if (cats.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">Shop by Category</span><span class="see-all" onclick="openCatsPage()">See all →</span></div>
+    <div class="cat-grid">${cats.map((c,i) => {
+      const emoji = catEmojis[c.name] || catEmojis['default'];
+      return `<div class="cat-card ${getCcBg(i)}" onclick="openFP(${c.id})">
+        <div class="cc-img">${c.imageUrl?`<img src="${c.imageUrl}" loading="lazy">`:`<span class="cc-emoji">${emoji}</span>`}</div>
         <div class="cc-name">${c.name}</div>
-      </div>`
-    ).join('')}</div></div>`;
+      </div>`;
+    }).join('')}</div></div>`;
 
   // Per-category strips
   cats.forEach(c => {
@@ -972,8 +1064,70 @@ function updateCardInPlace(card, p, vid) {
 
 function reRenderCurrentPage() {
   const fpOpen = document.getElementById('fpage')?.classList.contains('open');
-  if (fpOpen && window._openCatId) renderFPContent(window._openCatId);
+  const splitVisible = document.getElementById('fpSplitBody')?.style.display !== 'none';
+  if (fpOpen && window._openCatId && splitVisible) renderSplitRight(window._openCatId);
   else renderHome();
+}
+
+// Blinkit-style product card for split panel
+function pCardBlinkit(p) {
+  const selVid = window._selVariant?.[p.id] || defaultVariant(p)?.id;
+  const v = getVariant(p, selVid);
+  if (!v) return '';
+  const qty = cart[cartKey(p.id, selVid)] || 0;
+  const price = getPrice(v.priceTiers, qty || 1);
+  const mrp = v.mrp && v.mrp > price ? v.mrp : null;
+  const off = offPct(price, mrp);
+  const hasMultiVariants = p.variants.length > 1;
+  const imgUrl = v.imageUrl || p.imageUrl || '';
+  const dropId = 'vdropB_' + p.id;
+  const btnId  = 'vbtnB_' + p.id;
+
+  const variantBlock = hasMultiVariants
+    ? `<button class="pc-variant-btn" id="${btnId}" onclick="event.stopPropagation();toggleVariantDrop(${p.id},'${dropId}','${btnId}')">
+        <span>${v.label}</span>
+        <span class="vb-arrow">▾</span>
+      </button>
+      <div class="pc-variant-dropdown" id="${dropId}">
+        ${p.variants.map(vv => {
+          const vp = getPrice(vv.priceTiers, 1);
+          return `<div class="pc-vd-option ${vv.id===selVid?'selected':''}" onclick="event.stopPropagation();pickVariant(${p.id},'${vv.id}','${dropId}','${btnId}')">
+            <span>${vv.label}</span>
+            <span class="vd-price">₹${vp}</span>
+          </div>`;
+        }).join('')}
+      </div>`
+    : `<div class="pc-variant-label">${v.label}</div>`;
+
+  const addCtrl = qty > 0
+    ? `<div class="qty-ctrl">
+        <button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button>
+        <span>${qty}</span>
+        <button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button>
+       </div>`
+    : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
+
+  const perUnit = v.label ? `₹${(price / 1).toFixed(0)}/${v.label}` : '';
+
+  return `<div class="pcard pcard-blinkit" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
+    <div class="pc-img-wrap">
+      ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : '<span style="font-size:2.2rem">📦</span>'}
+      ${off > 0 ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
+      <span class="pc-heart">♡</span>
+    </div>
+    ${p.isNew ? '<div class="pc-tag-row"><span class="pc-tag">NEW</span></div>' : ''}
+    <div class="pc-body">
+      ${variantBlock}
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-delivery"><span class="dot"></span> In stock</div>
+      <div class="pc-price-row">
+        <span class="pc-price">₹${price}</span>
+        ${mrp ? `<span class="pc-mrp">₹${mrp}</span>` : ''}
+        ${off > 0 ? `<span class="pc-off">${off}% off</span>` : ''}
+      </div>
+      <div class="pc-bot">${addCtrl}</div>
+    </div>
+  </div>`;
 }
 
 // Legacy — no longer called but keep for safety
@@ -984,19 +1138,85 @@ function onVariantChange(pid, vid) {
 
 // ── OPEN FP ───────────────────────────────────────────────────────────────────
 window._openCatId = null;
+window._fpFilter = 'all';
+
 function openFP(catId) {
   window._openCatId = catId;
+  window._fpFilter = 'all';
   const cat = cats.find(c => c.id === catId);
   document.getElementById('fpTitle').textContent = cat?.name || '';
-  renderFPContent(catId);
+  // Show split-panel mode
+  document.getElementById('fpFilterBar').style.display = '';
+  document.getElementById('fpSplitBody').style.display = '';
+  document.getElementById('fpAllCatsBody').style.display = 'none';
+  // Reset filter chips
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('filterAll')?.classList.add('active');
+  renderSplitPanel(catId);
   document.getElementById('fpage').classList.add('open');
   document.getElementById('searchPage').classList.remove('open');
 }
+
+function fpFilterSort(type) {
+  window._fpFilter = type;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  const map = {all:'filterAll',instock:'filterInStock',lowprice:'filterLowPrice',highprice:'filterHighPrice'};
+  document.getElementById(map[type])?.classList.add('active');
+  if (window._openCatId) renderSplitPanel(window._openCatId);
+}
+
+function renderSplitPanel(catId) {
+  // Left panel: all categories as subcategories
+  const catLeft = document.getElementById('catLeft');
+  catLeft.innerHTML = cats.map((c,i) =>
+    `<div class="cat-left-item ${c.id === catId ? 'active' : ''}" onclick="switchSplitCat(${c.id})" id="clitem_${c.id}">
+      <div class="cat-left-img">${c.imageUrl ? `<img src="${c.imageUrl}" loading="lazy">` : `<span style="font-size:1.2rem">📂</span>`}</div>
+      <div class="cat-left-label">${c.name}</div>
+    </div>`
+  ).join('');
+
+  renderSplitRight(catId);
+}
+
+function switchSplitCat(catId) {
+  window._openCatId = catId;
+  window._fpFilter = 'all';
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('filterAll')?.classList.add('active');
+  // Update left panel active state
+  document.querySelectorAll('.cat-left-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('clitem_' + catId)?.classList.add('active');
+  // Update title
+  const cat = cats.find(c => c.id === catId);
+  document.getElementById('fpTitle').textContent = cat?.name || '';
+  renderSplitRight(catId);
+}
+
+function renderSplitRight(catId) {
+  let ps = prods.filter(p => p.catId === catId);
+  const filter = window._fpFilter || 'all';
+  if (filter === 'instock') ps = ps.filter(p => p.variants?.some(v => v.inStock));
+  else ps = ps.filter(p => p.variants?.some(v => v.inStock));
+  if (filter === 'lowprice') ps = ps.sort((a,b) => getVariantPrice(a, defaultVariant(a)?.id, 1) - getVariantPrice(b, defaultVariant(b)?.id, 1));
+  if (filter === 'highprice') ps = ps.sort((a,b) => getVariantPrice(b, defaultVariant(b)?.id, 1) - getVariantPrice(a, defaultVariant(a)?.id, 1));
+
+  const catName = cats.find(c => c.id === catId)?.name || '';
+  const catRight = document.getElementById('catRight');
+
+  if (!ps.length) {
+    catRight.innerHTML = '<div class="empty-state" style="padding-top:3rem"><div class="ei">🛒</div><p>No products in this category.</p></div>';
+    return;
+  }
+
+  catRight.innerHTML = `
+    <div class="cat-right-section">
+      <div class="cat-right-section-title">${catName} <span style="color:var(--text3);font-weight:600;font-size:.7rem">(${ps.length})</span></div>
+      <div class="cat-right-grid">${ps.map(pCardBlinkit).join('')}</div>
+    </div>`;
+}
+
 function renderFPContent(catId) {
-  const ps = prods.filter(p => p.catId === catId && p.variants?.some(v=>v.inStock));
-  document.getElementById('fpGrid').innerHTML = ps.length
-    ? ps.map(pCard).join('')
-    : '<div class="empty-state"><div class="ei">🛒</div><p>No products in this category.</p></div>';
+  renderSplitRight(catId);
 }
 
 // ── SEARCH ────────────────────────────────────────────────────────────────────
@@ -1367,8 +1587,14 @@ function chQtyCart(key, delta) {
   if (nw===0) delete cart[key]; else cart[key]=nw;
   updateCart(); renderCart();
   const { pid, vid } = parseKey(key);
-  if (document.getElementById('fpage')?.classList.contains('open') && window._openCatId) renderFPContent(window._openCatId);
-  else renderHome();
+  const fpOpen = document.getElementById('fpage')?.classList.contains('open');
+  const splitVisible = document.getElementById('fpSplitBody')?.style.display !== 'none';
+  if (fpOpen && window._openCatId && splitVisible) {
+    const p = prods.find(x=>x.id===pid);
+    if (p) document.querySelectorAll(`.pcard[data-pid="${pid}"][data-vid="${vid}"]`).forEach(card => updateCardInPlace(card, p, vid));
+  } else {
+    renderHome();
+  }
 }
 
 function upsellAdd(id) {
