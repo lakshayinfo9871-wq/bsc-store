@@ -118,7 +118,8 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .pc-price{font-size:14px;font-weight:900;letter-spacing:-.4px;}
 .pc-mrp{font-size:10px;color:var(--text3);text-decoration:line-through;}
 .pc-off{font-size:9px;background:rgba(255,71,87,.15);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:800;}
-.pc-bulk-hint{font-size:9px;color:var(--green);font-weight:600;margin-bottom:5px;}
+.pc-bulk-hint{display:inline-flex;align-items:center;gap:3px;font-size:9px;color:#000;font-weight:800;background:var(--yellow);border-radius:4px;padding:2px 6px;margin-bottom:5px;letter-spacing:.01em;}
+.pc-bulk-hint.best{background:var(--green);}
 .pc-bot{margin-top:6px;}
 /* ADD button — full width */
 .add-btn{width:100%;background:none;border:1.5px solid var(--green);color:var(--green);border-radius:9px;padding:7px 0;font-size:12px;font-weight:900;letter-spacing:.04em;transition:background .15s,color .15s,transform .1s;display:block;text-align:center;}
@@ -200,6 +201,8 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .pcard-blinkit .pc-mrp{font-size:.68rem;color:var(--text3);text-decoration:line-through;}
 .pcard-blinkit .pc-off{font-size:.6rem;color:var(--green);font-weight:800;}
 .pcard-blinkit .pc-per-unit{font-size:.6rem;color:var(--text3);margin-bottom:4px;}
+.pcard-blinkit .pc-bulk-hint{display:inline-flex;align-items:center;gap:3px;font-size:.58rem;color:#000;font-weight:800;background:var(--yellow);border-radius:4px;padding:2px 5px;margin-bottom:4px;letter-spacing:.01em;}
+.pcard-blinkit .pc-bulk-hint.best{background:var(--green);}
 .pcard-blinkit .pc-bot{margin-top:auto;padding-top:4px;}
 .pcard-blinkit .add-btn{width:100%;background:none;border:1.5px solid var(--green);color:var(--green);border-radius:8px;padding:6px 0;font-size:.75rem;font-weight:900;letter-spacing:.04em;transition:background .15s,color .15s;display:block;text-align:center;}
 .pcard-blinkit .add-btn:active{background:var(--green);color:#000;}
@@ -642,7 +645,7 @@ select.ck-inp option{background:var(--bg2);}
   <!-- Filter bar (shown in split-panel mode) -->
   <div class="fp-filter-bar" id="fpFilterBar" style="display:none">
     <div class="filter-chip active" id="filterAll" onclick="fpFilterSort('all')">⊞ All</div>
-    <div class="filter-chip" id="filterInStock" onclick="fpFilterSort('instock')">✓ In Stock</div>
+    <div class="filter-chip" id="filterBulk" onclick="fpFilterSort('bulk')">📦 Bulk Deals</div>
     <div class="filter-chip" id="filterLowPrice" onclick="fpFilterSort('lowprice')">↑ Low Price</div>
     <div class="filter-chip" id="filterHighPrice" onclick="fpFilterSort('highprice')">↓ High Price</div>
   </div>
@@ -901,7 +904,7 @@ function pCard(p) {
   const mrp = v.mrp && v.mrp > price ? v.mrp : null;
   const off = offPct(price, mrp);
   const hasMultiVariants = p.variants.length > 1;
-  const bulkHint = getBulkHint(v.priceTiers, qty || 1);
+  const bulkBadge = bulkBadgeHtml(v.priceTiers, qty || 1);
   const imgUrl = v.imageUrl || p.imageUrl || '';
   const dropId = 'vdrop_' + p.id;
   const btnId  = 'vbtn_' + p.id;
@@ -944,7 +947,7 @@ function pCard(p) {
         <span class="pc-price">₹${price}</span>
         ${mrp ? `<span class="pc-mrp">₹${mrp}</span><span class="pc-off">${off}% off</span>` : ''}
       </div>
-      ${bulkHint ? `<div class="pc-bulk-hint">📦 ${bulkHint}</div>` : ''}
+      ${bulkBadge}
       <div class="pc-bot">${addCtrl}</div>
     </div>
   </div>`;
@@ -954,12 +957,22 @@ function getBulkHint(tiers, qty) {
   if (!tiers || tiers.length <= 1) return '';
   const sorted = [...tiers].sort((a,b) => a.minQty - b.minQty);
   const curPrice = getPrice(tiers, qty);
+  // Find next tier the user hasn't unlocked yet
   for (const t of sorted) {
     if (t.minQty > qty && t.price < curPrice) return `Buy ${t.minQty}+ @ ₹${t.price}`;
   }
-  const best = sorted[sorted.length-1];
-  if (best.minQty <= 1) return '';
-  return `Buy ${best.minQty}+ @ ₹${best.price}`;
+  // Already at best tier
+  const best = sorted[sorted.length - 1];
+  if (qty >= best.minQty && best.minQty > 1) return 'best';
+  return '';
+}
+
+function bulkBadgeHtml(tiers, qty) {
+  if (!tiers || tiers.length <= 1) return '';
+  const hint = getBulkHint(tiers, qty);
+  if (!hint) return '';
+  if (hint === 'best') return `<div class="pc-bulk-hint best">🏆 Best price!</div>`;
+  return `<div class="pc-bulk-hint">📦 ${hint}</div>`;
 }
 
 // ── VARIANT CHANGE & DROPDOWN ─────────────────────────────────────────────────
@@ -1028,15 +1041,27 @@ function updateCardInPlace(card, p, vid) {
   const price = getPrice(v.priceTiers, qty || 1);
   const mrp   = v.mrp && v.mrp > price ? v.mrp : null;
   const off   = offPct(price, mrp);
-  const bulkHint = getBulkHint(v.priceTiers, qty || 1);
 
   // Update price row
   const priceRow = card.querySelector('.pc-price-row');
   if (priceRow) priceRow.innerHTML = `<span class="pc-price">₹${price}</span>${mrp?`<span class="pc-mrp">₹${mrp}</span><span class="pc-off">${off}% off</span>`:''}`;
 
-  // Update bulk hint
+  // Update bulk hint badge — replace the element live
   const hintEl = card.querySelector('.pc-bulk-hint');
-  if (hintEl) hintEl.textContent = bulkHint ? '📦 '+bulkHint : '';
+  const newBadgeHtml = bulkBadgeHtml(v.priceTiers, qty || 1);
+  if (hintEl) {
+    if (newBadgeHtml) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = newBadgeHtml;
+      hintEl.replaceWith(tmp.firstElementChild);
+    } else {
+      hintEl.remove();
+    }
+  } else if (newBadgeHtml) {
+    // No badge exists yet — insert before price row
+    const pr = card.querySelector('.pc-price-row');
+    if (pr) pr.insertAdjacentHTML('beforebegin', newBadgeHtml);
+  }
 
   // Update discount badge
   const badge = card.querySelector('.pc-discount-badge');
@@ -1051,10 +1076,6 @@ function updateCardInPlace(card, p, vid) {
       bot.innerHTML = `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${vid}',1)">ADD</button>`;
     }
   }
-  // Also update price to reflect new qty-based tier pricing
-  const newPrice = getPrice(v.priceTiers, qty || 1);
-  const priceEl = card.querySelector('.pc-price');
-  if (priceEl) priceEl.textContent = '₹' + newPrice;
 
   // Update image if variant has own image
   const img = card.querySelector('.pc-img-wrap img');
@@ -1080,6 +1101,7 @@ function pCardBlinkit(p) {
   const off = offPct(price, mrp);
   const hasMultiVariants = p.variants.length > 1;
   const imgUrl = v.imageUrl || p.imageUrl || '';
+  const bulkBadge = bulkBadgeHtml(v.priceTiers, qty || 1);
   const dropId = 'vdropB_' + p.id;
   const btnId  = 'vbtnB_' + p.id;
 
@@ -1119,7 +1141,7 @@ function pCardBlinkit(p) {
     <div class="pc-body">
       ${variantBlock}
       <div class="pc-name">${p.name}</div>
-      <div class="pc-delivery"><span class="dot"></span> In stock</div>
+      ${bulkBadge}
       <div class="pc-price-row">
         <span class="pc-price">₹${price}</span>
         ${mrp ? `<span class="pc-mrp">₹${mrp}</span>` : ''}
@@ -1162,7 +1184,7 @@ function openFP(catId) {
 function fpFilterSort(type) {
   window._fpFilter = type;
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  const map = {all:'filterAll',instock:'filterInStock',lowprice:'filterLowPrice',highprice:'filterHighPrice'};
+  const map = {all:'filterAll',bulk:'filterBulk',lowprice:'filterLowPrice',highprice:'filterHighPrice'};
   document.getElementById(map[type])?.classList.add('active');
   if (window._openCatId) renderSplitRight(window._openCatId, window._openSubCatId);
 }
@@ -1217,6 +1239,10 @@ function renderSplitRight(catId, subCatId) {
   }
   const filter = window._fpFilter || 'all';
   ps = ps.filter(p => p.variants?.some(v => v.inStock));
+  if (filter === 'bulk') ps = ps.filter(p => {
+    const v = defaultVariant(p);
+    return v?.priceTiers?.length > 1;
+  });
   if (filter === 'lowprice') ps = ps.sort((a,b) => getVariantPrice(a, defaultVariant(a)?.id, 1) - getVariantPrice(b, defaultVariant(b)?.id, 1));
   if (filter === 'highprice') ps = ps.sort((a,b) => getVariantPrice(b, defaultVariant(b)?.id, 1) - getVariantPrice(a, defaultVariant(a)?.id, 1));
 
@@ -1226,7 +1252,8 @@ function renderSplitRight(catId, subCatId) {
     : (cats.find(c => c.id === catId)?.name || '');
 
   if (!ps.length) {
-    catRight.innerHTML = '<div class="empty-state" style="padding-top:3rem"><div class="ei">🛒</div><p>No products here.</p></div>';
+    const emptyMsg = filter === 'bulk' ? 'No bulk deal products here.' : 'No products here.';
+    catRight.innerHTML = `<div class="empty-state" style="padding-top:3rem"><div class="ei">🛒</div><p>${emptyMsg}</p></div>`;
     return;
   }
 
