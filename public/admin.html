@@ -1041,8 +1041,8 @@ function renderMilkDeliveries() {
 function renderMilkCustomers() {
   document.getElementById('milkTabContent').innerHTML=`
     <div class="card">
-      <div class="card-header"><h2>All Customers (${milkCustomers.length})</h2></div>
-      ${milkCustomers.length===0?`<div class="empty-state"><div class="ei">👥</div><p>No milk customers yet.</p></div>`:`
+      <div class="card-header"><h2>Milk Subscribers (${milkCustomers.length})</h2><button class="btn btn-green" onclick="openAddCustomerModal()">+ Add Customer</button></div>
+      ${milkCustomers.length===0?`<div class="empty-state"><div class="ei">👥</div><p>No milk subscribers yet. Add from Accounts section.</p></div>`:`
       <table>
         <thead><tr><th>Name</th><th>Phone</th><th>Address</th><th>Qty/day</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>${milkCustomers.map(c=>`<tr>
@@ -1111,14 +1111,19 @@ async function bulkMark(date) {
 }
 
 async function toggleCustomer(id,active) {
-  await fetch('/api/admin/milk/customers/'+id,{method:'PUT',headers:ah(),body:JSON.stringify({active})});
+  // id here is customerId
+  if(active) {
+    await fetch('/api/admin/milk/subscriptions/'+id+'/resume',{method:'POST',headers:ah(),body:JSON.stringify({})});
+  } else {
+    await fetch('/api/admin/milk/subscriptions/'+id+'/pause',{method:'POST',headers:ah(),body:JSON.stringify({})});
+  }
   await loadMilkData(); renderMilkPage();
 }
 
 async function delMilkCustomer(id) {
-  if(!confirm('Delete this customer?')) return;
-  await fetch('/api/admin/milk/customers/'+id,{method:'DELETE',headers:ah()});
-  await loadMilkData(); renderMilkPage(); toast('Customer deleted');
+  if(!confirm('Remove milk subscription for this customer?')) return;
+  await fetch('/api/admin/milk/subscriptions/'+id,{method:'DELETE',headers:ah()});
+  await loadMilkData(); renderMilkPage(); toast('Subscription removed');
 }
 
 async function recordPayment(customerId,month,amount) {
@@ -1134,40 +1139,8 @@ async function saveMilkPrice() {
 }
 
 function openAddMilkCustomer() {
-  document.body.insertAdjacentHTML('beforeend',`
-    <div id="mcModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem">
-      <div style="background:#fff;border-radius:18px;width:min(460px,100%);box-shadow:0 24px 64px rgba(0,0,0,.2)">
-        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-          <h2 style="font-size:1rem;font-weight:700">Add Milk Customer</h2>
-          <button onclick="document.getElementById('mcModal').remove()" style="background:none;font-size:1.3rem;color:var(--text2);cursor:pointer;border:none">X</button>
-        </div>
-        <div style="padding:1.5rem">
-          <div class="form-group"><label>Full Name</label><input type="text" id="mcName" placeholder="Customer name"></div>
-          <div class="form-row">
-            <div class="form-group"><label>Phone</label><input type="tel" id="mcPhone" placeholder="10-digit" maxlength="10"></div>
-            <div class="form-group"><label>Daily Qty (L)</label><input type="number" id="mcQty" value="0.5" min="0.5" step="0.5"></div>
-          </div>
-          <div class="form-group"><label>Address</label><input type="text" id="mcAddr" placeholder="Villa / Block No."></div>
-        </div>
-        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
-          <button class="btn btn-gray" onclick="document.getElementById('mcModal').remove()">Cancel</button>
-          <button class="btn btn-green" onclick="saveNewMilkCustomer()">Add Customer</button>
-        </div>
-      </div>
-    </div>`);
-}
-
-async function saveNewMilkCustomer() {
-  const name=document.getElementById('mcName').value.trim();
-  const phone=document.getElementById('mcPhone').value.trim();
-  const address=document.getElementById('mcAddr').value.trim();
-  const defaultQty=parseFloat(document.getElementById('mcQty').value)||0.5;
-  if(!name) return toast('Name required');
-  if(phone.length<10) return toast('Valid phone required');
-  const r=await fetch('/api/milk/register',{method:'POST',headers:ah(),body:JSON.stringify({name,phone,address,defaultQty})});
-  if(!r.ok){const d=await r.json();return toast(d.error||'Error');}
-  document.getElementById('mcModal')?.remove();
-  await loadMilkData(); renderMilkPage(); toast('Customer added!');
+  // Redirect to the unified Add Customer modal in Accounts
+  openAddCustomerModal();
 }
 
 function openDayLog(customerId) {
@@ -1397,491 +1370,583 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// UDHAR — Full credit management system
+// ACCOUNTS — Complete customer management system
 // ══════════════════════════════════════════════════════════════════════════════
 
-let udharCustomers=[], udharSummaries=[], udharSelectedId=null;
-let udharEntries=[], udharPayments=[], udharMilkLogs=[], udharAppOrders=[];
+let allCustomers=[], udharSummaries=[], accountSelectedId=null;
+let udharEntries=[], udharPayments=[], udharMilkLogs=[];
+let udharCustomers=[]; // legacy alias
 
 async function renderAccounts() {
-  await loadUdharData();
-  renderUdharOverview();
+  await loadAccountsData();
+  renderAccountsOverview();
 }
 
-async function loadUdharData() {
-  const [sR, cR, oR] = await Promise.all([
-    fetch('/api/admin/udhar-summary', {headers:ah()}),
-    fetch('/api/admin/milk/customers', {headers:ah()}),
-    fetch('/api/orders', {headers:ah()}).catch(()=>({ok:false}))
+async function loadAccountsData() {
+  const [cR, sR] = await Promise.all([
+    fetch('/api/admin/customers',{headers:ah()}),
+    fetch('/api/admin/udhar-summary',{headers:ah()}),
   ]);
+  allCustomers = cR.ok ? await cR.json() : [];
   udharSummaries = sR.ok ? await sR.json() : [];
-  udharCustomers = cR.ok ? await cR.json() : [];
-  try { const d = await oR.json(); udharAppOrders = Array.isArray(d)?d:(d.orders||[]); } catch { udharAppOrders=[]; }
+  udharCustomers = allCustomers.map(c=>({...c,id:c.customerId}));
 }
 
-function renderUdharOverview() {
-  const totalOutstanding = udharSummaries.reduce((s,x)=>s+(x.balance>0?x.balance:0), 0);
-  const totalReceived    = udharSummaries.reduce((s,x)=>s+x.totalPaid, 0);
-  const totalUdharGiven  = udharSummaries.reduce((s,x)=>s+x.totalUdhar, 0);
+async function loadUdharData() { await loadAccountsData(); }
 
-  const rows = udharSummaries.length === 0
-    ? `<div class="empty-state"><div class="ei">📒</div><p>No customers with udhar yet.</p></div>`
-    : udharSummaries.map(s => {
-        const bal = s.balance;
-        const badgeStyle = bal > 0
-          ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca'
-          : 'background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0';
-        return `<tr onclick="openUdharDetail(${s.customer.id})" style="cursor:pointer">
-          <td><div style="font-weight:600">${s.customer.name}</div><div style="font-size:.73rem;color:var(--text2)">${s.customer.phone}</div></td>
-          <td style="color:var(--text2);font-size:.84rem">${s.customer.address||'—'}</td>
-          <td style="font-weight:700;color:var(--red)">Rs.${s.totalUdhar.toFixed(0)}</td>
-          <td style="font-weight:600;color:var(--green)">Rs.${s.totalPaid.toFixed(0)}</td>
-          <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:700;${badgeStyle}">${bal>0?'Rs.'+bal.toFixed(0)+' due':bal<0?'Advance':' Settled'}</span></td>
-          <td><div class="actions">
-            <button class="btn btn-blue" onclick="event.stopPropagation();openUdharDetail(${s.customer.id})">Manage</button>
-            <button class="btn btn-green" onclick="event.stopPropagation();quickAddUdhar(${s.customer.id},'${s.customer.name}')">+ Udhar</button>
-            ${bal>0?`<button class="btn btn-gray" onclick="event.stopPropagation();quickPayment(${s.customer.id},'${s.customer.name}',${bal.toFixed(0)})">Mark Paid</button>`:''}
+function renderAccountsOverview() {
+  const udharMap={};
+  udharSummaries.forEach(s=>{udharMap[s.customer.id]=s;});
+  const totalOut = udharSummaries.reduce((s,x)=>s+(x.balance>0?x.balance:0),0);
+  const totalRec = udharSummaries.reduce((s,x)=>s+x.totalPaid,0);
+  const milkCount = allCustomers.filter(c=>c.milkSubscription).length;
+
+  const rows = allCustomers.length===0
+    ? `<div class="empty-state"><div class="ei">👥</div><p>No customers yet.</p></div>`
+    : allCustomers.map(c=>{
+        const s=udharMap[c.customerId]||{totalUdhar:0,totalPaid:0,balance:0};
+        const bal=s.balance;
+        const hasMilk=!!c.milkSubscription;
+        const milkBadge=hasMilk
+          ?`<span style="font-size:.65rem;background:${c.milkSubscription.status==='active'?'#f0fdf4':'#fffbeb'};color:${c.milkSubscription.status==='active'?'#16a34a':'#d97706'};border-radius:20px;padding:1px 7px;font-weight:600;display:inline-block;margin-top:2px">${c.milkSubscription.status==='active'?'🥛 Milk Active':'⏸️ Milk Paused'}</span>`
+          :'';
+        const balCol=bal>0?'var(--red)':bal<0?'var(--blue)':'var(--green)';
+        const balTxt=bal>0?'Rs.'+bal.toFixed(0)+' due':bal<0?'Advance Rs.'+Math.abs(bal).toFixed(0):'Settled';
+        const n=c.name.replace(/'/g,"\\'");
+        return `<tr onclick="openCustomerProfile(${c.customerId})" style="cursor:pointer">
+          <td>
+            <div style="font-weight:700">${c.name}</div>
+            <div style="font-size:.73rem;color:var(--text2)">${c.phone}</div>
+            ${milkBadge}
+          </td>
+          <td style="font-size:.82rem;color:var(--text2)">${c.address||'—'}</td>
+          <td style="font-weight:700;color:var(--red)">${s.totalUdhar>0?'Rs.'+s.totalUdhar.toFixed(0):'—'}</td>
+          <td style="font-weight:600;color:var(--green)">${s.totalPaid>0?'Rs.'+s.totalPaid.toFixed(0):'—'}</td>
+          <td style="font-weight:700;color:${balCol}">${balTxt}</td>
+          <td onclick="event.stopPropagation()"><div class="actions">
+            <button class="btn btn-blue" onclick="openCustomerProfile(${c.customerId})">👤 Open</button>
+            <button class="btn btn-green" onclick="quickAddUdhar(${c.customerId},'${n}')">+ Udhar</button>
+            ${bal>0?`<button class="btn btn-gray" onclick="quickPayment(${c.customerId},'${n}',${bal.toFixed(0)})">Paid</button>`:''}
           </div></td>
         </tr>`;
       }).join('');
 
-  document.getElementById('content').innerHTML = `
-    <!-- OVERVIEW STATS -->
-    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.2rem">
-      <div class="stat-card"><div class="stat-val" style="color:var(--red)">Rs.${totalOutstanding.toFixed(0)}</div><div class="stat-lbl">Total Outstanding</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--green)">Rs.${totalReceived.toFixed(0)}</div><div class="stat-lbl">Total Received</div></div>
-      <div class="stat-card"><div class="stat-val">Rs.${totalUdharGiven.toFixed(0)}</div><div class="stat-lbl">Total Udhar Given</div></div>
+  document.getElementById('content').innerHTML=`
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.2rem">
+      <div class="stat-card"><div class="stat-val">${allCustomers.length}</div><div class="stat-lbl">All Customers</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)">Rs.${totalOut.toFixed(0)}</div><div class="stat-lbl">Total Outstanding</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">Rs.${totalRec.toFixed(0)}</div><div class="stat-lbl">Total Received</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${milkCount}</div><div class="stat-lbl">Milk Subscribers</div></div>
     </div>
-
-    <!-- CUSTOMER TABLE -->
+    <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+      <input type="text" id="custSearch" placeholder="🔍 Search name or phone..." class="search-input" style="flex:1;min-width:180px" oninput="filterCustTable(this.value)">
+      <button class="btn btn-green" onclick="openAddCustomerModal()">+ Add Customer</button>
+    </div>
     <div class="card">
-      <div class="card-header">
-        <h2>📒 Udhar Accounts (${udharSummaries.length} customers)</h2>
-        <button class="btn btn-green" onclick="openAddUdharCustomer()">+ Add Customer</button>
-      </div>
-      ${udharSummaries.length===0
-        ? `<div class="empty-state"><div class="ei">📒</div><p>No customers yet. Add one to start tracking udhar.</p></div>`
-        : `<table>
-            <thead><tr><th>Customer</th><th>Address</th><th>Total Udhar</th><th>Total Paid</th><th>Balance</th><th>Actions</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>`}
+      <div class="card-header"><h2>👥 All Customers (${allCustomers.length})</h2></div>
+      <div class="table-scroll"><table id="custTable">
+        <thead><tr><th>Customer</th><th>Address</th><th>Udhar</th><th>Paid</th><th>Balance</th><th>Actions</th></tr></thead>
+        <tbody>${typeof rows==='string'&&rows.startsWith('<div')?`<tr><td colspan="6">${rows}</td></tr>`:rows}</tbody>
+      </table></div>
     </div>
-    <div id="udharDetail"></div>`;
+    <div id="customerProfile"></div>`;
 }
 
-async function openUdharDetail(customerId) {
-  udharSelectedId = customerId;
-  const c = udharCustomers.find(x=>x.id===customerId);
-  if(!c) return;
+// legacy alias
+function renderUdharOverview(){renderAccountsOverview();}
 
-  const [eR, pR, lR] = await Promise.all([
-    fetch('/api/admin/udhar?customerId='+customerId, {headers:ah()}),
-    fetch('/api/admin/udhar-payments?customerId='+customerId, {headers:ah()}),
-    fetch('/api/admin/milk/logs?month='+new Date().toISOString().slice(0,7), {headers:ah()})
-  ]);
-  udharEntries = eR.ok ? await eR.json() : [];
-  udharPayments = pR.ok ? await pR.json() : [];
-  const ld = lR.ok ? await lR.json() : {};
-  udharMilkLogs = (ld.logs||[]).filter(l=>l.customerId===customerId);
-  const milkPrice = ld.settings?.milkPrice || 60;
-  const custOrders = udharAppOrders.filter(o=>o.phone===c.phone);
+function filterCustTable(q){
+  q=q.toLowerCase();
+  document.querySelectorAll('#custTable tbody tr').forEach(r=>{
+    r.style.display=r.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
 
-  const totalUdhar = udharEntries.reduce((s,e)=>s+(e.amount||0),0);
-  const totalPaid  = udharPayments.reduce((s,p)=>s+(p.amount||0),0);
-  const balance    = totalUdhar - totalPaid;
-  const milkAmt    = udharMilkLogs.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
-  const totalL     = udharMilkLogs.reduce((s,l)=>s+l.qty,0);
+// ── CUSTOMER PROFILE (full page drawer) ──────────────────────────────────────
+async function openCustomerProfile(customerId) {
+  accountSelectedId=customerId;
+  const profDiv=document.getElementById('customerProfile');
+  profDiv.innerHTML=`<div class="card" style="margin-top:1.2rem"><div class="card-body" style="text-align:center;padding:2rem;color:var(--text2)">Loading profile...</div></div>`;
+  profDiv.scrollIntoView({behavior:'smooth'});
 
-  // Build combined ledger (entries + payments interleaved, newest first)
-  const ledger = [
-    ...udharEntries.map(e=>({...e, _type:'debit', _date:e.date})),
-    ...udharPayments.map(p=>({...p, _type:'credit', _date:p.date||p.paidAt?.slice(0,10)}))
-  ].sort((a,b)=>b._date.localeCompare(a._date));
+  const r=await fetch('/api/admin/customers/'+customerId,{headers:ah()});
+  if(!r.ok){toast('Could not load customer');return;}
+  const data=await r.json();
+  const c=data.customer;
+  const sub=data.milkSubscription;
+  udharEntries=data.udharEntries||[];
+  udharPayments=data.udharPayments||[];
+  udharMilkLogs=data.milkLogs||[];
 
-  const ledgerRows = ledger.length===0
-    ? `<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:1.5rem">No transactions yet</td></tr>`
-    : ledger.map(r=>{
-        if(r._type==='debit'){
-          const items=(r.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')||r.note||'Purchase';
-          return `<tr>
-            <td>${new Date(r._date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
-            <td><div style="font-weight:600">${items}</div>${r.note&&r.items?.length?`<div style="font-size:.74rem;color:var(--text2)">${r.note}</div>`:''}  </td>
-            <td style="color:var(--red);font-weight:700">+Rs.${r.amount.toFixed(0)}</td>
-            <td><div class="actions">
-              <button class="btn btn-blue" style="font-size:.72rem;padding:.25rem .6rem" onclick="editUdharEntry(${r.id})">Edit</button>
-              <button class="btn btn-red" style="font-size:.72rem;padding:.25rem .6rem" onclick="delUdharEntry(${r.id})">Del</button>
-            </div></td>
-          </tr>`;
-        } else {
-          return `<tr style="background:#f0fdf4">
-            <td>${new Date(r._date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
-            <td><div style="font-weight:600;color:var(--green)">✓ Payment — ${r.method||'Cash'}</div>${r.note?`<div style="font-size:.74rem;color:var(--text2)">${r.note}</div>`:''}</td>
-            <td style="color:var(--green);font-weight:700">-Rs.${r.amount.toFixed(0)}</td>
-            <td><button class="btn btn-red" style="font-size:.72rem;padding:.25rem .6rem" onclick="delUdharPayment(${r.id})">Del</button></td>
-          </tr>`;
-        }
-      }).join('');
+  const totalUdhar=udharEntries.reduce((s,e)=>s+(e.amount||0),0);
+  const totalPaid=udharPayments.reduce((s,p)=>s+(p.amount||0),0);
+  const balance=totalUdhar-totalPaid;
+  const milkAmt=udharMilkLogs.reduce((s,l)=>s+l.qty*(l.price||60),0);
+  const totalL=udharMilkLogs.reduce((s,l)=>s+l.qty,0);
 
-  const milkRows = udharMilkLogs.length===0
-    ? '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:1rem">No deliveries this month</td></tr>'
-    : [...udharMilkLogs].sort((a,b)=>b.date.localeCompare(a.date)).map(l=>`
-        <tr>
-          <td>${new Date(l.date+'T12:00:00').toLocaleDateString('default',{weekday:'short',day:'numeric',month:'short'})}</td>
-          <td>${l.qty}L</td>
-          <td>Rs.${(l.qty*(l.price||milkPrice)).toFixed(0)}</td>
-          <td><button class="btn btn-gray" style="font-size:.72rem;padding:.2rem .5rem" onclick="editMilkEntry(${customerId},'${l.date}',${l.qty})">Edit</button></td>
-        </tr>`).join('');
+  // Build ledger (combined, sorted desc)
+  const ledger=[
+    ...udharEntries.map(e=>({...e,_t:'debit',_d:e.date})),
+    ...udharPayments.map(p=>({...p,_t:'credit',_d:p.date||p.paidAt?.slice(0,10)||''}))
+  ].sort((a,b)=>b._d.localeCompare(a._d));
 
-  document.getElementById('udharDetail').innerHTML=`
+  const ledgerRows=ledger.length===0
+    ?`<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:1.5rem">No transactions yet</td></tr>`
+    :ledger.map(r=>{
+      if(r._t==='debit'){
+        const desc=(r.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')||r.note||'Purchase';
+        return `<tr>
+          <td style="white-space:nowrap">${fmtDate(r._d)}</td>
+          <td><div style="font-weight:600">${desc}</div>${r.note&&(r.items||[]).length?`<div style="font-size:.72rem;color:var(--text2)">${r.note}</div>`:''}</td>
+          <td style="color:var(--red);font-weight:700;white-space:nowrap">+Rs.${(r.amount||0).toFixed(0)}</td>
+          <td><div class="actions">
+            <button class="btn btn-blue" style="font-size:.7rem;padding:.22rem .55rem" onclick="editUdharEntry(${r.id})">Edit</button>
+            <button class="btn btn-red" style="font-size:.7rem;padding:.22rem .55rem" onclick="delUdharEntry(${r.id})">Del</button>
+          </div></td></tr>`;
+      } else {
+        return `<tr style="background:#f0fdf4">
+          <td style="white-space:nowrap">${fmtDate(r._d)}</td>
+          <td><div style="font-weight:600;color:var(--green)">✓ Payment — ${r.method||'Cash'}</div>${r.note?`<div style="font-size:.72rem;color:var(--text2)">${r.note}</div>`:''}</td>
+          <td style="color:var(--green);font-weight:700;white-space:nowrap">-Rs.${(r.amount||0).toFixed(0)}</td>
+          <td><button class="btn btn-red" style="font-size:.7rem;padding:.22rem .55rem" onclick="delUdharPayment(${r.id})">Del</button></td></tr>`;
+      }
+    }).join('');
+
+  const milkRows=(udharMilkLogs.length===0)
+    ?`<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:1rem">No milk deliveries recorded</td></tr>`
+    :[...udharMilkLogs].sort((a,b)=>b.date.localeCompare(a.date)).map(l=>`
+      <tr>
+        <td>${fmtDate(l.date)}</td>
+        <td>${l.qty}L</td>
+        <td>Rs.${(l.qty*(l.price||60)).toFixed(0)}</td>
+        <td><button class="btn btn-gray" style="font-size:.7rem;padding:.2rem .5rem" onclick="editMilkLogFromProfile(${customerId},'${l.date}',${l.qty})">Edit</button></td>
+      </tr>`).join('');
+
+  const orderRows=(data.orders||[]).length===0
+    ?`<div style="color:var(--text2);font-size:.85rem;padding:.5rem 0">No app orders.</div>`
+    :(data.orders||[]).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(o=>`
+      <div style="display:flex;justify-content:space-between;align-items:start;padding:.6rem 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-weight:600;font-size:.85rem">Order #${o.id}</div>
+          <div style="font-size:.73rem;color:var(--text2)">${fmtDate(o.createdAt?.slice(0,10))} · ${(o.items||[]).slice(0,3).map(i=>i.name+'×'+i.qty).join(', ')}${(o.items||[]).length>3?'...':''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:.5rem">
+          <div style="font-weight:700;color:var(--green)">Rs.${o.total}</div>
+          <span class="badge ${o.status==='delivered'?'badge-green':o.status==='cancelled'?'badge-red':'badge-yellow'}">${o.status}</span>
+        </div>
+      </div>`).join('');
+
+  const milkSectionHtml = sub ? `
+    <!-- MILK SUBSCRIPTION -->
+    <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem">
+        <div style="font-size:.85rem;font-weight:700">🥛 Milk Subscription</div>
+        <div class="actions">
+          <span class="badge ${sub.status==='active'?'badge-green':'badge-yellow'}">${sub.status}</span>
+          ${sub.status==='active'
+            ?`<button class="btn btn-gray" style="font-size:.72rem" onclick="pauseMilkSub(${customerId})">Pause</button>`
+            :`<button class="btn btn-green" style="font-size:.72rem" onclick="resumeMilkSub(${customerId})">Resume</button>`}
+          <button class="btn btn-blue" style="font-size:.72rem" onclick="editMilkSub(${customerId},${sub.defaultQty},${sub.pricePerLitre||60})">Edit</button>
+          <button class="btn btn-red" style="font-size:.72rem" onclick="deleteMilkSub(${customerId})">Remove</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem">
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">${(sub.defaultQty||0)}L</div><div class="stat-lbl">Daily</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">Rs.${sub.pricePerLitre||60}</div><div class="stat-lbl">Per Litre</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">${totalL.toFixed(1)}L</div><div class="stat-lbl">This Month</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">Rs.${milkAmt.toFixed(0)}</div><div class="stat-lbl">Milk Bill</div></div>
+      </div>
+      <div style="font-size:.8rem;font-weight:700;margin-bottom:.5rem;color:var(--text2)">DELIVERY LOG (recent)</div>
+      <table><thead><tr><th>Date</th><th>Qty</th><th>Amount</th><th></th></tr></thead><tbody>${milkRows}</tbody></table>
+      <button class="btn btn-green" style="margin-top:.7rem;font-size:.78rem" onclick="editMilkLogFromProfile(${customerId},'${new Date().toISOString().slice(0,10)}',${sub.defaultQty||0.5})">+ Mark Today</button>
+    </div>` : `
+    <!-- NO MILK SUB -->
+    <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:.85rem;color:var(--text2)">🥛 No milk subscription</div>
+        <button class="btn btn-blue" style="font-size:.78rem" onclick="addMilkSubForCustomer(${customerId})">+ Add Milk Subscription</button>
+      </div>
+    </div>`;
+
+  const n=c.name.replace(/'/g,"\\'");
+  profDiv.innerHTML=`
     <div class="card" style="margin-top:1.2rem">
 
       <!-- HEADER -->
       <div class="card-header" style="background:linear-gradient(135deg,#f0fdf4,#fff)">
         <div>
           <div style="font-size:1.05rem;font-weight:800">${c.name}</div>
-          <div style="font-size:.8rem;color:var(--text2)">${c.phone}${c.address?' · '+c.address:''} · ${c.defaultQty}L/day</div>
+          <div style="font-size:.8rem;color:var(--text2)">${c.phone}${c.address?' · '+c.address:''}</div>
         </div>
-        <div style="display:flex;gap:.5rem;align-items:center">
-          <button class="btn btn-green" onclick="quickAddUdhar(${customerId},'${c.name}')">+ Add Udhar</button>
-          <button class="btn btn-blue" onclick="quickPayment(${customerId},'${c.name}',${balance.toFixed(0)})">Record Payment</button>
+        <div class="actions">
+          <button class="btn btn-green" onclick="quickAddUdhar(${customerId},'${n}')">+ Udhar</button>
+          <button class="btn btn-blue" onclick="quickPayment(${customerId},'${n}',${balance.toFixed(0)})">Record Payment</button>
           <button class="btn btn-gray" onclick="openBillPreview(${customerId})">📄 Bill</button>
-          <button class="btn btn-gray" onclick="document.getElementById('udharDetail').innerHTML=''">Close</button>
+          <button class="btn btn-gray" onclick="openEditCustomerModal(${customerId})">✏️ Edit</button>
+          <button class="btn btn-gray" onclick="document.getElementById('customerProfile').innerHTML=''">✕ Close</button>
         </div>
       </div>
 
       <!-- SUMMARY STATS -->
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.8rem;padding:1rem 1.4rem;background:var(--bg);border-bottom:1px solid var(--border)">
-        <div class="stat-card" style="margin:0"><div class="stat-val" style="font-size:1.2rem;color:var(--red)">Rs.${totalUdhar.toFixed(0)}</div><div class="stat-lbl">Total Udhar</div></div>
-        <div class="stat-card" style="margin:0"><div class="stat-val" style="font-size:1.2rem;color:var(--green)">Rs.${totalPaid.toFixed(0)}</div><div class="stat-lbl">Paid</div></div>
-        <div class="stat-card" style="margin:0"><div class="stat-val" style="font-size:1.2rem;color:${balance>0?'var(--red)':'var(--green)'}">${balance>0?'Rs.'+balance.toFixed(0)+'due':'Settled'}</div><div class="stat-lbl">Balance</div></div>
-        <div class="stat-card" style="margin:0"><div class="stat-val" style="font-size:1.2rem">${totalL.toFixed(1)}L</div><div class="stat-lbl">Milk This Month</div></div>
-        <div class="stat-card" style="margin:0"><div class="stat-val" style="font-size:1.2rem">Rs.${milkAmt.toFixed(0)}</div><div class="stat-lbl">Milk Bill</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem;color:var(--red)">Rs.${totalUdhar.toFixed(0)}</div><div class="stat-lbl">Total Udhar</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem;color:var(--green)">Rs.${totalPaid.toFixed(0)}</div><div class="stat-lbl">Paid</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem;color:${balance>0?'var(--red)':'var(--green)'}">${balance>0?'Rs.'+balance.toFixed(0)+' due':'Settled'}</div><div class="stat-lbl">Balance</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">${totalL.toFixed(1)}L</div><div class="stat-lbl">Milk Month</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">Rs.${milkAmt.toFixed(0)}</div><div class="stat-lbl">Milk Bill</div></div>
       </div>
 
-      <!-- ADD UDHAR ENTRY FORM (inline) -->
-      <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border);background:#fffbeb">
-        <div style="font-size:.82rem;font-weight:700;margin-bottom:.8rem;color:var(--text)">+ Add Udhar Entry (offline purchase)</div>
-        <div id="udharItemsContainer">
-          <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.5rem;margin-bottom:.5rem">
-            <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
-            <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
-            <input type="number" placeholder="Price" class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
-            <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca;border-radius:8px;padding:.42rem .7rem;font-size:.9rem;cursor:pointer">✕</button>
+      <!-- TABS -->
+      <div style="display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg)">
+        ${['udhar','milk','orders','info'].map(tab=>`
+          <button id="ptab_${tab}" onclick="switchProfileTab('${tab}',${customerId})"
+            style="padding:.65rem 1.2rem;font-size:.82rem;font-weight:600;border:none;cursor:pointer;background:none;border-bottom:2px solid ${tab==='udhar'?'var(--green)':'transparent'};color:${tab==='udhar'?'var(--green)':'var(--text2)'};transition:all .15s">
+            ${tab==='udhar'?'📒 Udhar':tab==='milk'?'🥛 Milk':tab==='orders'?'🛒 Orders':'👤 Info'}
+          </button>`).join('')}
+      </div>
+
+      <!-- TAB CONTENT -->
+      <div id="profileTabContent">
+
+        <!-- UDHAR TAB (default) -->
+        <div id="ptabBody_udhar">
+          <!-- ADD UDHAR INLINE -->
+          <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border);background:#fffbeb">
+            <div style="font-size:.82rem;font-weight:700;margin-bottom:.6rem">+ Add Udhar Entry</div>
+            <div id="udharItemsContainer">
+              <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem">
+                <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.84rem;font-family:inherit">
+                <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
+                <input type="number" placeholder="Rs." class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
+                <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:.4rem .6rem;cursor:pointer">✕</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.4rem">
+              <button class="btn btn-gray" style="font-size:.78rem" onclick="addUdharItemRow()">+ More items</button>
+              <input type="date" id="ud_date" value="${new Date().toISOString().slice(0,10)}" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.82rem;font-family:inherit">
+              <input type="text" id="ud_note" placeholder="Note (optional)" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.82rem;font-family:inherit;flex:1;min-width:100px">
+              <input type="number" id="ud_manual_total" placeholder="Or total Rs." style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.82rem;font-family:inherit;width:120px">
+              <button class="btn btn-red" style="font-weight:700;font-size:.82rem" onclick="saveUdharEntry(${customerId})">Save Udhar</button>
+            </div>
+          </div>
+          <!-- LEDGER -->
+          <div style="padding:1rem 1.4rem">
+            <div style="font-size:.82rem;font-weight:700;margin-bottom:.6rem">📒 Transaction Ledger</div>
+            <table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th></th></tr></thead><tbody>${ledgerRows}</tbody></table>
           </div>
         </div>
-        <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-top:.4rem">
-          <button class="btn btn-gray" onclick="addUdharItemRow()">+ Add item</button>
-          <input type="date" id="ud_date" value="${new Date().toISOString().slice(0,10)}" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .7rem;font-size:.82rem;font-family:inherit">
-          <input type="text" id="ud_note" placeholder="Note (optional)" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.82rem;font-family:inherit;flex:1;min-width:120px">
-          <input type="number" id="ud_manual_total" placeholder="Or enter total Rs." style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.82rem;font-family:inherit;width:140px">
-          <button class="btn btn-red" style="font-weight:700" onclick="saveUdharEntry(${customerId})">Save Udhar</button>
+
+        <!-- MILK TAB (hidden) -->
+        <div id="ptabBody_milk" style="display:none">
+          ${milkSectionHtml}
         </div>
-      </div>
 
-      <!-- UDHAR LEDGER -->
-      <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border)">
-        <div style="font-size:.82rem;font-weight:700;margin-bottom:.7rem">📒 Transaction Ledger</div>
-        <table>
-          <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th></th></tr></thead>
-          <tbody>${ledgerRows}</tbody>
-        </table>
-      </div>
-
-      <!-- MILK LOG -->
-      <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem">
-          <div style="font-size:.82rem;font-weight:700">🥛 Milk Log (this month)</div>
-          <button class="btn btn-green" style="font-size:.75rem" onclick="editMilkEntry(${customerId},'${new Date().toISOString().slice(0,10)}',${c.defaultQty})">Mark Today</button>
+        <!-- ORDERS TAB (hidden) -->
+        <div id="ptabBody_orders" style="display:none">
+          <div style="padding:1rem 1.4rem">
+            <div style="font-size:.82rem;font-weight:700;margin-bottom:.6rem">🛒 App Orders</div>
+            ${orderRows}
+          </div>
         </div>
-        <table><thead><tr><th>Date</th><th>Qty</th><th>Amount</th><th></th></tr></thead><tbody>${milkRows}</tbody></table>
-      </div>
 
-      <!-- APP ORDERS -->
-      <div style="padding:1rem 1.4rem">
-        <div style="font-size:.82rem;font-weight:700;margin-bottom:.7rem">🛒 App Orders (phone match)</div>
-        ${custOrders.length===0
-          ? '<div style="color:var(--text2);font-size:.84rem">No app orders for this phone number.</div>'
-          : `<table><thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th></tr></thead><tbody>
-             ${custOrders.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(o=>`
-              <tr>
-                <td>#${o.id}</td>
-                <td>${new Date(o.createdAt).toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
-                <td style="font-size:.8rem;color:var(--text2)">${(o.items||[]).map(i=>i.name+'×'+i.qty).join(', ')}</td>
-                <td style="font-weight:700;color:var(--green)">Rs.${o.total}</td>
-              </tr>`).join('')}
-             </tbody></table>`}
+        <!-- INFO TAB (hidden) -->
+        <div id="ptabBody_info" style="display:none">
+          <div style="padding:1.2rem 1.4rem">
+            <div style="font-size:.82rem;font-weight:700;margin-bottom:.8rem">👤 Customer Info</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1rem">
+              <div class="form-group" style="margin:0"><label>Name</label><input type="text" id="ei_name" value="${c.name}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+              <div class="form-group" style="margin:0"><label>Phone</label><input type="text" id="ei_phone" value="${c.phone}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            </div>
+            <div class="form-group" style="margin-bottom:.8rem"><label>Address</label><input type="text" id="ei_address" value="${c.address||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem">
+              <div class="form-group" style="margin:0"><label>Block</label><input type="text" id="ei_block" value="${c.block||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+              <div class="form-group" style="margin:0"><label>Villa / Flat</label><input type="text" id="ei_villa" value="${c.villa||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            </div>
+            <div class="form-group" style="margin-bottom:.8rem"><label>Notes</label><textarea id="ei_notes" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;resize:vertical">${c.notes||''}</textarea></div>
+            <div class="form-group" style="margin-bottom:.8rem"><label>New PIN (leave blank to keep current)</label><input type="number" id="ei_pin" placeholder="4-digit PIN" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            <div style="display:flex;gap:.5rem">
+              <button class="btn btn-green" onclick="saveCustomerInfo(${customerId})">💾 Save Info</button>
+              <button class="btn btn-red" onclick="deleteCustomer(${customerId})">🗑️ Delete Customer</button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>`;
 
-  document.getElementById('udharDetail').scrollIntoView({behavior:'smooth'});
+  profDiv.scrollIntoView({behavior:'smooth'});
 }
+
+function switchProfileTab(tab, customerId) {
+  ['udhar','milk','orders','info'].forEach(t=>{
+    const body=document.getElementById('ptabBody_'+t);
+    const btn=document.getElementById('ptab_'+t);
+    if(body) body.style.display=t===tab?'':'none';
+    if(btn){
+      btn.style.borderBottomColor=t===tab?'var(--green)':'transparent';
+      btn.style.color=t===tab?'var(--green)':'var(--text2)';
+    }
+  });
+}
+
+function fmtDate(d) {
+  if(!d) return '—';
+  try{ return new Date(d+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'}); }
+  catch{ return d; }
+}
+
+// ── CUSTOMER CRUD ─────────────────────────────────────────────────────────────
+function openAddCustomerModal() {
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="addCustModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(500px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.25)">
+        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
+          <div><div style="font-weight:700;font-size:1rem">Add Customer</div><div style="font-size:.74rem;color:var(--text2)">Creates account only. Add milk subscription separately.</div></div>
+          <button onclick="document.getElementById('addCustModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
+        </div>
+        <div style="padding:1.4rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
+            <div class="form-group" style="margin:0"><label>Full Name *</label><input type="text" id="nc_name" placeholder="e.g. Raj Kumar" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            <div class="form-group" style="margin:0"><label>Phone *</label><input type="tel" id="nc_phone" placeholder="10-digit" maxlength="10" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          </div>
+          <div class="form-group" style="margin-top:.7rem;margin-bottom:.7rem"><label>Address</label><input type="text" id="nc_address" placeholder="Villa / Block" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem">
+            <div class="form-group" style="margin:0"><label>Block</label><input type="text" id="nc_block" placeholder="A / B / C..." style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            <div class="form-group" style="margin:0"><label>Villa / Flat</label><input type="text" id="nc_villa" placeholder="14" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:.7rem"><label>4-digit PIN (for customer portal)</label><input type="number" id="nc_pin" placeholder="e.g. 1234" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:.8rem 0">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
+            <input type="checkbox" id="nc_addMilk" onchange="toggleMilkSection()" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer">
+            <label for="nc_addMilk" style="font-size:.88rem;font-weight:600;cursor:pointer">🥛 Also add milk subscription</label>
+          </div>
+          <div id="nc_milkSection" style="display:none;background:var(--bg);border-radius:10px;padding:1rem;border:1px solid var(--border)">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
+              <div class="form-group" style="margin:0"><label>Daily Quantity (L)</label><input type="number" id="nc_milkQty" value="0.5" min="0.5" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+              <div class="form-group" style="margin:0"><label>Price per Litre (Rs.)</label><input type="number" id="nc_milkPrice" value="60" min="1" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            </div>
+            <div class="form-group" style="margin-top:.7rem;margin-bottom:0"><label>Start Date</label><input type="date" id="nc_milkStart" value="${new Date().toISOString().slice(0,10)}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          </div>
+        </div>
+        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-gray" onclick="document.getElementById('addCustModal').remove()">Cancel</button>
+          <button class="btn btn-green" onclick="saveNewCustomer()">Add Customer</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function toggleMilkSection(){
+  const show=document.getElementById('nc_addMilk').checked;
+  document.getElementById('nc_milkSection').style.display=show?'block':'none';
+}
+
+async function saveNewCustomer(){
+  const name=document.getElementById('nc_name')?.value.trim();
+  const phone=document.getElementById('nc_phone')?.value.trim();
+  const address=document.getElementById('nc_address')?.value.trim()||'';
+  const block=document.getElementById('nc_block')?.value.trim()||'';
+  const villa=document.getElementById('nc_villa')?.value.trim()||'';
+  const pin=document.getElementById('nc_pin')?.value.trim();
+  if(!name) return toast('Name is required');
+  if(!phone||phone.length<10) return toast('Valid 10-digit phone required');
+  const r=await fetch('/api/admin/customers',{method:'POST',headers:ah(),body:JSON.stringify({name,phone,address,block,villa,pin:pin||null})});
+  const d=await r.json();
+  if(!r.ok) return toast(d.error||'Failed to add customer');
+  const cid=d.customer.customerId;
+  // optionally add milk subscription
+  if(document.getElementById('nc_addMilk')?.checked){
+    const qty=parseFloat(document.getElementById('nc_milkQty')?.value)||0.5;
+    const price=parseFloat(document.getElementById('nc_milkPrice')?.value)||60;
+    const start=document.getElementById('nc_milkStart')?.value||new Date().toISOString().slice(0,10);
+    await fetch('/api/admin/milk/subscriptions',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,defaultQty:qty,pricePerLitre:price,startDate:start})});
+  }
+  document.getElementById('addCustModal')?.remove();
+  toast('Customer added!');
+  await loadAccountsData();
+  renderAccountsOverview();
+}
+
+async function saveCustomerInfo(customerId){
+  const body={
+    name:document.getElementById('ei_name')?.value.trim(),
+    phone:document.getElementById('ei_phone')?.value.trim(),
+    address:document.getElementById('ei_address')?.value.trim(),
+    block:document.getElementById('ei_block')?.value.trim(),
+    villa:document.getElementById('ei_villa')?.value.trim(),
+    notes:document.getElementById('ei_notes')?.value.trim(),
+  };
+  const pin=document.getElementById('ei_pin')?.value.trim();
+  if(pin) body.pin=pin;
+  const r=await fetch('/api/admin/customers/'+customerId,{method:'PUT',headers:ah(),body:JSON.stringify(body)});
+  if(!r.ok) return toast('Failed to save');
+  toast('Customer info saved!');
+  await loadAccountsData();
+  openCustomerProfile(customerId);
+}
+
+async function deleteCustomer(customerId){
+  if(!confirm('Delete this customer? All their data will remain but the account will be removed.')) return;
+  await fetch('/api/admin/customers/'+customerId,{method:'DELETE',headers:ah()});
+  toast('Customer deleted');
+  document.getElementById('customerProfile').innerHTML='';
+  await loadAccountsData();
+  renderAccountsOverview();
+}
+
+function openEditCustomerModal(customerId){ switchProfileTab('info',customerId); }
+
+// ── MILK SUBSCRIPTION MANAGEMENT FROM PROFILE ─────────────────────────────────
+async function addMilkSubForCustomer(customerId){
+  const settings=await fetch('/api/admin/settings',{headers:ah()}).then(r=>r.json()).catch(()=>({milkPrice:60}));
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="addMilkSubModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(440px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
+        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-weight:700">🥛 Add Milk Subscription</div>
+          <button onclick="document.getElementById('addMilkSubModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
+        </div>
+        <div style="padding:1.4rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
+            <div class="form-group" style="margin:0"><label>Daily Quantity (L)</label><input type="number" id="ms_qty" value="0.5" min="0.5" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            <div class="form-group" style="margin:0"><label>Price per Litre (Rs.)</label><input type="number" id="ms_price" value="${settings.milkPrice||60}" min="1" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          </div>
+          <div class="form-group" style="margin-top:.7rem;margin-bottom:0"><label>Start Date</label><input type="date" id="ms_start" value="${new Date().toISOString().slice(0,10)}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+        </div>
+        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-gray" onclick="document.getElementById('addMilkSubModal').remove()">Cancel</button>
+          <button class="btn btn-green" onclick="saveMilkSubForCustomer(${customerId})">Add Subscription</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function saveMilkSubForCustomer(customerId){
+  const qty=parseFloat(document.getElementById('ms_qty')?.value)||0.5;
+  const price=parseFloat(document.getElementById('ms_price')?.value)||60;
+  const start=document.getElementById('ms_start')?.value||new Date().toISOString().slice(0,10);
+  const r=await fetch('/api/admin/milk/subscriptions',{method:'POST',headers:ah(),body:JSON.stringify({customerId,defaultQty:qty,pricePerLitre:price,startDate:start})});
+  const d=await r.json();
+  if(!r.ok) return toast(d.error||'Failed');
+  document.getElementById('addMilkSubModal')?.remove();
+  toast('Milk subscription added!');
+  await loadAccountsData();
+  openCustomerProfile(customerId);
+}
+
+async function editMilkSub(customerId,currentQty,currentPrice){
+  const qty=prompt('Daily quantity (litres):',currentQty);
+  if(qty===null) return;
+  const price=prompt('Price per litre (Rs.):',currentPrice);
+  if(price===null) return;
+  await fetch('/api/admin/milk/subscriptions/'+customerId,{method:'PUT',headers:ah(),body:JSON.stringify({defaultQty:parseFloat(qty)||0.5,pricePerLitre:parseFloat(price)||60})});
+  toast('Subscription updated!');
+  await loadAccountsData();
+  openCustomerProfile(customerId);
+}
+
+async function pauseMilkSub(customerId){
+  await fetch('/api/admin/milk/subscriptions/'+customerId+'/pause',{method:'POST',headers:ah(),body:JSON.stringify({})});
+  toast('Subscription paused');
+  await loadAccountsData();
+  openCustomerProfile(customerId);
+}
+
+async function resumeMilkSub(customerId){
+  await fetch('/api/admin/milk/subscriptions/'+customerId+'/resume',{method:'POST',headers:ah(),body:JSON.stringify({})});
+  toast('Subscription resumed!');
+  await loadAccountsData();
+  openCustomerProfile(customerId);
+}
+
+async function deleteMilkSub(customerId){
+  if(!confirm('Remove milk subscription? Delivery logs will be kept.')) return;
+  await fetch('/api/admin/milk/subscriptions/'+customerId,{method:'DELETE',headers:ah()});
+  toast('Subscription removed');
+  await loadAccountsData();
+  openCustomerProfile(customerId);
+}
+
+async function editMilkLogFromProfile(customerId,date,defaultQty){
+  const newQty=prompt('Litres delivered on '+date+':',defaultQty);
+  if(newQty===null) return;
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(newQty)||0,price:60})});
+  toast('Milk log updated!');
+  openCustomerProfile(customerId);
+}
+
+// ── UDHAR HELPERS (used both from profile and quickAdd) ───────────────────────
+function openAddUdharCustomer(){ openAddCustomerModal(); }
 
 function addUdharItemRow() {
   document.getElementById('udharItemsContainer').insertAdjacentHTML('beforeend',`
-    <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.5rem;margin-bottom:.5rem">
-      <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
-      <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
-      <input type="number" placeholder="Price" class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.42rem .8rem;font-size:.84rem;font-family:inherit">
-      <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca;border-radius:8px;padding:.42rem .7rem;font-size:.9rem;cursor:pointer">✕</button>
+    <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem">
+      <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.84rem;font-family:inherit">
+      <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
+      <input type="number" placeholder="Rs." class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
+      <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:.4rem .6rem;cursor:pointer">✕</button>
     </div>`);
 }
 
 async function saveUdharEntry(customerId) {
-  const rows = document.querySelectorAll('.udhar-item-row');
-  const items = [];
-  let computedTotal = 0;
-  rows.forEach(row => {
-    const name  = row.querySelector('.ui_name')?.value.trim();
-    const qty   = parseFloat(row.querySelector('.ui_qty')?.value) || 1;
-    const price = parseFloat(row.querySelector('.ui_price')?.value) || 0;
-    if (name) { items.push({name, qty, price}); computedTotal += qty * price; }
-  });
-  const manualTotal = parseFloat(document.getElementById('ud_manual_total')?.value) || 0;
-  const amount = manualTotal || computedTotal;
-  const date = document.getElementById('ud_date')?.value;
-  const note = document.getElementById('ud_note')?.value.trim();
-  if (!amount) return toast('Enter items with prices or a manual total');
-  const r = await fetch('/api/admin/udhar', {method:'POST', headers:ah(), body:JSON.stringify({customerId, items, amount, date, note})});
-  if (!r.ok) return toast('Failed to save');
-  toast('Udhar entry saved! Rs.' + amount);
-  await loadUdharData();
-  openUdharDetail(customerId);
-}
-
-async function editUdharEntry(id) {
-  const e = udharEntries.find(x=>x.id===id);
-  if (!e) return;
-  const newAmt = prompt('Edit amount (Rs.):', e.amount);
-  if (newAmt === null) return;
-  const newNote = prompt('Note:', e.note||'');
-  await fetch('/api/admin/udhar/'+id, {method:'PUT', headers:ah(), body:JSON.stringify({amount:parseFloat(newAmt)||e.amount, note:newNote||''})});
-  toast('Updated!'); await loadUdharData(); openUdharDetail(udharSelectedId);
-}
-
-async function delUdharEntry(id) {
-  if (!confirm('Delete this udhar entry? This will reduce the balance.')) return;
-  await fetch('/api/admin/udhar/'+id, {method:'DELETE', headers:ah()});
-  toast('Entry deleted'); await loadUdharData(); openUdharDetail(udharSelectedId);
-}
-
-async function delUdharPayment(id) {
-  if (!confirm('Delete this payment record?')) return;
-  await fetch('/api/admin/udhar-payments/'+id, {method:'DELETE', headers:ah()});
-  toast('Payment deleted'); await loadUdharData(); openUdharDetail(udharSelectedId);
-}
-
-function quickAddUdhar(customerId, name) {
-  document.body.insertAdjacentHTML('beforeend',`
-    <div id="qaModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
-      <div style="background:#fff;border-radius:18px;width:min(480px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
-        <div style="padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-          <div><div style="font-weight:700">Add Udhar — ${name}</div><div style="font-size:.75rem;color:var(--text2)">Offline purchase / credit entry</div></div>
-          <button onclick="document.getElementById('qaModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
-        </div>
-        <div style="padding:1.2rem 1.4rem">
-          <div id="qaItems">
-            <div class="qa-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.5rem;margin-bottom:.5rem">
-              <input type="text" placeholder="Item name (e.g. Rice)" class="qi_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;font-family:inherit;width:100%">
-              <input type="number" placeholder="Qty" class="qi_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-size:.88rem;font-family:inherit;width:100%">
-              <input type="number" placeholder="Rs." class="qi_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-size:.88rem;font-family:inherit;width:100%">
-              <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca;border-radius:8px;padding:.5rem .7rem;cursor:pointer;border:none">✕</button>
-            </div>
-          </div>
-          <div id="qa_total_preview" style="font-size:.8rem;color:var(--green);font-weight:700;margin:.3rem 0 .6rem"></div>
-          <button class="btn btn-gray" onclick="addQARow()" style="margin-bottom:.8rem">+ Add more items</button>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
-            <div class="form-group" style="margin:0"><label>Date</label><input type="date" id="qa_date" value="${new Date().toISOString().slice(0,10)}"></div>
-            <div class="form-group" style="margin:0"><label>Manual total (optional)</label><input type="number" id="qa_manual" placeholder="Rs. if no itemwise price"></div>
-          </div>
-          <div class="form-group" style="margin-top:.6rem;margin-bottom:0"><label>Note</label><input type="text" id="qa_note" placeholder="e.g. bought on credit, door delivery"></div>
-        </div>
-        <div style="padding:1rem 1.4rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
-          <button class="btn btn-gray" onclick="document.getElementById('qaModal').remove()">Cancel</button>
-          <button class="btn btn-red" style="font-weight:800" onclick="submitQuickUdhar(${customerId})">Save Udhar Entry</button>
-        </div>
-      </div>
-    </div>`);
-  // live total preview
-  document.getElementById('qaItems').addEventListener('input', updateQATotal);
-}
-
-function addQARow() {
-  document.getElementById('qaItems').insertAdjacentHTML('beforeend',`
-    <div class="qa-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.5rem;margin-bottom:.5rem">
-      <input type="text" placeholder="Item name" class="qi_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;font-family:inherit;width:100%">
-      <input type="number" placeholder="Qty" class="qi_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-size:.88rem;font-family:inherit;width:100%">
-      <input type="number" placeholder="Rs." class="qi_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-size:.88rem;font-family:inherit;width:100%">
-      <button onclick="this.parentElement.remove();updateQATotal()" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca;border-radius:8px;padding:.5rem .7rem;cursor:pointer;border:none">✕</button>
-    </div>`);
-}
-
-function updateQATotal() {
-  let t=0;
-  document.querySelectorAll('.qa-row').forEach(r=>{
-    const q=parseFloat(r.querySelector('.qi_qty')?.value)||1;
-    const p=parseFloat(r.querySelector('.qi_price')?.value)||0;
-    t+=q*p;
-  });
-  document.getElementById('qa_total_preview').textContent = t>0 ? 'Total: Rs.'+t.toFixed(0) : '';
-}
-
-async function submitQuickUdhar(customerId) {
+  const rows=document.querySelectorAll('.udhar-item-row');
   const items=[]; let total=0;
-  document.querySelectorAll('.qa-row').forEach(r=>{
-    const name=r.querySelector('.qi_name')?.value.trim();
-    const qty=parseFloat(r.querySelector('.qi_qty')?.value)||1;
-    const price=parseFloat(r.querySelector('.qi_price')?.value)||0;
+  rows.forEach(row=>{
+    const name=row.querySelector('.ui_name')?.value.trim();
+    const qty=parseFloat(row.querySelector('.ui_qty')?.value)||1;
+    const price=parseFloat(row.querySelector('.ui_price')?.value)||0;
     if(name){items.push({name,qty,price});total+=qty*price;}
   });
-  const manual=parseFloat(document.getElementById('qa_manual')?.value)||0;
+  const manual=parseFloat(document.getElementById('ud_manual_total')?.value)||0;
   const amount=manual||total;
-  if(!amount) return toast('Enter item prices or a manual total');
-  const date=document.getElementById('qa_date')?.value;
-  const note=document.getElementById('qa_note')?.value.trim();
+  const date=document.getElementById('ud_date')?.value;
+  const note=document.getElementById('ud_note')?.value.trim();
+  if(!amount) return toast('Enter items with prices or a manual total');
   const r=await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId,items,amount,date,note})});
-  if(!r.ok) return toast('Failed');
-  document.getElementById('qaModal')?.remove();
-  toast('Udhar Rs.'+amount+' added to '+((udharCustomers.find(x=>x.id===customerId)||{}).name||'account'));
-  await loadUdharData();
-  renderUdharOverview();
-  if(udharSelectedId===customerId) openUdharDetail(customerId);
+  if(!r.ok) return toast('Failed to save');
+  toast('Udhar Rs.'+amount+' saved!');
+  await loadAccountsData();
+  openCustomerProfile(customerId);
 }
 
-async function quickPayment(customerId, name, balance) {
-  document.body.insertAdjacentHTML('beforeend',`
-    <div id="qpModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
-      <div style="background:#fff;border-radius:18px;width:min(400px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
-        <div style="padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-          <div><div style="font-weight:700">Record Payment — ${name}</div><div style="font-size:.75rem;color:var(--text2)">Outstanding: Rs.${balance}</div></div>
-          <button onclick="document.getElementById('qpModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
-        </div>
-        <div style="padding:1.2rem 1.4rem">
-          <div class="form-group"><label>Amount Received (Rs.)</label><input type="number" id="qp_amount" value="${balance}" placeholder="Rs."></div>
-          <div class="form-group"><label>Payment Method</label>
-            <select id="qp_method"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank Transfer</option><option value="other">Other</option></select>
-          </div>
-          <div class="form-group" style="margin-bottom:0"><label>Note (optional)</label><input type="text" id="qp_note" placeholder="e.g. paid full balance"></div>
-        </div>
-        <div style="padding:1rem 1.4rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
-          <button class="btn btn-gray" onclick="document.getElementById('qpModal').remove()">Cancel</button>
-          <button class="btn btn-green" style="font-weight:800" onclick="submitPayment(${customerId})">Mark as Paid</button>
-        </div>
-      </div>
-    </div>`);
+async function editUdharEntry(id){
+  const e=udharEntries.find(x=>x.id===id);
+  if(!e) return;
+  const newAmt=prompt('Edit amount (Rs.):',e.amount);
+  if(newAmt===null) return;
+  const newNote=prompt('Note:',e.note||'');
+  await fetch('/api/admin/udhar/'+id,{method:'PUT',headers:ah(),body:JSON.stringify({amount:parseFloat(newAmt)||e.amount,note:newNote||''})});
+  toast('Updated!');
+  await loadAccountsData();
+  openCustomerProfile(accountSelectedId);
 }
 
-async function submitPayment(customerId) {
-  const amount=parseFloat(document.getElementById('qp_amount')?.value)||0;
-  const method=document.getElementById('qp_method')?.value||'cash';
-  const note=document.getElementById('qp_note')?.value.trim();
-  if(!amount) return toast('Enter amount');
-  const r=await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId,amount,method,note})});
-  if(!r.ok) return toast('Failed');
-  document.getElementById('qpModal')?.remove();
-  toast('Payment Rs.'+amount+' recorded!');
-  await loadUdharData();
-  renderUdharOverview();
-  if(udharSelectedId===customerId) openUdharDetail(customerId);
+async function delUdharEntry(id){
+  if(!confirm('Delete this udhar entry?')) return;
+  await fetch('/api/admin/udhar/'+id,{method:'DELETE',headers:ah()});
+  toast('Entry deleted');
+  await loadAccountsData();
+  openCustomerProfile(accountSelectedId);
 }
 
-async function openBillPreview(customerId) {
-  // Build and open bill for admin to send via WhatsApp/print
-  const c=udharCustomers.find(x=>x.id===customerId); if(!c) return;
-  const db_s=udharSummaries.find(x=>x.customer.id===customerId)||{};
-  const totalUdhar=db_s.totalUdhar||0, totalPaid=db_s.totalPaid||0, balance=db_s.balance||0;
-  const milkAmt=udharMilkLogs.reduce((s,l)=>s+l.qty*60,0);
-  const monthLabel=new Date().toLocaleString('default',{month:'long',year:'numeric'});
-  const today=new Date().toLocaleDateString('default',{day:'numeric',month:'long',year:'numeric'});
-
-  const entryRows=udharEntries.map(e=>`
-    <tr><td>${new Date(e.date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
-    <td>${(e.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')||e.note||'Purchase'}</td>
-    <td style="text-align:right;color:#dc2626;font-weight:600">Rs.${e.amount.toFixed(0)}</td></tr>`).join('');
-
-  const payRows=udharPayments.map(p=>`
-    <tr><td>${new Date(p.paidAt).toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
-    <td>Payment (${p.method||'cash'})${p.note?' — '+p.note:''}</td>
-    <td style="text-align:right;color:#16a34a;font-weight:600">-Rs.${p.amount.toFixed(0)}</td></tr>`).join('');
-
-  const milkRowsHTML=udharMilkLogs.map(l=>`
-    <tr><td>${new Date(l.date+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'})}</td>
-    <td>${l.qty}L @ Rs.${l.price||60}/L</td>
-    <td style="text-align:right">Rs.${(l.qty*(l.price||60)).toFixed(0)}</td></tr>`).join('');
-
-  const billHTML=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bill — ${c.name}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;}
-.page{max-width:680px;margin:0 auto;padding:32px 28px;}
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #f0f0f0;}
-.store-name{font-size:1.5rem;font-weight:900;}.store-name span{color:#16a34a;}
-.store-sub{font-size:.78rem;color:#888;margin-top:3px;}
-.bill-meta{text-align:right;}.bill-title{font-size:1.1rem;font-weight:800;}
-.bill-date{font-size:.75rem;color:#888;margin-top:3px;}
-.customer-box{background:#f9fafb;border-radius:10px;padding:14px 18px;margin-bottom:24px;border:1px solid #e8eaed;}
-.customer-name{font-size:1rem;font-weight:700;}.customer-meta{font-size:.78rem;color:#666;margin-top:3px;}
-.section{margin-bottom:22px;}.section-title{font-size:.72rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
-table{width:100%;border-collapse:collapse;}th{font-size:.72rem;font-weight:600;color:#888;text-transform:uppercase;padding:7px 10px;background:#f9fafb;text-align:left;border-bottom:1px solid #e8eaed;}
-td{padding:9px 10px;border-bottom:1px solid #f0f0f0;font-size:.85rem;}tr:last-child td{border:none;}
-.summary-box{background:#f9fafb;border-radius:12px;padding:18px;margin-top:20px;border:1px solid #e8eaed;}
-.sum-row{display:flex;justify-content:space-between;font-size:.88rem;padding:5px 0;}
-.sum-row.total{border-top:2px solid #e8eaed;margin-top:8px;padding-top:12px;font-size:1.1rem;font-weight:800;}
-.due-banner{background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;padding:18px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;}
-.due-label{font-size:.88rem;font-weight:700;color:#dc2626;}.due-amt{font-size:1.8rem;font-weight:900;color:#dc2626;}
-.settled{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:16px;margin-top:16px;text-align:center;color:#16a34a;font-weight:700;}
-.footer{margin-top:32px;padding-top:16px;border-top:1px solid #f0f0f0;font-size:.72rem;color:#aaa;text-align:center;}
-.print-btn{position:fixed;top:20px;right:20px;background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;}
-@media print{.print-btn{display:none;}.page{max-width:100%;padding:20px;}}
-</style></head><body>
-<button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
-<div class="page">
-  <div class="header">
-    <div><div class="store-name">BSC <span>Store</span></div><div class="store-sub">Local Grocery &amp; Milk Delivery</div></div>
-    <div class="bill-meta"><div class="bill-title">Monthly Statement</div><div class="bill-date">${monthLabel} · Generated ${today}</div></div>
-  </div>
-  <div class="customer-box">
-    <div class="customer-name">${c.name}</div>
-    <div class="customer-meta">${c.phone}${c.address?' · '+c.address:''}</div>
-  </div>
-  ${udharEntries.length>0||udharPayments.length>0?`
-  <div class="section">
-    <div class="section-title">📒 Udhar Ledger</div>
-    <table><thead><tr><th>Date</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
-    <tbody>${entryRows}${payRows}</tbody></table>
-  </div>`:''}
-  ${udharMilkLogs.length>0?`
-  <div class="section">
-    <div class="section-title">🥛 Milk Deliveries — ${monthLabel}</div>
-    <table><thead><tr><th>Date</th><th>Details</th><th style="text-align:right">Amount</th></tr></thead>
-    <tbody>${milkRowsHTML}</tbody></table>
-  </div>`:''}
-  <div class="summary-box">
-    <div class="sum-row"><span>Total Udhar</span><span>Rs.${totalUdhar.toFixed(0)}</span></div>
-    <div class="sum-row"><span>Payments Received</span><span style="color:#16a34a">-Rs.${totalPaid.toFixed(0)}</span></div>
-    <div class="sum-row"><span>Milk Bill (${monthLabel})</span><span>Rs.${milkAmt.toFixed(0)}</span></div>
-    <div class="sum-row total"><span>Total Outstanding</span><span style="color:#dc2626">Rs.${(balance+milkAmt).toFixed(0)}</span></div>
-  </div>
-  ${(balance+milkAmt)>0
-    ?`<div class="due-banner"><div><div class="due-label">Amount Due</div><div style="font-size:.75rem;color:#dc2626;margin-top:3px">Please pay at earliest</div></div><div class="due-amt">Rs.${(balance+milkAmt).toFixed(0)}</div></div>`
-    :`<div class="settled">✅ All Settled — No outstanding balance. Thank you!</div>`}
-  <div class="footer">BSC Store · ${monthLabel} statement · Thank you for your business!</div>
-</div></body></html>`;
-
-  const win=window.open('','_blank');
-  win.document.write(billHTML);
-  win.document.close();
+async function delUdharPayment(id){
+  if(!confirm('Delete this payment record?')) return;
+  await fetch('/api/admin/udhar-payments/'+id,{method:'DELETE',headers:ah()});
+  toast('Payment deleted');
+  await loadAccountsData();
+  openCustomerProfile(accountSelectedId);
 }
 
-function openAddUdharCustomer() {
-  // Reuse existing milk customer add modal
-  if(typeof openAddMilkCustomer === 'function') openAddMilkCustomer();
-  else toast('Go to Milk section to add customers');
-}
+// ── QUICK MODALS (from table row buttons) ─────────────────────────────────────
+
+
 
 async function editMilkEntry(customerId, date, defaultQty) {
   const newQty=prompt('Enter litres delivered on '+date+':',defaultQty);
   if(newQty===null) return;
   await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(newQty)||0,price:60})});
   toast('Milk log updated!');
-  if(udharSelectedId===customerId) openUdharDetail(customerId);
+  if(accountSelectedId===customerId) openCustomerProfile(customerId);
 }
 
 let toastTimer;
