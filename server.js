@@ -33,6 +33,8 @@ async function connectDB() {
   // Keep old indexes for migration compat
   await db.collection('udharEntries').createIndex({ customerId: 1 });
   await db.collection('udharPayments').createIndex({ customerId: 1 });
+  // Subcategories
+  await db.collection('subcategories').createIndex({ catId: 1 });
 
   const settings = await db.collection('settings').findOne({ _id: 'main' });
   if (!settings) {
@@ -115,15 +117,16 @@ function customerAuth(req, res, next) {
 // ── PUBLIC STORE ──────────────────────────────────────────────────────────────
 app.get('/api/store', async (req, res) => {
   try {
-    const [settings, categories, products, banners] = await Promise.all([
+    const [settings, categories, products, banners, subcategories] = await Promise.all([
       db.collection('settings').findOne({ _id: 'main' }),
       db.collection('categories').find().toArray(),
       db.collection('products').find().toArray(),
       db.collection('banners').find().toArray(),
+      db.collection('subcategories').find().toArray(),
     ]);
     const fg = settings.freeGift || {};
     res.json({
-      categories, products: products.map(migrateProduct), banners,
+      categories, products: products.map(migrateProduct), banners, subcategories,
       settings: {
         storeName: settings.storeName, minOrder: settings.minOrder,
         upiId: settings.upiId, whatsapp: settings.whatsapp,
@@ -183,6 +186,32 @@ app.delete('/api/admin/categories/:id', adminAuth, async (req, res) => {
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── SUBCATEGORIES ─────────────────────────────────────────────────────────────
+app.get('/api/admin/subcategories', adminAuth, async (req, res) => {
+  try { res.json(await db.collection('subcategories').find().toArray()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/admin/subcategories', adminAuth, async (req, res) => {
+  try {
+    const sub = { id: await getNextId('subcategoryId'), name: req.body.name || 'New Subcategory', catId: parseInt(req.body.catId) || 0, imageUrl: req.body.imageUrl || '' };
+    await db.collection('subcategories').insertOne(sub);
+    res.json(sub);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put('/api/admin/subcategories/:id', adminAuth, async (req, res) => {
+  try {
+    const result = await db.collection('subcategories').findOneAndUpdate(
+      { id: parseInt(req.params.id) }, { $set: req.body }, { returnDocument: 'after' }
+    );
+    if (!result) return res.status(404).json({ error: 'Not found' });
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete('/api/admin/subcategories/:id', adminAuth, async (req, res) => {
+  try { await db.collection('subcategories').deleteOne({ id: parseInt(req.params.id) }); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── PRODUCTS ──────────────────────────────────────────────────────────────────
 app.get('/api/admin/products', adminAuth, async (req, res) => {
   try { res.json((await db.collection('products').find().toArray()).map(migrateProduct)); }
@@ -192,7 +221,9 @@ app.post('/api/admin/products', adminAuth, async (req, res) => {
   try {
     const p = {
       id: await getNextId('productId'), name: req.body.name || 'New Product',
-      catId: parseInt(req.body.catId) || 0, imageUrl: req.body.imageUrl || '',
+      catId: parseInt(req.body.catId) || 0,
+      subCatId: req.body.subCatId ? parseInt(req.body.subCatId) : null,
+      imageUrl: req.body.imageUrl || '',
       featured: req.body.featured || false, isNew: req.body.isNew || false,
       variants: req.body.variants || [{ id: 'v1', label: '1 unit', imageUrl: '', mrp: null, inStock: true, priceTiers: [{ minQty: 1, price: 0 }] }]
     };

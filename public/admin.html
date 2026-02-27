@@ -190,6 +190,7 @@ tr:hover td{background:#fafafa;}
       <div class="nav-link" onclick="goTo('udhar')"><span class="icon">📒</span><span>Udhar</span></div>
       <div class="nav-link" onclick="goTo('products')"><span class="icon">🛍️</span><span>Products</span></div>
       <div class="nav-link" onclick="goTo('categories')"><span class="icon">📂</span><span>Categories</span></div>
+      <div class="nav-link" onclick="goTo('subcategories')"><span class="icon">🗂️</span><span>Subcategories</span></div>
       <div class="nav-link" onclick="goTo('banners')"><span class="icon">🖼️</span><span>Banners</span></div>
       <div class="nav-link" onclick="goTo('settings')"><span class="icon">⚙️</span><span>Settings</span></div>
     </nav>
@@ -217,9 +218,10 @@ tr:hover td{background:#fafafa;}
       <input type="hidden" id="pEditId">
       <div class="form-row">
         <div class="form-group"><label>Product Name</label><input type="text" id="pName" placeholder="e.g. Maida, Tomatoes..."></div>
-        <div class="form-group"><label>Category</label><select id="pCat"></select></div>
+        <div class="form-group"><label>Category</label><select id="pCat" onchange="updateSubcatDropdown()"></select></div>
       </div>
       <div class="form-row">
+        <div class="form-group"><label>Subcategory</label><select id="pSubCat"><option value="">— None —</option></select></div>
         <div class="form-group">
           <label>Tag</label>
           <select id="pTag">
@@ -228,16 +230,14 @@ tr:hover td{background:#fafafa;}
             <option value="new">✨ New Arrival</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Product Image (fallback)</label>
-          <div class="img-upload-area" id="pImgArea" onclick="document.getElementById('pImgFile').click()" style="padding:.8rem">
-            <div style="font-size:1.4rem;margin-bottom:.2rem">📷</div>
-            <div style="font-size:.75rem;color:var(--text2)" id="pImgText">Upload fallback image</div>
-            <img class="img-preview" id="pImgPreview">
-          </div>
-          <input type="file" id="pImgFile" accept="image/*" style="display:none" onchange="handleImgUpload('product',this)">
-          <input type="hidden" id="pImgUrl">
+      </div>
+      <div class="form-group">
+        <label>Product Image URL (fallback)</label>
+        <input type="text" id="pImgUrl" placeholder="https://... paste image link here" oninput="previewUrlImg('pImgPreview', this.value)" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:.62rem .9rem;font-size:.9rem;color:var(--text);background:var(--white)">
+        <div style="margin-top:8px" id="pImgPreviewWrap">
+          <img id="pImgPreview" style="display:none;width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
         </div>
+        <div class="form-hint">Paste a direct image URL (WhatsApp, Google Drive, Cloudinary, etc.)</div>
       </div>
       <div class="form-group">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -263,17 +263,15 @@ tr:hover td{background:#fafafa;}
     </div>
     <div class="modal-body">
       <input type="hidden" id="cEditId">
-      <div class="form-group">
-        <label>Category Image</label>
-        <div class="img-upload-area" id="cImgArea" onclick="document.getElementById('cImgFile').click()">
-          <div style="font-size:2rem;margin-bottom:.4rem">📷</div>
-          <div style="font-size:.82rem;font-weight:600;color:var(--text2)" id="cImgText">Click to upload image</div>
-          <img class="img-preview" id="cImgPreview">
-        </div>
-        <input type="file" id="cImgFile" accept="image/*" style="display:none" onchange="handleImgUpload('category',this)">
-        <input type="hidden" id="cImgUrl">
-      </div>
       <div class="form-group"><label>Category Name</label><input type="text" id="cName" placeholder="e.g. Dairy and Eggs"></div>
+      <div class="form-group">
+        <label>Category Image URL</label>
+        <input type="text" id="cImgUrl" placeholder="https://... paste image link here" oninput="previewUrlImg('cImgPreview', this.value)" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:.62rem .9rem;font-size:.9rem;color:var(--text);background:var(--white)">
+        <div style="margin-top:8px">
+          <img id="cImgPreview" style="display:none;width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+        </div>
+        <div class="form-hint">Paste a direct image URL</div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeModal('categoryModal')">Cancel</button>
@@ -292,15 +290,12 @@ tr:hover td{background:#fafafa;}
     <div class="modal-body">
       <input type="hidden" id="bEditId">
       <div class="form-group">
-        <label>Banner Image</label>
-        <div class="img-upload-area" id="bImgArea" onclick="document.getElementById('bImgFile').click()">
-          <div style="font-size:2rem;margin-bottom:.4rem">📷</div>
-          <div style="font-size:.82rem;font-weight:600;color:var(--text2)" id="bImgText">Click to upload banner image</div>
-          <div style="font-size:.72rem;color:var(--text3);margin-top:.2rem">Recommended: 800x400px</div>
-          <img class="img-preview" id="bImgPreview">
+        <label>Banner Image URL</label>
+        <input type="text" id="bImgUrl" placeholder="https://... paste image link here" oninput="previewUrlImg('bImgPreview', this.value)" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:.62rem .9rem;font-size:.9rem;color:var(--text);background:var(--white)">
+        <div style="margin-top:8px">
+          <img id="bImgPreview" style="display:none;width:100%;max-height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
         </div>
-        <input type="file" id="bImgFile" accept="image/*" style="display:none" onchange="handleImgUpload('banner',this)">
-        <input type="hidden" id="bImgUrl">
+        <div class="form-hint">Paste a direct image URL. Recommended: 800×400px</div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Title (optional)</label><input type="text" id="bTitle" placeholder="e.g. Weekend Deals"></div>
@@ -337,11 +332,41 @@ tr:hover td{background:#fafafa;}
   </div>
 </div>
 
+<!-- SUBCATEGORY MODAL -->
+<div class="modal-overlay" id="subcategoryModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="scModalTitle">Add Subcategory</h2>
+      <button class="modal-close" onclick="closeModal('subcategoryModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="scEditId">
+      <div class="form-group">
+        <label>Parent Category</label>
+        <select id="scCatId" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:.62rem .9rem;font-size:.9rem;color:var(--text);background:var(--white)"></select>
+      </div>
+      <div class="form-group"><label>Subcategory Name</label><input type="text" id="scName" placeholder="e.g. Milk, Paneer, Curd, Eggs"></div>
+      <div class="form-group">
+        <label>Subcategory Image URL</label>
+        <input type="text" id="scImgUrl" placeholder="https://... paste image link here" oninput="previewUrlImg('scImgPreview', this.value)" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:.62rem .9rem;font-size:.9rem;color:var(--text);background:var(--white)">
+        <div style="margin-top:8px">
+          <img id="scImgPreview" style="display:none;width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+        </div>
+        <div class="form-hint">Paste a direct image URL</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeModal('subcategoryModal')">Cancel</button>
+      <button class="btn btn-green" onclick="saveSubcat()">Save Subcategory</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 let token = localStorage.getItem('bsc_token');
-let allProducts = [], allCategories = [], allBanners = [];
+let allProducts = [], allCategories = [], allBanners = [], allSubcategories = [];
 let currentPage = 'dashboard';
 let productSearch = '';
 
@@ -374,26 +399,28 @@ async function startApp() {
 function logout() { localStorage.removeItem('bsc_token'); token=null; location.reload(); }
 
 async function loadAll() {
-  const [pR,cR,bR] = await Promise.all([
+  const [pR,cR,bR,scR] = await Promise.all([
     fetch('/api/admin/products',{headers:ah()}),
     fetch('/api/admin/categories',{headers:ah()}),
     fetch('/api/admin/banners',{headers:ah()}),
+    fetch('/api/admin/subcategories',{headers:ah()}),
   ]);
   allProducts = await pR.json();
   allCategories = await cR.json();
   allBanners = await bR.json();
+  allSubcategories = scR.ok ? await scR.json() : [];
 }
 
 const ah = () => ({Authorization:'Bearer '+token,'Content-Type':'application/json'});
 
-const PAGE_NAMES = ['dashboard','customers','orders','milk','udhar','products','categories','banners','settings'];
+const PAGE_NAMES = ['dashboard','customers','orders','milk','udhar','products','categories','subcategories','banners','settings'];
 
 function goTo(page) {
   currentPage = page;
   document.querySelectorAll('.nav-link').forEach((l,i) => l.classList.toggle('active', PAGE_NAMES[i]===page));
-  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Credit',products:'Products',categories:'Categories',banners:'Banners',settings:'Settings'};
+  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Credit',products:'Products',categories:'Categories',subcategories:'Subcategories',banners:'Banners',settings:'Settings'};
   document.getElementById('pageTitle').textContent = titles[page]||page;
-  const fns = {dashboard:renderDashboard,customers:renderCustomers,orders:renderOrders,milk:renderMilk,udhar:renderUdhar,products:renderProducts,categories:renderCategories,banners:renderBanners,settings:renderSettings};
+  const fns = {dashboard:renderDashboard,customers:renderCustomers,orders:renderOrders,milk:renderMilk,udhar:renderUdhar,products:renderProducts,categories:renderCategories,subcategories:renderSubcategories,banners:renderBanners,settings:renderSettings};
   if (fns[page]) {
     const r = fns[page]();
     if (r && r.then) r.then(() => wrapTables()); else setTimeout(wrapTables, 80);
@@ -1467,12 +1494,22 @@ function openProductModal(id) {
   document.getElementById('pEditId').value = p?.id||'';
   document.getElementById('pName').value = p?.name||'';
   document.getElementById('pTag').value = p?.featured?'featured':p?.isNew?'new':'';
-  document.getElementById('pImgUrl').value = p?.imageUrl||'';
-  setImgPreview('p',p?.imageUrl||'');
+  const imgUrl = p?.imageUrl||'';
+  document.getElementById('pImgUrl').value = imgUrl;
+  previewUrlImg('pImgPreview', imgUrl);
   document.getElementById('pCat').innerHTML = `<option value="0">No Category</option>`+allCategories.map(c=>`<option value="${c.id}" ${c.id===p?.catId?'selected':''}>${c.name}</option>`).join('');
+  updateSubcatDropdown(p?.subCatId||null);
   _editVariants = p?.variants ? JSON.parse(JSON.stringify(p.variants)) : [{ id:'v1', label:'1 unit', imageUrl:'', mrp:null, inStock:true, priceTiers:[{minQty:1,price:0}] }];
   renderVariantEditor();
   document.getElementById('productModal').classList.add('open');
+}
+
+function updateSubcatDropdown(selectedSubCatId) {
+  const catId = parseInt(document.getElementById('pCat').value) || 0;
+  const subcats = allSubcategories.filter(sc => sc.catId === catId);
+  const sel = selectedSubCatId !== undefined ? selectedSubCatId : (parseInt(document.getElementById('pSubCat').value) || null);
+  document.getElementById('pSubCat').innerHTML = `<option value="">— None —</option>` +
+    subcats.map(sc => `<option value="${sc.id}" ${sc.id === sel ? 'selected' : ''}>${sc.name}</option>`).join('');
 }
 
 function renderVariantEditor() {
@@ -1532,7 +1569,8 @@ async function saveProduct() {
     if ([...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)[0].minQty !== 1) return toast(`Variant "${v.label}" first tier must start at qty 1`);
   }
   const tag = document.getElementById('pTag').value;
-  const body = {name,catId:parseInt(document.getElementById('pCat').value)||0,imageUrl:document.getElementById('pImgUrl').value,featured:tag==='featured',isNew:tag==='new',variants:_editVariants.map((v,i)=>({...v,id:v.id||('v'+(i+1)),priceTiers:[...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)}))};
+  const subCatId = parseInt(document.getElementById('pSubCat').value) || null;
+  const body = {name,catId:parseInt(document.getElementById('pCat').value)||0,subCatId,imageUrl:document.getElementById('pImgUrl').value,featured:tag==='featured',isNew:tag==='new',variants:_editVariants.map((v,i)=>({...v,id:v.id||('v'+(i+1)),priceTiers:[...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)}))};
   await fetch(id?`/api/admin/products/${id}`:'/api/admin/products',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
   await loadAll(); closeModal('productModal'); renderProducts();
   toast(id?'Product updated!':'Product added!');
@@ -1575,8 +1613,9 @@ function openCatModal(id) {
   document.getElementById('catModalTitle').textContent = c?'Edit Category':'Add Category';
   document.getElementById('cEditId').value = c?.id||'';
   document.getElementById('cName').value = c?.name||'';
-  document.getElementById('cImgUrl').value = c?.imageUrl||'';
-  setImgPreview('c',c?.imageUrl||'');
+  const imgUrl = c?.imageUrl||'';
+  document.getElementById('cImgUrl').value = imgUrl;
+  previewUrlImg('cImgPreview', imgUrl);
   document.getElementById('categoryModal').classList.add('open');
 }
 
@@ -1633,7 +1672,7 @@ function openBannerModal(id) {
   document.getElementById('bBgColor').value = b?.bgColor||'#1a1a2e';
   document.getElementById('bImgUrl').value = b?.imageUrl||'';
   document.getElementById('bActionType').value = b?.action?.type||'';
-  setImgPreview('b',b?.imageUrl||'');
+  previewUrlImg('bImgPreview', b?.imageUrl||'');
   document.getElementById('bCatId').innerHTML = allCategories.map(c=>`<option value="${c.id}" ${b?.action?.catId===c.id?'selected':''}>${c.name}</option>`).join('');
   onBannerActionChange();
   if (b?.action?.type==='products') {
@@ -1804,22 +1843,85 @@ function fmtDateTime(d) {
   catch { return d; }
 }
 
-async function handleImgUpload(type, input) {
-  const file = input.files[0]; if (!file) return;
-  const prefix = type==='product'?'p':type==='category'?'c':'b';
-  document.getElementById(prefix+'ImgText').textContent = 'Uploading...';
-  const form = new FormData(); form.append('image',file);
-  const r = await fetch('/api/admin/upload',{method:'POST',headers:{Authorization:'Bearer '+token},body:form});
-  if (r.ok) { const d=await r.json(); document.getElementById(prefix+'ImgUrl').value=d.url; setImgPreview(prefix,d.url); toast('Image uploaded!'); }
-  else { document.getElementById(prefix+'ImgText').textContent='Upload failed'; toast('Upload failed'); }
+// ── IMAGE URL PREVIEW ─────────────────────────────────────────────────────────
+function previewUrlImg(imgId, url) {
+  const img = document.getElementById(imgId);
+  if (!img) return;
+  if (url && url.startsWith('http')) {
+    img.src = url;
+    img.style.display = 'block';
+    img.onerror = () => { img.style.display = 'none'; };
+  } else if (url && url.startsWith('/')) {
+    img.src = url;
+    img.style.display = 'block';
+    img.onerror = () => { img.style.display = 'none'; };
+  } else {
+    img.style.display = 'none';
+  }
 }
 
-function setImgPreview(prefix, url) {
-  const area = document.getElementById(prefix+'ImgArea');
-  const preview = document.getElementById(prefix+'ImgPreview');
-  const text = document.getElementById(prefix+'ImgText');
-  if (url) { preview.src=url; preview.style.display='block'; area.classList.add('has-image'); text.textContent='Click to replace'; }
-  else { preview.style.display='none'; area.classList.remove('has-image'); text.textContent=prefix==='b'?'Click to upload banner':'Click to upload image'; }
+// ═══════════════════════════════════════
+// SUBCATEGORIES
+// ═══════════════════════════════════════
+function renderSubcategories() {
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <h2>Subcategories (${allSubcategories.length})</h2>
+        <button class="btn btn-green" onclick="openSubcatModal()">+ Add Subcategory</button>
+      </div>
+      ${allSubcategories.length === 0 ? `<div class="empty-state"><div class="ei">🗂️</div><p>No subcategories yet.<br>Add subcategories to organise products within a category.</p></div>` : `
+      <table>
+        <thead><tr><th>Image</th><th>Name</th><th>Parent Category</th><th>Products</th><th>Actions</th></tr></thead>
+        <tbody>${allSubcategories.map(sc => {
+          const parentCat = allCategories.find(c => c.id === sc.catId);
+          const count = allProducts.filter(p => p.subCatId === sc.id).length;
+          return `<tr>
+            <td>${sc.imageUrl ? `<img class="td-img" src="${sc.imageUrl}">` : `<div class="td-img-ph">🗂️</div>`}</td>
+            <td style="font-weight:600">${sc.name}</td>
+            <td><span class="badge badge-purple">${parentCat?.name || '—'}</span></td>
+            <td><span class="badge badge-blue">${count} product${count !== 1 ? 's' : ''}</span></td>
+            <td><div class="actions">
+              <button class="btn btn-blue" onclick="openSubcatModal(${sc.id})">Edit</button>
+              <button class="btn btn-red" onclick="deleteSubcat(${sc.id})">Delete</button>
+            </div></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`}
+    </div>`;
+}
+
+function openSubcatModal(id) {
+  const sc = id ? allSubcategories.find(x => x.id === id) : null;
+  document.getElementById('scModalTitle').textContent = sc ? 'Edit Subcategory' : 'Add Subcategory';
+  document.getElementById('scEditId').value = sc?.id || '';
+  document.getElementById('scName').value = sc?.name || '';
+  const imgUrl = sc?.imageUrl || '';
+  document.getElementById('scImgUrl').value = imgUrl;
+  previewUrlImg('scImgPreview', imgUrl);
+  document.getElementById('scCatId').innerHTML = allCategories.map(c =>
+    `<option value="${c.id}" ${c.id === sc?.catId ? 'selected' : ''}>${c.name}</option>`
+  ).join('');
+  document.getElementById('subcategoryModal').classList.add('open');
+}
+
+async function saveSubcat() {
+  const id = document.getElementById('scEditId').value;
+  const name = document.getElementById('scName').value.trim();
+  if (!name) return toast('Subcategory name required');
+  const catId = parseInt(document.getElementById('scCatId').value) || 0;
+  if (!catId) return toast('Please select a parent category');
+  const body = { name, catId, imageUrl: document.getElementById('scImgUrl').value.trim() };
+  await fetch(id ? `/api/admin/subcategories/${id}` : '/api/admin/subcategories', { method: id ? 'PUT' : 'POST', headers: ah(), body: JSON.stringify(body) });
+  await loadAll(); closeModal('subcategoryModal'); renderSubcategories();
+  toast(id ? 'Subcategory updated!' : 'Subcategory added!');
+}
+
+async function deleteSubcat(id) {
+  const count = allProducts.filter(p => p.subCatId === id).length;
+  if (count > 0 && !confirm(`${count} product(s) use this subcategory. Delete anyway?`)) return;
+  await fetch(`/api/admin/subcategories/${id}`, { method: 'DELETE', headers: ah() });
+  await loadAll(); renderSubcategories(); toast('Subcategory deleted');
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }

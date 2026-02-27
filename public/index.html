@@ -723,7 +723,7 @@ select.ck-inp option{background:var(--bg2);}
 
 <script>
 // ── GLOBALS ───────────────────────────────────────────────────────────────────
-let prods=[], cats=[], banners=[], settings={};
+let prods=[], cats=[], banners=[], settings={}, subcats=[];
 // cart: { "productId_variantId": qty, ... }
 let cart = {};
 let giftState = { injected:false, claimed:false, prevUnlocked:false };
@@ -762,7 +762,7 @@ function offPct(price, mrp) {
 async function init() {
   try {
     const d = await fetch('/api/store').then(r=>r.json());
-    prods=d.products||[]; cats=d.categories||[]; banners=d.banners||[]; settings=d.settings||{};
+    prods=d.products||[]; cats=d.categories||[]; banners=d.banners||[]; settings=d.settings||{}; subcats=d.subcategories||[];
     buildTabs(); renderHome();
   } catch(e) {
     document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
@@ -1065,7 +1065,7 @@ function updateCardInPlace(card, p, vid) {
 function reRenderCurrentPage() {
   const fpOpen = document.getElementById('fpage')?.classList.contains('open');
   const splitVisible = document.getElementById('fpSplitBody')?.style.display !== 'none';
-  if (fpOpen && window._openCatId && splitVisible) renderSplitRight(window._openCatId);
+  if (fpOpen && window._openCatId && splitVisible) renderSplitRight(window._openCatId, window._openSubCatId);
   else renderHome();
 }
 
@@ -1138,10 +1138,12 @@ function onVariantChange(pid, vid) {
 
 // ── OPEN FP ───────────────────────────────────────────────────────────────────
 window._openCatId = null;
+window._openSubCatId = null; // null = "All" within the parent category
 window._fpFilter = 'all';
 
 function openFP(catId) {
   window._openCatId = catId;
+  window._openSubCatId = null;
   window._fpFilter = 'all';
   const cat = cats.find(c => c.id === catId);
   document.getElementById('fpTitle').textContent = cat?.name || '';
@@ -1162,61 +1164,81 @@ function fpFilterSort(type) {
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
   const map = {all:'filterAll',instock:'filterInStock',lowprice:'filterLowPrice',highprice:'filterHighPrice'};
   document.getElementById(map[type])?.classList.add('active');
-  if (window._openCatId) renderSplitPanel(window._openCatId);
+  if (window._openCatId) renderSplitRight(window._openCatId, window._openSubCatId);
 }
 
 function renderSplitPanel(catId) {
-  // Left panel: all categories as subcategories
   const catLeft = document.getElementById('catLeft');
-  catLeft.innerHTML = cats.map((c,i) =>
-    `<div class="cat-left-item ${c.id === catId ? 'active' : ''}" onclick="switchSplitCat(${c.id})" id="clitem_${c.id}">
-      <div class="cat-left-img">${c.imageUrl ? `<img src="${c.imageUrl}" loading="lazy">` : `<span style="font-size:1.2rem">📂</span>`}</div>
-      <div class="cat-left-label">${c.name}</div>
-    </div>`
-  ).join('');
+  const catSubcats = subcats.filter(sc => sc.catId === catId);
 
-  renderSplitRight(catId);
+  if (catSubcats.length === 0) {
+    // No subcategories — hide left panel and show all products
+    catLeft.innerHTML = '';
+    catLeft.style.display = 'none';
+  } else {
+    catLeft.style.display = '';
+    // Build left panel: "All" + subcategories of this parent category
+    const activeSubCatId = window._openSubCatId;
+    catLeft.innerHTML =
+      `<div class="cat-left-item ${activeSubCatId === null ? 'active' : ''}" onclick="switchSubCat(null)" id="clitem_all">
+        <div class="cat-left-img"><span style="font-size:1.3rem">⊞</span></div>
+        <div class="cat-left-label">All</div>
+      </div>` +
+      catSubcats.map(sc =>
+        `<div class="cat-left-item ${sc.id === activeSubCatId ? 'active' : ''}" onclick="switchSubCat(${sc.id})" id="clitem_${sc.id}">
+          <div class="cat-left-img">${sc.imageUrl ? `<img src="${sc.imageUrl}" loading="lazy">` : `<span style="font-size:1.2rem">🗂️</span>`}</div>
+          <div class="cat-left-label">${sc.name}</div>
+        </div>`
+      ).join('');
+  }
+  renderSplitRight(catId, window._openSubCatId);
 }
 
-function switchSplitCat(catId) {
-  window._openCatId = catId;
+function switchSubCat(subCatId) {
+  window._openSubCatId = subCatId;
   window._fpFilter = 'all';
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
   document.getElementById('filterAll')?.classList.add('active');
-  // Update left panel active state
+  // Update active state in left panel
   document.querySelectorAll('.cat-left-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('clitem_' + catId)?.classList.add('active');
-  // Update title
-  const cat = cats.find(c => c.id === catId);
-  document.getElementById('fpTitle').textContent = cat?.name || '';
-  renderSplitRight(catId);
+  const activeId = subCatId === null ? 'clitem_all' : 'clitem_' + subCatId;
+  document.getElementById(activeId)?.classList.add('active');
+  renderSplitRight(window._openCatId, subCatId);
 }
 
-function renderSplitRight(catId) {
+function renderSplitRight(catId, subCatId) {
+  const catSubcats = subcats.filter(sc => sc.catId === catId);
+  const hasSubcats = catSubcats.length > 0;
+
+  // Filter products
   let ps = prods.filter(p => p.catId === catId);
+  if (hasSubcats && subCatId !== null) {
+    ps = ps.filter(p => p.subCatId === subCatId);
+  }
   const filter = window._fpFilter || 'all';
-  if (filter === 'instock') ps = ps.filter(p => p.variants?.some(v => v.inStock));
-  else ps = ps.filter(p => p.variants?.some(v => v.inStock));
+  ps = ps.filter(p => p.variants?.some(v => v.inStock));
   if (filter === 'lowprice') ps = ps.sort((a,b) => getVariantPrice(a, defaultVariant(a)?.id, 1) - getVariantPrice(b, defaultVariant(b)?.id, 1));
   if (filter === 'highprice') ps = ps.sort((a,b) => getVariantPrice(b, defaultVariant(b)?.id, 1) - getVariantPrice(a, defaultVariant(a)?.id, 1));
 
-  const catName = cats.find(c => c.id === catId)?.name || '';
   const catRight = document.getElementById('catRight');
+  const sectionTitle = subCatId !== null
+    ? (catSubcats.find(sc => sc.id === subCatId)?.name || '')
+    : (cats.find(c => c.id === catId)?.name || '');
 
   if (!ps.length) {
-    catRight.innerHTML = '<div class="empty-state" style="padding-top:3rem"><div class="ei">🛒</div><p>No products in this category.</p></div>';
+    catRight.innerHTML = '<div class="empty-state" style="padding-top:3rem"><div class="ei">🛒</div><p>No products here.</p></div>';
     return;
   }
 
   catRight.innerHTML = `
     <div class="cat-right-section">
-      <div class="cat-right-section-title">${catName} <span style="color:var(--text3);font-weight:600;font-size:.7rem">(${ps.length})</span></div>
+      <div class="cat-right-section-title">${sectionTitle} <span style="color:var(--text3);font-weight:600;font-size:.7rem">(${ps.length})</span></div>
       <div class="cat-right-grid">${ps.map(pCardBlinkit).join('')}</div>
     </div>`;
 }
 
 function renderFPContent(catId) {
-  renderSplitRight(catId);
+  renderSplitRight(catId, window._openSubCatId);
 }
 
 // ── SEARCH ────────────────────────────────────────────────────────────────────
