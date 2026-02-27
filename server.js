@@ -478,6 +478,85 @@ app.put('/api/admin/milk/settings', adminAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Bulk mark all active milk customers for a given date
+app.post('/api/admin/milk/bulk-mark', adminAuth, async (req, res) => {
+  try {
+    const { date } = req.body;
+    if (!date) return res.status(400).json({ error: 'date required' });
+    const month = date.slice(0, 7);
+    const settings = await db.collection('settings').findOne({ _id: 'main' });
+    const milkPrice = settings.milkPrice || 60;
+
+    // Get all active milk subscriptions
+    const subs = await db.collection('milkSubscriptions').find({ status: 'active' }).toArray();
+    let marked = 0;
+
+    for (const sub of subs) {
+      const qty = sub.defaultQty || 0.5;
+      const existing = await db.collection('milkLogs').findOne({ customerId: sub.customerId, date });
+      if (!existing) {
+        await db.collection('milkLogs').insertOne({
+          id: await getNextId('milkLogId'),
+          customerId: sub.customerId, date, month,
+          qty, price: milkPrice,
+          markedAt: new Date().toISOString()
+        });
+        marked++;
+      }
+    }
+    res.json({ ok: true, marked, total: subs.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin dashboard stats API
+app.get('/api/admin/dashboard', adminAuth, async (req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const month = today.slice(0, 7);
+    const settings = await db.collection('settings').findOne({ _id: 'main' });
+    const milkPrice = settings.milkPrice || 60;
+
+    const [
+      totalCustomers, totalProducts,
+      ordersToday, allOrders,
+      milkSubs, milkLogsToday, milkLogsMonth,
+      allUdharEntries, allUdharPayments
+    ] = await Promise.all([
+      db.collection('customers').countDocuments(),
+      db.collection('products').countDocuments(),
+      db.collection('orders').find({ createdAt: { $gte: today } }).toArray(),
+      db.collection('orders').find({ status: { $ne: 'cancelled' } }).toArray(),
+      db.collection('milkSubscriptions').find({ status: 'active' }).toArray(),
+      db.collection('milkLogs').find({ date: today }).toArray(),
+      db.collection('milkLogs').find({ month }).toArray(),
+      db.collection('udharEntries').find().toArray(),
+      db.collection('udharPayments').find().toArray(),
+    ]);
+
+    const revenueToday = ordersToday.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (o.total || 0), 0);
+    const pendingOrders = allOrders.filter(o => o.status === 'pending').length;
+    const milkDeliveredToday = milkLogsToday.length;
+    const milkMonthRevenue = milkLogsMonth.reduce((s, l) => s + l.qty * (l.price || milkPrice), 0);
+    const totalUdharOut = allUdharEntries.reduce((s, e) => s + (e.amount || 0), 0);
+    const totalUdharPaid = allUdharPayments.reduce((s, p) => s + (p.amount || 0), 0);
+    const udharOutstanding = totalUdharOut - totalUdharPaid;
+
+    // Recent orders (last 10)
+    const recentOrders = await db.collection('orders').find().sort({ createdAt: -1 }).limit(10).toArray();
+
+    res.json({
+      totalCustomers, totalProducts,
+      ordersToday: ordersToday.length, revenueToday,
+      pendingOrders,
+      milkActiveSubs: milkSubs.length,
+      milkDeliveredToday,
+      milkMonthRevenue,
+      udharOutstanding,
+      recentOrders
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ── ORDERS ────────────────────────────────────────════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -231,16 +231,14 @@ tr:hover td{background:#fafafa;}
   <div class="sidebar">
     <div class="sidebar-logo">BSC <span>Store</span></div>
     <nav class="sidebar-nav">
-<div class="nav-link" onclick="goTo('orders')">
-  <span class="icon">📦</span>
-  <span>Orders</span>
-</div>
       <div class="nav-link" onclick="goTo('dashboard')"><span class="icon">📊</span><span>Dashboard</span></div>
+      <div class="nav-link" onclick="goTo('customers')"><span class="icon">👥</span><span>Customers</span></div>
+      <div class="nav-link" onclick="goTo('orders')"><span class="icon">📦</span><span>Orders</span></div>
+      <div class="nav-link" onclick="goTo('milk')"><span class="icon">🥛</span><span>Milk</span></div>
+      <div class="nav-link" onclick="goTo('udhar')"><span class="icon">📒</span><span>Udhar</span></div>
       <div class="nav-link" onclick="goTo('products')"><span class="icon">🛍️</span><span>Products</span></div>
       <div class="nav-link" onclick="goTo('categories')"><span class="icon">📂</span><span>Categories</span></div>
       <div class="nav-link" onclick="goTo('banners')"><span class="icon">🖼️</span><span>Banners</span></div>
-      <div class="nav-link" onclick="goTo('milk')"><span class="icon">🥛</span><span>Milk</span></div>
-      <div class="nav-link" onclick="goTo('accounts')"><span class="icon">👤</span><span>Accounts</span></div>
       <div class="nav-link" onclick="goTo('settings')"><span class="icon">⚙️</span><span>Settings</span></div>
     </nav>
     <div class="sidebar-footer">
@@ -441,29 +439,31 @@ function goTo(page)
 {
   currentPage = page;
   const pages = [
-  'orders',
   'dashboard',
+  'customers',
+  'orders',
+  'milk',
+  'udhar',
   'products',
   'categories',
   'banners',
-  'milk',
-  'accounts',
   'settings'
 ];
   document.querySelectorAll('.nav-link').forEach((l,i) => l.classList.toggle('active', pages[i]===page));
-  const titles = {dashboard:'Dashboard',products:'Products',categories:'Categories',banners:'Banners',milk:'Milk Delivery',accounts:'Customer Accounts',settings:'Settings'};
+  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Ledger',products:'Products',categories:'Categories',banners:'Banners',settings:'Settings'};
   document.getElementById('pageTitle').textContent = titles[page]||page;
   const fns = {
   dashboard: renderDashboard,
+  customers: renderAccounts,
+  orders: renderOrders,
+  milk: renderMilk,
+  udhar: renderUdharPage,
   products: renderProducts,
   categories: renderCategories,
   banners: renderBanners,
-  milk: renderMilk,
-  accounts: renderAccounts,
   settings: renderSettings,
-
-  // ⭐ ADD THIS LINE
-  orders: renderOrders
+  // legacy alias
+  accounts: renderAccounts,
 };
   if (fns[page]) {
     const r = fns[page]();
@@ -481,168 +481,182 @@ function wrapTables() {
   });
 }
 
-function renderDashboard() {
-  document.getElementById('content').innerHTML = `
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-val">${allProducts.length}</div><div class="stat-lbl">Total Products</div></div>
-      <div class="stat-card"><div class="stat-val">${allCategories.length}</div><div class="stat-lbl">Categories</div></div>
-      <div class="stat-card"><div class="stat-val">${allBanners.length}</div><div class="stat-lbl">Banners</div></div>
-      <div class="stat-card"><div class="stat-val">${allProducts.filter(p=>!p.inStock).length}</div><div class="stat-lbl">Out of Stock</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h2>Quick Actions</h2></div>
-      <div class="card-body" style="display:flex;gap:.8rem;flex-wrap:wrap">
+async function renderDashboard() {
+  document.getElementById('content').innerHTML = `<div class="empty-state"><div class="ei">⏳</div><p>Loading dashboard...</p></div>`;
+  try {
+    const r = await fetch('/api/admin/dashboard', { headers: ah() });
+    const d = await r.json();
+
+    const orderStatusColor = { pending:'badge-yellow', confirmed:'badge-blue', delivered:'badge-green', cancelled:'badge-red' };
+
+    document.getElementById('content').innerHTML = `
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--green)">₹${(d.revenueToday||0).toFixed(0)}</div>
+          <div class="stat-lbl">Revenue Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--yellow)">${d.pendingOrders||0}</div>
+          <div class="stat-lbl">Pending Orders</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--blue)">${d.milkDeliveredToday||0} / ${d.milkActiveSubs||0}</div>
+          <div class="stat-lbl">Milk Marked Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--red)">₹${(d.udharOutstanding||0).toFixed(0)}</div>
+          <div class="stat-lbl">Udhar Outstanding</div>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card">
+          <div class="stat-val">${d.totalCustomers||0}</div>
+          <div class="stat-lbl">Total Customers</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">${d.ordersToday||0}</div>
+          <div class="stat-lbl">Orders Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--green)">₹${(d.milkMonthRevenue||0).toFixed(0)}</div>
+          <div class="stat-lbl">Milk Revenue (Month)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">${d.totalProducts||0}</div>
+          <div class="stat-lbl">Products Listed</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+        <div class="card">
+          <div class="card-header"><h2>⚡ Quick Actions</h2></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:.6rem">
+            <button class="btn btn-green" style="justify-content:center" onclick="goTo('orders')">📦 View All Orders ${d.pendingOrders>0?`<span style='background:rgba(255,255,255,.3);border-radius:20px;padding:1px 8px;margin-left:4px'>${d.pendingOrders} pending</span>`:''}</button>
+            <button class="btn btn-blue" style="justify-content:center" onclick="goTo('customers');setTimeout(openAddCustomerModal,120)">👤 Add Customer</button>
+            <button class="btn btn-gray" style="justify-content:center" onclick="goTo('milk')">🥛 Mark Milk Deliveries</button>
+            <a href="/" target="_blank"><button class="btn btn-gray" style="width:100%;justify-content:center">🛒 View Store</button></a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2>📦 Recent Orders</h2><button class="btn btn-gray" style="font-size:.78rem" onclick="goTo('orders')">See all</button></div>
+          ${!(d.recentOrders||[]).length ? `<div class="empty-state" style="padding:1.5rem"><div class="ei">📦</div><p>No orders yet.</p></div>` : `
+          <div style="max-height:320px;overflow-y:auto">
+            ${d.recentOrders.map(o => {
+              const time = new Date(o.createdAt||Date.now()).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+              const sc = orderStatusColor[o.status] || 'badge-yellow';
+              return `<div style="padding:.75rem 1.2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.5rem">
+                <div>
+                  <div style="font-weight:700;font-size:.88rem">Order #${o.id} · ${o.customerName||'Guest'}</div>
+                  <div style="font-size:.74rem;color:var(--text2)">${time} · ${o.block||''} ${o.villa||''}</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0">
+                  <div style="font-weight:800;color:var(--green)">₹${o.total}</div>
+                  <span class="badge ${sc}">${o.status||'new'}</span>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>`}
+        </div>
+      </div>`;
+  } catch(e) {
+    // fallback if dashboard API fails
+    document.getElementById('content').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val">${allProducts.length}</div><div class="stat-lbl">Total Products</div></div>
+        <div class="stat-card"><div class="stat-val">${allCategories.length}</div><div class="stat-lbl">Categories</div></div>
+        <div class="stat-card"><div class="stat-val">${allBanners.length}</div><div class="stat-lbl">Banners</div></div>
+      </div>
+      <div class="card"><div class="card-body" style="display:flex;gap:.8rem;flex-wrap:wrap">
         <button class="btn btn-green" onclick="goTo('products');setTimeout(openProductModal,100)">+ Add Product</button>
         <button class="btn btn-blue" onclick="goTo('categories');setTimeout(openCatModal,100)">+ Add Category</button>
-        <button class="btn btn-gray" onclick="goTo('banners');setTimeout(openBannerModal,100)">+ Add Banner</button>
         <a href="/" target="_blank"><button class="btn btn-gray">View Store</button></a>
-      </div>
-    </div>`;
+      </div></div>`;
+  }
 }
 
 // ═══════════════════════════════════════
-// ORDERS PAGE
+// ORDERS PAGE — FULL VERSION
 // ═══════════════════════════════════════
-
-// ═══════════════════════════════════════
-// ORDERS PAGE — PRO VERSION
-// ═══════════════════════════════════════
+let ordersFilter = 'all';
 
 async function renderOrders() {
   try {
-    const r = await fetch('/api/admin/orders', { headers: ah() });
+    const url = '/api/admin/orders' + (ordersFilter !== 'all' ? '?status='+ordersFilter : '');
+    const r = await fetch(url, { headers: ah() });
     const orders = await r.json();
 
-    if (!orders.length) {
-      document.getElementById('content').innerHTML = `
-        <div class="empty-state">
-          <div class="ei">📦</div>
-          <p>No orders yet.</p>
-        </div>`;
-      return;
-    }
-
-
-
+    const statusColors = { pending:'badge-yellow', confirmed:'badge-blue', packed:'badge-blue', delivered:'badge-green', cancelled:'badge-red' };
+    const filterBtns = ['all','pending','confirmed','packed','delivered','cancelled'].map(s =>
+      `<button class="btn ${ordersFilter===s?'btn-green':'btn-gray'}" style="font-size:.78rem;padding:.35rem .8rem" onclick="ordersFilter='${s}';renderOrders()">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`
+    ).join('');
 
     document.getElementById('content').innerHTML = `
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center">
+        ${filterBtns}
+        <span style="margin-left:auto;font-size:.82rem;color:var(--text2)">${orders.length} order${orders.length!==1?'s':''}</span>
+      </div>
+      ${!orders.length ? `<div class="empty-state"><div class="ei">📦</div><p>No orders${ordersFilter!=='all'?' with status "'+ordersFilter+'"':''}.</p></div>` : `
       <div class="card">
-        <div class="card-header">
-          <h2>📦 Orders (${orders.length})</h2>
-        </div>
-
         ${orders.map(o => {
-
-          const time = new Date(o.createdAt || Date.now())
-            .toLocaleString('en-IN', {
-              day:'numeric', month:'short',
-              hour:'2-digit', minute:'2-digit'
-            });
-
-          const itemsHtml = (o.items || []).map(i => `
-            <div style="display:flex;justify-content:space-between;font-size:.85rem;padding:3px 0">
-              <span>${i.name} × ${i.qty}</span>
-              <span>₹${i.price * i.qty}</span>
-            </div>
-          `).join('');
-
+          const time = new Date(o.createdAt||Date.now()).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+          const sc = statusColors[o.status] || 'badge-yellow';
+          const itemsHtml = (o.items||[]).map(i =>
+            `<div style="display:flex;justify-content:space-between;font-size:.83rem;padding:3px 0;${i.isFreeGift?'color:var(--green)':''}">
+              <span>${i.isFreeGift?'🎁 ':''} ${i.name}${i.variant?' ('+i.variant+')':''} × ${i.qty}</span>
+              <span>₹${(i.price*i.qty).toFixed(0)}</span>
+            </div>`).join('');
           return `
-          <div style="
-            border-bottom:1px solid var(--border);
-            padding:14px 16px;
-          ">
-
-            <!-- TOP ROW -->
-            <div style="display:flex;justify-content:space-between;align-items:center">
-
+          <div style="border-bottom:1px solid var(--border);padding:14px 16px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
               <div>
-                <div style="font-weight:800;font-size:.95rem">
-                  Order #${o.id}
-                </div>
-                <div style="font-size:.75rem;color:var(--text2)">
-                  ${time}
-                </div>
+                <div style="font-weight:800;font-size:.95rem">Order #${o.id}</div>
+                <div style="font-size:.75rem;color:var(--text2)">${time}</div>
               </div>
-
-              <div style="text-align:right">
-                <div style="font-weight:800;font-size:1rem;color:var(--green)">
-                  ₹${o.total}
-                </div>
-                <span class="badge badge-yellow">
-                  ${o.status || 'new'}
-                </span>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-weight:800;font-size:1rem;color:var(--green)">₹${o.total}</div>
+                <span class="badge ${sc}">${o.status||'new'}</span>
+                ${o.paymentMethod?`<div style="font-size:.7rem;color:var(--text2);margin-top:2px">${o.paymentMethod.toUpperCase()}</div>`:''}
               </div>
-
             </div>
-
-            <!-- CUSTOMER -->
-            <div style="margin-top:6px;font-size:.85rem">
-              <strong>${o.customerName || 'Customer'}</strong>
-              • ${o.phone || ''}
+            <div style="margin-top:5px;font-size:.85rem"><strong>${o.customerName||'Guest'}</strong> · ${o.phone||''}</div>
+            <div style="font-size:.78rem;color:var(--text2)">${o.block||''} ${o.villa||''} ${o.note?'· Note: '+o.note:''}</div>
+            <div style="margin-top:8px;background:var(--bg);padding:8px 10px;border-radius:8px">${itemsHtml}</div>
+            <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+              ${o.status!=='delivered'?`<button class="btn btn-green" style="font-size:.78rem" onclick="updateOrder(${o.id},'delivered')">✓ Delivered</button>`:''}
+              ${o.status==='pending'?`<button class="btn btn-blue" style="font-size:.78rem" onclick="updateOrder(${o.id},'confirmed')">Confirm</button>`:''}
+              ${o.status!=='cancelled'&&o.status!=='delivered'?`<button class="btn btn-red" style="font-size:.78rem" onclick="updateOrder(${o.id},'cancelled')">Cancel</button>`:''}
+              ${!o.addedToUdhar&&o.status!=='cancelled'?`<button class="btn btn-gray" style="font-size:.78rem" onclick="convertOrderToUdhar(${o.id})">📒 → Udhar</button>`:''}
+              ${o.addedToUdhar?`<span class="badge badge-blue" style="font-size:.72rem">Udhar Added</span>`:''}
+              <button class="btn btn-red" style="font-size:.78rem;margin-left:auto" onclick="deleteOrder(${o.id})">🗑️ Delete</button>
             </div>
-
-            <div style="font-size:.8rem;color:var(--text2)">
-              ${o.block || ''} ${o.villa || ''}
-            </div>
-
-            <!-- ITEMS -->
-            <div style="
-              margin-top:10px;
-              background:var(--bg);
-              padding:10px;
-              border-radius:8px;
-            ">
-              ${itemsHtml}
-            </div>
-
-            <!-- ACTION BUTTONS -->
-            <div style="
-              margin-top:10px;
-              display:flex;
-              gap:6px;
-              flex-wrap:wrap;
-            ">
-
-              <button class="btn btn-blue"
-                onclick="updateOrder(${o.id},'accepted')">
-                Accept
-              </button>
-
-              <button class="btn btn-gray"
-                onclick="updateOrder(${o.id},'packed')">
-                Packed
-              </button>
-
-              <button class="btn btn-green"
-                onclick="updateOrder(${o.id},'delivered')">
-                Delivered
-              </button>
-
-              <button class="btn btn-red"
-                onclick="updateOrder(${o.id},'cancelled')">
-                Cancel
-              </button>
-
-            </div>
-
           </div>`;
         }).join('')}
-
-      </div>`;
-  } catch {
+      </div>`}`;
+  } catch(e) {
     toast('Failed to load orders');
   }
 }
 
-
 async function updateOrder(id, status) {
-  await fetch('/api/admin/orders/' + id, {
-    method: 'PUT',
-    headers: ah(),
-    body: JSON.stringify({ status })
-  });
+  await fetch('/api/admin/orders/' + id, { method:'PUT', headers:ah(), body:JSON.stringify({status}) });
+  toast('Order → ' + status);
+  renderOrders();
+}
 
-  toast('Order updated → ' + status);
+async function deleteOrder(id) {
+  if(!confirm('Delete order #'+id+'? This cannot be undone.')) return;
+  await fetch('/api/admin/orders/'+id, {method:'DELETE', headers:ah()});
+  toast('Order deleted');
+  renderOrders();
+}
+
+async function convertOrderToUdhar(id) {
+  if(!confirm('Add this order to customer\'s udhar account?')) return;
+  const r = await fetch('/api/admin/orders/'+id+'/convert-to-udhar', {method:'POST', headers:ah()});
+  const d = await r.json();
+  if(!r.ok) return toast(d.error||'Failed — customer may not have a registered account');
+  toast('Added to udhar!');
   renderOrders();
 }
 
@@ -1939,12 +1953,205 @@ async function delUdharPayment(id){
 
 // ── QUICK MODALS (from table row buttons) ─────────────────────────────────────
 
+function quickAddUdhar(customerId, name) {
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="quickUdharModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(480px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.25)">
+        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
+          <div><div style="font-weight:700">📒 Add Udhar</div><div style="font-size:.75rem;color:var(--text2)">${name}</div></div>
+          <button onclick="document.getElementById('quickUdharModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
+        </div>
+        <div style="padding:1.4rem">
+          <div id="quickUdharItems">
+            <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem">
+              <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.84rem;font-family:inherit">
+              <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
+              <input type="number" placeholder="₹" class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
+              <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:.4rem .6rem;cursor:pointer">✕</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.4rem">
+            <button class="btn btn-gray" style="font-size:.78rem" onclick="document.getElementById('quickUdharItems').insertAdjacentHTML('beforeend',\`<div class='udhar-item-row' style='display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem'><input type='text' placeholder='Item name' class='ui_name' style='border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.84rem;font-family:inherit'><input type='number' placeholder='Qty' class='ui_qty' value='1' style='border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit'><input type='number' placeholder='₹' class='ui_price' style='border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit'><button onclick='this.parentElement.remove()' style='background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:.4rem .6rem;cursor:pointer'>✕</button></div>\`)">+ Item</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.8rem">
+            <div class="form-group" style="margin:0"><label>Date</label><input type="date" id="qu_date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.45rem .7rem;font-size:.85rem"></div>
+            <div class="form-group" style="margin:0"><label>Manual Total ₹ (optional)</label><input type="number" id="qu_manual" placeholder="Override total" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.45rem .7rem;font-size:.85rem"></div>
+          </div>
+          <div class="form-group" style="margin-top:.6rem;margin-bottom:0"><label>Note</label><input type="text" id="qu_note" placeholder="Optional note" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.45rem .7rem;font-size:.85rem"></div>
+        </div>
+        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-gray" onclick="document.getElementById('quickUdharModal').remove()">Cancel</button>
+          <button class="btn btn-red" onclick="saveQuickUdhar(${customerId})">💾 Save Udhar</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function saveQuickUdhar(customerId) {
+  const rows = document.querySelectorAll('#quickUdharModal .udhar-item-row');
+  const items = []; let total = 0;
+  rows.forEach(row => {
+    const name = row.querySelector('.ui_name')?.value.trim();
+    const qty = parseFloat(row.querySelector('.ui_qty')?.value)||1;
+    const price = parseFloat(row.querySelector('.ui_price')?.value)||0;
+    if(name){items.push({name,qty,price});total+=qty*price;}
+  });
+  const manual = parseFloat(document.getElementById('qu_manual')?.value)||0;
+  const amount = manual||total;
+  const date = document.getElementById('qu_date')?.value;
+  const note = document.getElementById('qu_note')?.value.trim();
+  if(!amount) return toast('Enter items with prices or a manual total');
+  const r = await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId,items,amount,date,note})});
+  if(!r.ok) return toast('Failed to save');
+  document.getElementById('quickUdharModal')?.remove();
+  toast('Udhar ₹'+amount+' saved!');
+  await loadAccountsData();
+  if(accountSelectedId === customerId) openCustomerProfile(customerId);
+  else if(currentPage==='customers') renderAccountsOverview();
+  else if(currentPage==='udhar') renderUdharPage();
+}
+
+function quickPayment(customerId, name, suggestedAmount) {
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="quickPayModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(400px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
+        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div><div style="font-weight:700">💰 Record Payment</div><div style="font-size:.75rem;color:var(--text2)">${name}</div></div>
+          <button onclick="document.getElementById('quickPayModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
+        </div>
+        <div style="padding:1.4rem;display:flex;flex-direction:column;gap:.7rem">
+          <div class="form-group" style="margin:0"><label>Amount Received (₹)</label><input type="number" id="qp_amount" value="${suggestedAmount||''}" placeholder="e.g. 500" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.9rem" autofocus></div>
+          <div class="form-group" style="margin:0"><label>Payment Method</label>
+            <select id="qp_method" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.9rem">
+              <option value="cash">Cash</option>
+              <option value="upi">UPI</option>
+              <option value="bank">Bank Transfer</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0"><label>Note (optional)</label><input type="text" id="qp_note" placeholder="e.g. Received in hand" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.9rem"></div>
+        </div>
+        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-gray" onclick="document.getElementById('quickPayModal').remove()">Cancel</button>
+          <button class="btn btn-green" onclick="saveQuickPayment(${customerId})">✓ Save Payment</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function saveQuickPayment(customerId) {
+  const amount = parseFloat(document.getElementById('qp_amount')?.value);
+  if(!amount||amount<=0) return toast('Enter a valid amount');
+  const method = document.getElementById('qp_method')?.value||'cash';
+  const note = document.getElementById('qp_note')?.value.trim()||'';
+  const r = await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId,amount,method,note})});
+  if(!r.ok) return toast('Failed to record payment');
+  document.getElementById('quickPayModal')?.remove();
+  toast('Payment ₹'+amount+' recorded!');
+  await loadAccountsData();
+  if(accountSelectedId===customerId) openCustomerProfile(customerId);
+  else if(currentPage==='customers') renderAccountsOverview();
+  else if(currentPage==='udhar') renderUdharPage();
+}
+
+async function openBillPreview(customerId) {
+  const r = await fetch('/api/admin/customers/'+customerId, {headers:ah()});
+  if(!r.ok) return toast('Could not load customer');
+  const data = await r.json();
+  const c = data.customer;
+  const milkPrice = 60;
+  const totalUdhar = (data.udharEntries||[]).reduce((s,e)=>s+(e.amount||0),0);
+  const totalPaid = (data.udharPayments||[]).reduce((s,p)=>s+(p.amount||0),0);
+  const milkAmt = (data.milkLogs||[]).reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
+  const balance = totalUdhar - totalPaid;
+  const today = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+
+  const win = window.open('','_blank','width=600,height=700');
+  win.document.write(`<!DOCTYPE html><html><head><title>Bill — ${c.name}</title>
+  <style>body{font-family:Arial,sans-serif;padding:24px;color:#111;max-width:520px;margin:0 auto}
+  h2{margin:0 0 4px}h3{margin:16px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px}
+  table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{padding:5px 8px;text-align:left;border-bottom:1px solid #eee;font-size:13px}
+  th{background:#f5f5f5;font-weight:600}.total-row td{font-weight:700;border-top:2px solid #333}
+  .red{color:#dc2626}.green{color:#16a34a}.footer{margin-top:20px;font-size:11px;color:#888;text-align:center}
+  @media print{button{display:none}}</style>
+  </head><body>
+  <h2>BSC Store</h2><div style="font-size:13px;color:#666">Bill — ${today}</div>
+  <h3>Customer</h3>
+  <div><strong>${c.name}</strong> · ${c.phone}</div>
+  <div style="font-size:13px;color:#666">${c.address||''} ${c.block||''} ${c.villa||''}</div>
+  ${milkAmt>0?`<h3>Milk (Current Month)</h3>
+  <table><thead><tr><th>Date</th><th>Qty</th><th>Amount</th></tr></thead><tbody>
+  ${[...(data.milkLogs||[])].sort((a,b)=>a.date.localeCompare(b.date)).map(l=>`<tr><td>${l.date}</td><td>${l.qty}L</td><td>₹${(l.qty*(l.price||milkPrice)).toFixed(0)}</td></tr>`).join('')}
+  <tr class="total-row"><td colspan="2">Milk Total</td><td>₹${milkAmt.toFixed(0)}</td></tr>
+  </tbody></table>`:''}
+  ${data.udharEntries&&data.udharEntries.length?`<h3>Udhar Entries</h3>
+  <table><thead><tr><th>Date</th><th>Items</th><th>Amount</th></tr></thead><tbody>
+  ${data.udharEntries.map(e=>`<tr><td>${e.date||''}</td><td>${(e.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')||e.note||'Purchase'}</td><td>₹${(e.amount||0).toFixed(0)}</td></tr>`).join('')}
+  <tr class="total-row"><td colspan="2">Total Udhar</td><td class="red">₹${totalUdhar.toFixed(0)}</td></tr>
+  </tbody></table>`:''}
+  ${data.udharPayments&&data.udharPayments.length?`<h3>Payments</h3>
+  <table><thead><tr><th>Date</th><th>Method</th><th>Amount</th></tr></thead><tbody>
+  ${data.udharPayments.map(p=>`<tr><td>${p.date||p.paidAt?.slice(0,10)||''}</td><td>${p.method||'Cash'}</td><td class="green">-₹${(p.amount||0).toFixed(0)}</td></tr>`).join('')}
+  </tbody></table>`:''}
+  <div style="background:#f5f5f5;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-weight:700;font-size:15px">Outstanding Balance</span>
+    <span style="font-weight:900;font-size:18px;color:${balance>0?'#dc2626':'#16a34a'}">${balance>0?'₹'+balance.toFixed(0)+' due':'Settled ✓'}</span>
+  </div>
+  <div class="footer">Generated by BSC Store Admin</div>
+  <br><button onclick="window.print()" style="background:#16a34a;color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px">🖨️ Print</button>
+  </body></html>`);
+  win.document.close();
+}
+
+// ── UDHAR STANDALONE PAGE ─────────────────────────────────────────────────────
+async function renderUdharPage() {
+  document.getElementById('content').innerHTML = `<div class="empty-state"><div class="ei">⏳</div><p>Loading...</p></div>`;
+  const [cR, sR] = await Promise.all([
+    fetch('/api/admin/customers',{headers:ah()}),
+    fetch('/api/admin/udhar-summary',{headers:ah()}),
+  ]);
+  const customers = cR.ok ? await cR.json() : [];
+  const summaries = sR.ok ? await sR.json() : [];
+  const totalOut = summaries.reduce((s,x)=>s+(x.balance>0?x.balance:0),0);
+
+  const rows = summaries.length===0
+    ? `<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:2rem">No udhar yet</td></tr>`
+    : summaries.map(s => {
+        const n = (s.customer?.name||'').replace(/'/g,"\\'");
+        const cid = s.customer?.id;
+        return `<tr>
+          <td><div style="font-weight:700">${s.customer?.name||'?'}</div><div style="font-size:.73rem;color:var(--text2)">${s.customer?.phone||''}</div></td>
+          <td style="color:var(--red);font-weight:700">₹${(s.totalUdhar||0).toFixed(0)}</td>
+          <td style="color:var(--green);font-weight:600">₹${(s.totalPaid||0).toFixed(0)}</td>
+          <td style="font-weight:800;color:${s.balance>0?'var(--red)':s.balance<0?'var(--blue)':'var(--green)'}">${s.balance>0?'₹'+s.balance.toFixed(0)+' due':s.balance<0?'Advance ₹'+Math.abs(s.balance).toFixed(0):'Settled'}</td>
+          <td><div class="actions">
+            <button class="btn btn-blue" onclick="goTo('customers');setTimeout(()=>openCustomerProfile(${cid}),200)">View</button>
+            <button class="btn btn-green" onclick="quickAddUdhar(${cid},'${n}')">+ Udhar</button>
+            ${s.balance>0?`<button class="btn btn-gray" onclick="quickPayment(${cid},'${n}',${s.balance.toFixed(0)})">Paid</button>`:''}
+          </div></td>
+        </tr>`;
+      }).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)">₹${totalOut.toFixed(0)}</div><div class="stat-lbl">Total Outstanding</div></div>
+      <div class="stat-card"><div class="stat-val">${summaries.filter(s=>s.balance>0).length}</div><div class="stat-lbl">Customers with Due</div></div>
+      <div class="stat-card"><div class="stat-val">${customers.length}</div><div class="stat-lbl">Total Customers</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>📒 Udhar / Ledger</h2></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Customer</th><th>Total Udhar</th><th>Paid</th><th>Balance</th><th>Actions</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
+}
+
 
 
 async function editMilkEntry(customerId, date, defaultQty) {
-  const newQty=prompt('Enter litres delivered on '+date+':',defaultQty);
+  const newQty=prompt('Litres delivered on '+date+':',defaultQty);
   if(newQty===null) return;
-  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(newQty)||0,price:60})});
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(newQty)||0,price:milkPrice||60})});
   toast('Milk log updated!');
   if(accountSelectedId===customerId) openCustomerProfile(customerId);
 }
