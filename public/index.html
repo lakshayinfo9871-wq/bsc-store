@@ -89,17 +89,16 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .cc-img{
   aspect-ratio:1;
   display:flex;
-  align-items:flex-end;
-  justify-content:center;
+  align-items:flex-start;   /* ⬅ TOP alignment */
+  justify-content:center;   /* center horizontally */
   overflow:hidden;
-  padding:6px 6px 0;
+  padding:10px 10px 0;      /* space from top */
   position:relative;
 }
 .cc-img img{
-  width:100%;
-  height:100%;
-  object-fit:cover;   /* 🔥 KEY CHANGE */
-  border-radius:0;
+  width:80%;
+  height:80%;
+  object-fit:contain;   /* no cropping */
 }
 .cc-img::after{
   content:"";
