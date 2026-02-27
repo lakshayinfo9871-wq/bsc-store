@@ -28,6 +28,9 @@ async function connectDB() {
   await db.collection('milkLogs').createIndex({ customerId: 1, month: 1 });
   await db.collection('orders').createIndex({ customerId: 1, createdAt: -1 });
   await db.collection('orders').createIndex({ phone: 1 });
+  // New unified ledger index
+  await db.collection('ledger').createIndex({ customerId: 1, createdAt: -1 });
+  // Keep old indexes for migration compat
   await db.collection('udharEntries').createIndex({ customerId: 1 });
   await db.collection('udharPayments').createIndex({ customerId: 1 });
 
@@ -81,6 +84,17 @@ function migrateProduct(p) {
       mrp: p.mrp || null, inStock: p.inStock !== false,
       priceTiers: p.priceTiers || [{ minQty: 1, price: 0 }] }]
   };
+}
+
+// Calculate balance from ledger (credits - payments)
+async function getCustomerBalance(customerId) {
+  const entries = await db.collection('ledger').find({ customerId }).toArray();
+  let balance = 0;
+  entries.forEach(e => {
+    if (e.type === 'credit') balance += (e.amount || 0);
+    else if (e.type === 'payment') balance -= (e.amount || 0);
+  });
+  return balance;
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -247,37 +261,76 @@ app.put('/api/admin/settings', adminAuth, async (req, res) => {
 
 app.get('/api/admin/customers', adminAuth, async (req, res) => {
   try {
-    const customers = await db.collection('customers').find().sort({ joinedAt: -1 }).toArray();
+    const customers = await db.collection('customers').find({ deleted: { $ne: true } }).sort({ joinedAt: -1 }).toArray();
     const subs = await db.collection('milkSubscriptions').find().toArray();
     const subMap = {};
     subs.forEach(s => { subMap[s.customerId] = s; });
-    res.json(customers.map(c => ({ ...c, pin: undefined, milkSubscription: subMap[c.customerId] || null })));
+
+    // Get ledger balances
+    const ledgerEntries = await db.collection('ledger').find().toArray();
+    const balanceMap = {};
+    ledgerEntries.forEach(e => {
+      if (!balanceMap[e.customerId]) balanceMap[e.customerId] = 0;
+      if (e.type === 'credit') balanceMap[e.customerId] += (e.amount || 0);
+      else if (e.type === 'payment') balanceMap[e.customerId] -= (e.amount || 0);
+    });
+
+    // Also include old udhar entries for customers not yet migrated
+    const oldEntries = await db.collection('udharEntries').find().toArray();
+    const oldPayments = await db.collection('udharPayments').find().toArray();
+    const oldBalMap = {};
+    oldEntries.forEach(e => {
+      if (!oldBalMap[e.customerId]) oldBalMap[e.customerId] = 0;
+      oldBalMap[e.customerId] += (e.amount || 0);
+    });
+    oldPayments.forEach(p => {
+      if (!oldBalMap[p.customerId]) oldBalMap[p.customerId] = 0;
+      oldBalMap[p.customerId] -= (p.amount || 0);
+    });
+
+    res.json(customers.map(c => ({
+      ...c, pin: undefined,
+      milkSubscription: subMap[c.customerId] || null,
+      balance: (balanceMap[c.customerId] || 0) + (oldBalMap[c.customerId] || 0)
+    })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/admin/customers/:id', adminAuth, async (req, res) => {
   try {
     const customerId = parseInt(req.params.id);
-    const c = await db.collection('customers').findOne({ customerId });
+    const c = await db.collection('customers').findOne({ customerId, deleted: { $ne: true } });
     if (!c) return res.status(404).json({ error: 'Customer not found' });
 
-    const [milkSub, orders, udharEntries, udharPayments, milkLogs, milkPayments] = await Promise.all([
+    const [milkSub, orders, ledgerEntries, oldUdharEntries, oldUdharPayments, milkLogs, milkPayments] = await Promise.all([
       db.collection('milkSubscriptions').findOne({ customerId }),
       db.collection('orders').find({ $or: [{ customerId }, { phone: c.phone }] }).sort({ createdAt: -1 }).toArray(),
+      db.collection('ledger').find({ customerId }).sort({ createdAt: -1 }).toArray(),
       db.collection('udharEntries').find({ customerId }).sort({ date: -1 }).toArray(),
       db.collection('udharPayments').find({ customerId }).sort({ date: -1 }).toArray(),
-      db.collection('milkLogs').find({ customerId }).sort({ date: -1 }).limit(60).toArray(),
+      db.collection('milkLogs').find({ customerId }).sort({ date: -1 }).limit(90).toArray(),
       db.collection('milkPayments').find({ customerId }).sort({ paidAt: -1 }).toArray(),
     ]);
 
-    const totalUdhar = udharEntries.reduce((s, e) => s + (e.amount || 0), 0);
-    const totalUdharPaid = udharPayments.reduce((s, p) => s + (p.amount || 0), 0);
+    // Compute balance from both new ledger and old udhar (migration compat)
+    const ledgerBalance = ledgerEntries.reduce((s, e) => {
+      if (e.type === 'credit') return s + (e.amount || 0);
+      if (e.type === 'payment') return s - (e.amount || 0);
+      return s;
+    }, 0);
+    const oldUdharBalance = oldUdharEntries.reduce((s, e) => s + (e.amount || 0), 0)
+      - oldUdharPayments.reduce((s, p) => s + (p.amount || 0), 0);
 
     res.json({
       customer: { ...c, pin: undefined },
       milkSubscription: milkSub || null,
-      milkLogs, milkPayments, orders, udharEntries, udharPayments,
-      udharBalance: totalUdhar - totalUdharPaid
+      milkLogs, milkPayments, orders,
+      ledgerEntries,
+      udharEntries: oldUdharEntries,
+      udharPayments: oldUdharPayments,
+      balance: ledgerBalance + oldUdharBalance,
+      ledgerBalance,
+      oldUdharBalance
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -314,10 +367,341 @@ app.put('/api/admin/customers/:id', adminAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// SOFT DELETE — preserves all related data, sets deleted flag
 app.delete('/api/admin/customers/:id', adminAuth, async (req, res) => {
   try {
-    await db.collection('customers').deleteOne({ customerId: parseInt(req.params.id) });
+    const customerId = parseInt(req.params.id);
+    const hard = req.query.hard === 'true';
+    if (hard) {
+      // Hard delete: remove everything
+      await Promise.all([
+        db.collection('customers').deleteOne({ customerId }),
+        db.collection('milkSubscriptions').deleteOne({ customerId }),
+        db.collection('ledger').deleteMany({ customerId }),
+        db.collection('udharEntries').deleteMany({ customerId }),
+        db.collection('udharPayments').deleteMany({ customerId }),
+        db.collection('milkLogs').deleteMany({ customerId }),
+        db.collection('milkPayments').deleteMany({ customerId }),
+      ]);
+      res.json({ ok: true, type: 'hard' });
+    } else {
+      // Soft delete (default)
+      await db.collection('customers').updateOne(
+        { customerId },
+        { $set: { deleted: true, deletedAt: new Date().toISOString() } }
+      );
+      res.json({ ok: true, type: 'soft' });
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── UNIFIED LEDGER ─────────────────────────────────────────────────────────────
+// Each entry: customerId, type ('credit'|'payment'), amount, note, createdAt
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Get ledger entries for a customer
+app.get('/api/admin/ledger', adminAuth, async (req, res) => {
+  try {
+    const customerId = parseInt(req.query.customerId);
+    if (!customerId) return res.status(400).json({ error: 'customerId required' });
+    const entries = await db.collection('ledger').find({ customerId }).sort({ createdAt: -1 }).toArray();
+    res.json(entries);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Add ledger entry (credit = they owe, payment = they paid)
+app.post('/api/admin/ledger', adminAuth, async (req, res) => {
+  try {
+    const { customerId, type, amount, note, date } = req.body;
+    if (!customerId || !type || !amount) return res.status(400).json({ error: 'customerId, type, amount required' });
+    if (!['credit', 'payment'].includes(type)) return res.status(400).json({ error: 'type must be credit or payment' });
+    const entry = {
+      id: await getNextId('ledgerId'),
+      customerId: parseInt(customerId),
+      type, // 'credit' or 'payment'
+      amount: parseFloat(amount),
+      note: note || '',
+      date: date || new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString()
+    };
+    await db.collection('ledger').insertOne(entry);
+    res.json({ ok: true, entry });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/ledger/:id', adminAuth, async (req, res) => {
+  try {
+    const { amount, note, date } = req.body;
+    const update = {};
+    if (amount != null) update.amount = parseFloat(amount);
+    if (note != null) update.note = note;
+    if (date) update.date = date;
+    await db.collection('ledger').updateOne({ id: parseInt(req.params.id) }, { $set: update });
     res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/ledger/:id', adminAuth, async (req, res) => {
+  try {
+    await db.collection('ledger').deleteOne({ id: parseInt(req.params.id) });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── UDHAR SUMMARY (uses unified ledger + old udhar for migration compat) ────
+app.get('/api/admin/udhar-summary', adminAuth, async (req, res) => {
+  try {
+    const customers = await db.collection('customers').find({ deleted: { $ne: true } }).toArray();
+    const [ledgerAll, oldEntries, oldPayments] = await Promise.all([
+      db.collection('ledger').find().toArray(),
+      db.collection('udharEntries').find().toArray(),
+      db.collection('udharPayments').find().toArray(),
+    ]);
+
+    const summary = customers.map(c => {
+      const cid = c.customerId;
+      // New ledger
+      const ledger = ledgerAll.filter(e => e.customerId === cid);
+      const credits = ledger.filter(e => e.type === 'credit').reduce((s, e) => s + (e.amount || 0), 0);
+      const payments = ledger.filter(e => e.type === 'payment').reduce((s, e) => s + (e.amount || 0), 0);
+      // Old udhar (migration compat)
+      const oldU = oldEntries.filter(e => e.customerId === cid).reduce((s, e) => s + (e.amount || 0), 0);
+      const oldP = oldPayments.filter(p => p.customerId === cid).reduce((s, p) => s + (p.amount || 0), 0);
+      const totalCredit = credits + oldU;
+      const totalPaid = payments + oldP;
+      const balance = totalCredit - totalPaid;
+      return {
+        customer: { id: cid, name: c.name, phone: c.phone, address: c.address },
+        totalUdhar: totalCredit, totalPaid, balance
+      };
+    }).filter(x => x.totalUdhar > 0 || x.balance !== 0);
+    res.json(summary);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── LEGACY UDHAR ENDPOINTS (kept for backward compat) ────────────────────────
+app.get('/api/admin/udhar', adminAuth, async (req, res) => {
+  try {
+    const cid = req.query.customerId ? parseInt(req.query.customerId) : null;
+    res.json(await db.collection('udharEntries').find(cid ? { customerId: cid } : {}).sort({ date: -1 }).toArray());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/admin/udhar', adminAuth, async (req, res) => {
+  try {
+    const { customerId, items, amount, date, note, type } = req.body;
+    if (!customerId || !amount) return res.status(400).json({ error: 'customerId and amount required' });
+    // Save to new ledger AND old udharEntries for compatibility
+    const ledgerEntry = {
+      id: await getNextId('ledgerId'),
+      customerId: parseInt(customerId),
+      type: 'credit',
+      amount: parseFloat(amount),
+      note: note || (items && items.length ? items.map(i=>i.name).join(', ') : ''),
+      date: date || new Date().toISOString().slice(0, 10),
+      source: 'manual',
+      items: items || [],
+      createdAt: new Date().toISOString()
+    };
+    await db.collection('ledger').insertOne(ledgerEntry);
+    // Also keep legacy for migration period
+    const entry = {
+      id: await getNextId('udharId'), customerId: parseInt(customerId),
+      items: items || [], amount: parseFloat(amount),
+      date: date || new Date().toISOString().slice(0, 10),
+      note: note || '', type: type || 'purchase', createdAt: new Date().toISOString()
+    };
+    await db.collection('udharEntries').insertOne(entry);
+    res.json({ ok: true, entry });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put('/api/admin/udhar/:id', adminAuth, async (req, res) => {
+  try {
+    const { customerId, ...rest } = req.body;
+    await db.collection('udharEntries').updateOne({ id: parseInt(req.params.id) }, { $set: rest });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete('/api/admin/udhar/:id', adminAuth, async (req, res) => {
+  try { await db.collection('udharEntries').deleteOne({ id: parseInt(req.params.id) }); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/admin/udhar-payments', adminAuth, async (req, res) => {
+  try {
+    const cid = req.query.customerId ? parseInt(req.query.customerId) : null;
+    res.json(await db.collection('udharPayments').find(cid ? { customerId: cid } : {}).toArray());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/admin/udhar-payments', adminAuth, async (req, res) => {
+  try {
+    const { customerId, amount, method, note } = req.body;
+    if (!customerId || !amount) return res.status(400).json({ error: 'customerId and amount required' });
+    // Save to new ledger
+    const ledgerEntry = {
+      id: await getNextId('ledgerId'),
+      customerId: parseInt(customerId),
+      type: 'payment',
+      amount: parseFloat(amount),
+      note: note || method || 'Cash',
+      date: new Date().toISOString().slice(0, 10),
+      source: 'payment',
+      createdAt: new Date().toISOString()
+    };
+    await db.collection('ledger').insertOne(ledgerEntry);
+    // Legacy
+    const pay = {
+      id: await getNextId('udharPayId'), customerId: parseInt(customerId),
+      amount: parseFloat(amount), method: method || 'cash', note: note || '',
+      paidAt: new Date().toISOString(), date: new Date().toISOString().slice(0, 10)
+    };
+    await db.collection('udharPayments').insertOne(pay);
+    res.json({ ok: true, pay });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete('/api/admin/udhar-payments/:id', adminAuth, async (req, res) => {
+  try { await db.collection('udharPayments').deleteOne({ id: parseInt(req.params.id) }); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── ORDERS ────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/admin/orders', adminAuth, async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.status) filter.status = req.query.status;
+    if (req.query.customerId) filter.customerId = parseInt(req.query.customerId);
+    res.json(await db.collection('orders').find(filter).sort({ createdAt: -1 }).toArray());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/orders/:id', adminAuth, async (req, res) => {
+  try {
+    const result = await db.collection('orders').findOneAndUpdate(
+      { id: parseInt(req.params.id) }, { $set: req.body }, { returnDocument: 'after' }
+    );
+    if (!result) return res.status(404).json({ error: 'Not found' });
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/orders/:id', adminAuth, async (req, res) => {
+  try {
+    await db.collection('orders').deleteOne({ id: parseInt(req.params.id) });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Convert order → ledger credit entry
+app.post('/api/admin/orders/:id/convert-to-udhar', adminAuth, async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const order = await db.collection('orders').findOne({ id: orderId });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.addedToUdhar) return res.status(400).json({ error: 'Already added to udhar' });
+    const customer = await db.collection('customers').findOne({
+      $or: [{ phone: order.phone }, { customerId: order.customerId }]
+    });
+    if (!customer) return res.status(404).json({ error: 'No registered customer for this order' });
+    const udharItems = (order.items || []).filter(i => !i.isFreeGift).map(i => ({
+      name: i.name + (i.variant ? ` (${i.variant})` : ''), qty: i.qty, price: i.price
+    }));
+    // Add to unified ledger
+    await db.collection('ledger').insertOne({
+      id: await getNextId('ledgerId'),
+      customerId: customer.customerId,
+      type: 'credit',
+      amount: parseFloat(order.total),
+      note: `App Order #${orderId}`,
+      date: (order.createdAt || new Date().toISOString()).slice(0, 10),
+      source: 'app_order',
+      orderId,
+      items: udharItems,
+      createdAt: new Date().toISOString()
+    });
+    // Also keep in legacy for compat
+    await db.collection('udharEntries').insertOne({
+      id: await getNextId('udharId'), customerId: customer.customerId,
+      items: udharItems, amount: parseFloat(order.total),
+      date: (order.createdAt || new Date().toISOString()).slice(0, 10),
+      note: `App Order #${orderId}`, type: 'app_order',
+      orderId, createdAt: new Date().toISOString()
+    });
+    await db.collection('orders').updateOne({ id: orderId }, { $set: { addedToUdhar: true, customerId: customer.customerId } });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Mark order as paid (creates payment in ledger)
+app.post('/api/admin/orders/:id/mark-paid', adminAuth, async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const order = await db.collection('orders').findOne({ id: orderId });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    const customer = await db.collection('customers').findOne({
+      $or: [{ phone: order.phone }, { customerId: order.customerId }]
+    });
+    if (!customer) return res.status(404).json({ error: 'No registered customer' });
+    // Add payment to ledger
+    await db.collection('ledger').insertOne({
+      id: await getNextId('ledgerId'),
+      customerId: customer.customerId,
+      type: 'payment',
+      amount: parseFloat(order.total),
+      note: `Payment for Order #${orderId}`,
+      date: new Date().toISOString().slice(0, 10),
+      source: 'order_payment',
+      orderId,
+      createdAt: new Date().toISOString()
+    });
+    await db.collection('orders').updateOne({ id: orderId }, { $set: { paid: true, paidAt: new Date().toISOString() } });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUBLIC: Place order
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { customerName, phone, block, villa, note, items, total, freeGift, paymentMethod } = req.body;
+    if (!customerName || !phone || !items?.length) return res.status(400).json({ error: 'Missing fields' });
+    const id = await getNextId('orderId');
+    const customer = await db.collection('customers').findOne({ phone });
+    const order = {
+      id, customerName, phone, block, villa: villa || '', note: note || '',
+      items, total, freeGift: freeGift || null, paymentMethod: paymentMethod || 'cod',
+      customerId: customer ? customer.customerId : null,
+      status: 'pending', addedToUdhar: false, createdAt: new Date().toISOString()
+    };
+    if (paymentMethod === 'account' && customer) {
+      const udharItems = (items || []).filter(i => !i.isFreeGift).map(i => ({
+        name: i.name + (i.variant ? ` (${i.variant})` : ''), qty: i.qty, price: i.price
+      }));
+      // Add to unified ledger
+      await db.collection('ledger').insertOne({
+        id: await getNextId('ledgerId'),
+        customerId: customer.customerId,
+        type: 'credit',
+        amount: parseFloat(total),
+        note: `App Order #${id}`,
+        date: new Date().toISOString().slice(0, 10),
+        source: 'app_order',
+        orderId: id,
+        items: udharItems,
+        createdAt: new Date().toISOString()
+      });
+      // Legacy
+      await db.collection('udharEntries').insertOne({
+        id: await getNextId('udharId'), customerId: customer.customerId,
+        items: udharItems, amount: parseFloat(total),
+        date: new Date().toISOString().slice(0, 10),
+        note: `App Order #${id}`, type: 'app_order',
+        orderId: id, createdAt: new Date().toISOString()
+      });
+      order.addedToUdhar = true;
+    }
+    await db.collection('orders').insertOne(order);
+    res.json({ ok: true, order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -328,14 +712,13 @@ app.delete('/api/admin/customers/:id', adminAuth, async (req, res) => {
 app.get('/api/admin/milk/subscriptions', adminAuth, async (req, res) => {
   try {
     const subs = await db.collection('milkSubscriptions').find().toArray();
-    const customers = await db.collection('customers').find().toArray();
+    const customers = await db.collection('customers').find({ deleted: { $ne: true } }).toArray();
     const custMap = {};
     customers.forEach(c => { custMap[c.customerId] = { customerId: c.customerId, name: c.name, phone: c.phone, address: c.address }; });
     res.json(subs.map(s => ({ ...s, customer: custMap[s.customerId] || null })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// CREATE subscription — admin only, never auto-created on registration
 app.post('/api/admin/milk/subscriptions', adminAuth, async (req, res) => {
   try {
     const { customerId, defaultQty, pricePerLitre, startDate, notes } = req.body;
@@ -397,12 +780,12 @@ app.delete('/api/admin/milk/subscriptions/:customerId', adminAuth, async (req, r
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Backward compat: returns only milk-subscribed customers
+// Returns only customers with milk subscriptions
 app.get('/api/admin/milk/customers', adminAuth, async (req, res) => {
   try {
     const subs = await db.collection('milkSubscriptions').find().toArray();
     const customerIds = subs.map(s => s.customerId);
-    const customers = await db.collection('customers').find({ customerId: { $in: customerIds } }).toArray();
+    const customers = await db.collection('customers').find({ customerId: { $in: customerIds }, deleted: { $ne: true } }).toArray();
     const subMap = {};
     subs.forEach(s => { subMap[s.customerId] = s; });
     res.json(customers.map(c => ({
@@ -452,6 +835,76 @@ app.post('/api/admin/milk/logs', adminAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// BULK MARK — marks all active milk subscribers as delivered for a given date
+app.post('/api/admin/milk/bulk-mark', adminAuth, async (req, res) => {
+  try {
+    const { date } = req.body;
+    if (!date) return res.status(400).json({ error: 'date required' });
+    const month = date.slice(0, 7);
+    const settings = await db.collection('settings').findOne({ _id: 'main' });
+    const subs = await db.collection('milkSubscriptions').find({ status: 'active' }).toArray();
+    let marked = 0;
+    for (const sub of subs) {
+      const existing = await db.collection('milkLogs').findOne({ customerId: sub.customerId, date });
+      if (!existing) {
+        await db.collection('milkLogs').insertOne({
+          id: await getNextId('milkLogId'),
+          customerId: sub.customerId, date, month,
+          qty: sub.defaultQty,
+          price: sub.pricePerLitre || settings.milkPrice || 60,
+          markedAt: new Date().toISOString()
+        });
+        marked++;
+      }
+    }
+    res.json({ ok: true, marked });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Generate monthly billing — returns summary of all milk dues for a month
+app.get('/api/admin/milk/billing/:month', adminAuth, async (req, res) => {
+  try {
+    const { month } = req.params;
+    const settings = await db.collection('settings').findOne({ _id: 'main' });
+    const subs = await db.collection('milkSubscriptions').find().toArray();
+    const customerIds = subs.map(s => s.customerId);
+    const customers = await db.collection('customers').find({ customerId: { $in: customerIds }, deleted: { $ne: true } }).toArray();
+    const logs = await db.collection('milkLogs').find({ month }).toArray();
+    const payments = await db.collection('milkPayments').find({ month }).toArray();
+    const custMap = {};
+    customers.forEach(c => { custMap[c.customerId] = c; });
+    const subMap = {};
+    subs.forEach(s => { subMap[s.customerId] = s; });
+
+    const billing = customerIds.map(cid => {
+      const c = custMap[cid];
+      if (!c) return null;
+      const sub = subMap[cid];
+      const custLogs = logs.filter(l => l.customerId === cid);
+      const totalLitres = custLogs.reduce((s, l) => s + l.qty, 0);
+      const totalBilled = custLogs.reduce((s, l) => s + l.qty * (l.price || sub?.pricePerLitre || settings.milkPrice || 60), 0);
+      const totalPaid = payments.filter(p => p.customerId === cid).reduce((s, p) => s + p.amount, 0);
+      return {
+        customerId: cid,
+        customerName: c.name,
+        phone: c.phone,
+        address: c.address,
+        dailyQty: sub?.defaultQty || 0,
+        totalLitres,
+        totalBilled: parseFloat(totalBilled.toFixed(2)),
+        totalPaid,
+        due: parseFloat((totalBilled - totalPaid).toFixed(2))
+      };
+    }).filter(Boolean);
+
+    res.json({ month, billing, totals: {
+      totalBilled: billing.reduce((s, b) => s + b.totalBilled, 0),
+      totalPaid: billing.reduce((s, b) => s + b.totalPaid, 0),
+      totalDue: billing.reduce((s, b) => s + b.due, 0)
+    }});
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/admin/milk/payments', adminAuth, async (req, res) => {
   try {
     const month = req.query.month || new Date().toISOString().slice(0, 7);
@@ -478,247 +931,53 @@ app.put('/api/admin/milk/settings', adminAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Bulk mark all active milk customers for a given date
-app.post('/api/admin/milk/bulk-mark', adminAuth, async (req, res) => {
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── MIGRATION UTILITY ─────────────────────────────────────────────────────────
+// Migrates old udharEntries + udharPayments → unified ledger
+// ═══════════════════════════════════════════════════════════════════════════════
+app.post('/api/admin/migrate-to-ledger', adminAuth, async (req, res) => {
   try {
-    const { date } = req.body;
-    if (!date) return res.status(400).json({ error: 'date required' });
-    const month = date.slice(0, 7);
-    const settings = await db.collection('settings').findOne({ _id: 'main' });
-    const milkPrice = settings.milkPrice || 60;
-
-    // Get all active milk subscriptions
-    const subs = await db.collection('milkSubscriptions').find({ status: 'active' }).toArray();
-    let marked = 0;
-
-    for (const sub of subs) {
-      const qty = sub.defaultQty || 0.5;
-      const existing = await db.collection('milkLogs').findOne({ customerId: sub.customerId, date });
-      if (!existing) {
-        await db.collection('milkLogs').insertOne({
-          id: await getNextId('milkLogId'),
-          customerId: sub.customerId, date, month,
-          qty, price: milkPrice,
-          markedAt: new Date().toISOString()
+    const [entries, payments] = await Promise.all([
+      db.collection('udharEntries').find().toArray(),
+      db.collection('udharPayments').find().toArray(),
+    ]);
+    let migratedCredits = 0, migratedPayments = 0;
+    for (const e of entries) {
+      const exists = await db.collection('ledger').findOne({ source: 'legacy_udhar', legacyId: e.id });
+      if (!exists) {
+        await db.collection('ledger').insertOne({
+          id: await getNextId('ledgerId'),
+          customerId: e.customerId,
+          type: 'credit',
+          amount: e.amount,
+          note: e.note || (e.items||[]).map(i=>i.name).join(', ') || 'Migrated entry',
+          date: e.date || e.createdAt?.slice(0,10) || new Date().toISOString().slice(0,10),
+          source: 'legacy_udhar',
+          legacyId: e.id,
+          items: e.items || [],
+          createdAt: e.createdAt || new Date().toISOString()
         });
-        marked++;
+        migratedCredits++;
       }
     }
-    res.json({ ok: true, marked, total: subs.length });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Admin dashboard stats API
-app.get('/api/admin/dashboard', adminAuth, async (req, res) => {
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const month = today.slice(0, 7);
-    const settings = await db.collection('settings').findOne({ _id: 'main' });
-    const milkPrice = settings.milkPrice || 60;
-
-    const [
-      totalCustomers, totalProducts,
-      ordersToday, allOrders,
-      milkSubs, milkLogsToday, milkLogsMonth,
-      allUdharEntries, allUdharPayments
-    ] = await Promise.all([
-      db.collection('customers').countDocuments(),
-      db.collection('products').countDocuments(),
-      db.collection('orders').find({ createdAt: { $gte: today } }).toArray(),
-      db.collection('orders').find({ status: { $ne: 'cancelled' } }).toArray(),
-      db.collection('milkSubscriptions').find({ status: 'active' }).toArray(),
-      db.collection('milkLogs').find({ date: today }).toArray(),
-      db.collection('milkLogs').find({ month }).toArray(),
-      db.collection('udharEntries').find().toArray(),
-      db.collection('udharPayments').find().toArray(),
-    ]);
-
-    const revenueToday = ordersToday.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (o.total || 0), 0);
-    const pendingOrders = allOrders.filter(o => o.status === 'pending').length;
-    const milkDeliveredToday = milkLogsToday.length;
-    const milkMonthRevenue = milkLogsMonth.reduce((s, l) => s + l.qty * (l.price || milkPrice), 0);
-    const totalUdharOut = allUdharEntries.reduce((s, e) => s + (e.amount || 0), 0);
-    const totalUdharPaid = allUdharPayments.reduce((s, p) => s + (p.amount || 0), 0);
-    const udharOutstanding = totalUdharOut - totalUdharPaid;
-
-    // Recent orders (last 10)
-    const recentOrders = await db.collection('orders').find().sort({ createdAt: -1 }).limit(10).toArray();
-
-    res.json({
-      totalCustomers, totalProducts,
-      ordersToday: ordersToday.length, revenueToday,
-      pendingOrders,
-      milkActiveSubs: milkSubs.length,
-      milkDeliveredToday,
-      milkMonthRevenue,
-      udharOutstanding,
-      recentOrders
-    });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ── ORDERS ────────────────────────────────────────════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════════
-
-app.get('/api/admin/orders', adminAuth, async (req, res) => {
-  try {
-    const filter = {};
-    if (req.query.status) filter.status = req.query.status;
-    if (req.query.customerId) filter.customerId = parseInt(req.query.customerId);
-    res.json(await db.collection('orders').find(filter).sort({ createdAt: -1 }).toArray());
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/admin/orders/:id', adminAuth, async (req, res) => {
-  try {
-    const result = await db.collection('orders').findOneAndUpdate(
-      { id: parseInt(req.params.id) }, { $set: req.body }, { returnDocument: 'after' }
-    );
-    if (!result) return res.status(404).json({ error: 'Not found' });
-    res.json(result);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/admin/orders/:id', adminAuth, async (req, res) => {
-  try {
-    await db.collection('orders').deleteOne({ id: parseInt(req.params.id) });
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Convert order → udhar entry
-app.post('/api/admin/orders/:id/convert-to-udhar', adminAuth, async (req, res) => {
-  try {
-    const orderId = parseInt(req.params.id);
-    const order = await db.collection('orders').findOne({ id: orderId });
-    if (!order) return res.status(404).json({ error: 'Order not found' });
-    if (order.addedToUdhar) return res.status(400).json({ error: 'Already added to udhar' });
-    const customer = await db.collection('customers').findOne({ phone: order.phone });
-    if (!customer) return res.status(404).json({ error: 'No registered customer for this phone' });
-    const udharItems = (order.items || []).filter(i => !i.isFreeGift).map(i => ({
-      name: i.name + (i.variant ? ` (${i.variant})` : ''), qty: i.qty, price: i.price
-    }));
-    await db.collection('udharEntries').insertOne({
-      id: await getNextId('udharId'), customerId: customer.customerId,
-      items: udharItems, amount: parseFloat(order.total),
-      date: order.createdAt.slice(0, 10),
-      note: `App Order #${orderId}`, type: 'app_order',
-      orderId, createdAt: new Date().toISOString()
-    });
-    await db.collection('orders').updateOne({ id: orderId }, { $set: { addedToUdhar: true, customerId: customer.customerId } });
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// PUBLIC: Place order
-app.post('/api/orders', async (req, res) => {
-  try {
-    const { customerName, phone, block, villa, note, items, total, freeGift, paymentMethod } = req.body;
-    if (!customerName || !phone || !items?.length) return res.status(400).json({ error: 'Missing fields' });
-    const id = await getNextId('orderId');
-    const customer = await db.collection('customers').findOne({ phone });
-    const order = {
-      id, customerName, phone, block, villa: villa || '', note: note || '',
-      items, total, freeGift: freeGift || null, paymentMethod: paymentMethod || 'cod',
-      customerId: customer ? customer.customerId : null,
-      status: 'pending', addedToUdhar: false, createdAt: new Date().toISOString()
-    };
-    if (paymentMethod === 'account' && customer) {
-      const udharItems = (items || []).filter(i => !i.isFreeGift).map(i => ({
-        name: i.name + (i.variant ? ` (${i.variant})` : ''), qty: i.qty, price: i.price
-      }));
-      await db.collection('udharEntries').insertOne({
-        id: await getNextId('udharId'), customerId: customer.customerId,
-        items: udharItems, amount: parseFloat(total),
-        date: new Date().toISOString().slice(0, 10),
-        note: `App Order #${id}`, type: 'app_order',
-        orderId: id, createdAt: new Date().toISOString()
-      });
-      order.addedToUdhar = true;
+    for (const p of payments) {
+      const exists = await db.collection('ledger').findOne({ source: 'legacy_payment', legacyId: p.id });
+      if (!exists) {
+        await db.collection('ledger').insertOne({
+          id: await getNextId('ledgerId'),
+          customerId: p.customerId,
+          type: 'payment',
+          amount: p.amount,
+          note: p.note || p.method || 'Migrated payment',
+          date: p.date || p.paidAt?.slice(0,10) || new Date().toISOString().slice(0,10),
+          source: 'legacy_payment',
+          legacyId: p.id,
+          createdAt: p.paidAt || new Date().toISOString()
+        });
+        migratedPayments++;
+      }
     }
-    await db.collection('orders').insertOne(order);
-    res.json({ ok: true, order });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ── UDHAR / CREDIT ─────────────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
-
-app.get('/api/admin/udhar', adminAuth, async (req, res) => {
-  try {
-    const cid = req.query.customerId ? parseInt(req.query.customerId) : null;
-    res.json(await db.collection('udharEntries').find(cid ? { customerId: cid } : {}).sort({ date: -1 }).toArray());
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-app.post('/api/admin/udhar', adminAuth, async (req, res) => {
-  try {
-    const { customerId, items, amount, date, note, type } = req.body;
-    if (!customerId || !amount) return res.status(400).json({ error: 'customerId and amount required' });
-    const entry = {
-      id: await getNextId('udharId'), customerId: parseInt(customerId),
-      items: items || [], amount: parseFloat(amount),
-      date: date || new Date().toISOString().slice(0, 10),
-      note: note || '', type: type || 'purchase', createdAt: new Date().toISOString()
-    };
-    await db.collection('udharEntries').insertOne(entry);
-    res.json({ ok: true, entry });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-app.put('/api/admin/udhar/:id', adminAuth, async (req, res) => {
-  try {
-    const { customerId, ...rest } = req.body;
-    await db.collection('udharEntries').updateOne({ id: parseInt(req.params.id) }, { $set: rest });
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-app.delete('/api/admin/udhar/:id', adminAuth, async (req, res) => {
-  try { await db.collection('udharEntries').deleteOne({ id: parseInt(req.params.id) }); res.json({ ok: true }); }
-  catch (e) { res.status(500).json({ error: e.message }); }
-});
-app.get('/api/admin/udhar-payments', adminAuth, async (req, res) => {
-  try {
-    const cid = req.query.customerId ? parseInt(req.query.customerId) : null;
-    res.json(await db.collection('udharPayments').find(cid ? { customerId: cid } : {}).toArray());
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-app.post('/api/admin/udhar-payments', adminAuth, async (req, res) => {
-  try {
-    const { customerId, amount, method, note } = req.body;
-    if (!customerId || !amount) return res.status(400).json({ error: 'customerId and amount required' });
-    const pay = {
-      id: await getNextId('udharPayId'), customerId: parseInt(customerId),
-      amount: parseFloat(amount), method: method || 'cash', note: note || '',
-      paidAt: new Date().toISOString(), date: new Date().toISOString().slice(0, 10)
-    };
-    await db.collection('udharPayments').insertOne(pay);
-    res.json({ ok: true, pay });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-app.delete('/api/admin/udhar-payments/:id', adminAuth, async (req, res) => {
-  try { await db.collection('udharPayments').deleteOne({ id: parseInt(req.params.id) }); res.json({ ok: true }); }
-  catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/admin/udhar-summary', adminAuth, async (req, res) => {
-  try {
-    const customers = await db.collection('customers').find().toArray();
-    const [allEntries, allPayments] = await Promise.all([
-      db.collection('udharEntries').find().toArray(),
-      db.collection('udharPayments').find().toArray(),
-    ]);
-    const summary = customers.map(c => {
-      const entries = allEntries.filter(e => e.customerId === c.customerId);
-      const payments = allPayments.filter(p => p.customerId === c.customerId);
-      const totalUdhar = entries.reduce((s, e) => s + (e.amount || 0), 0);
-      const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
-      return {
-        customer: { id: c.customerId, name: c.name, phone: c.phone, address: c.address },
-        totalUdhar, totalPaid, balance: totalUdhar - totalPaid, entries, payments
-      };
-    }).filter(x => x.totalUdhar > 0 || x.balance !== 0);
-    res.json(summary);
+    res.json({ ok: true, migratedCredits, migratedPayments });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -726,7 +985,7 @@ app.get('/api/admin/udhar-summary', adminAuth, async (req, res) => {
 // ── CUSTOMER PORTAL ───────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// REGISTER — saves to customers ONLY. No milk subscription created automatically.
+// REGISTER — saves to customers ONLY
 app.post('/api/milk/register', async (req, res) => {
   try {
     const { name, phone, address, pin } = req.body;
@@ -741,7 +1000,6 @@ app.post('/api/milk/register', async (req, res) => {
       active: true, tags: [], creditLimit: 0, notes: '',
       joinedAt: new Date().toISOString()
     });
-    // ✅ NO milk subscription created here
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -766,26 +1024,27 @@ app.get('/api/customer/dashboard', customerAuth, async (req, res) => {
     if (!c) return res.status(404).json({ error: 'Not found' });
     const settings = await db.collection('settings').findOne({ _id: 'main' });
     const key = new Date().toISOString().slice(0, 7);
-    const [milkSub, log, milkPayments, orders, udharEntries, udharPayments] = await Promise.all([
+    const [milkSub, log, milkPayments, orders, ledgerEntries, udharEntries, udharPayments] = await Promise.all([
       db.collection('milkSubscriptions').findOne({ customerId: c.customerId }),
       db.collection('milkLogs').find({ customerId: c.customerId, month: key }).toArray(),
       db.collection('milkPayments').find({ customerId: c.customerId, month: key }).toArray(),
       db.collection('orders').find({ $or: [{ customerId: c.customerId }, { phone: c.phone }] }).sort({ createdAt: -1 }).limit(30).toArray(),
-      db.collection('udharEntries').find({ customerId: c.customerId }).sort({ date: -1 }).toArray(),
-      db.collection('udharPayments').find({ customerId: c.customerId }).sort({ paidAt: -1 }).toArray(),
+      db.collection('ledger').find({ customerId: c.customerId }).toArray(),
+      db.collection('udharEntries').find({ customerId: c.customerId }).toArray(),
+      db.collection('udharPayments').find({ customerId: c.customerId }).toArray(),
     ]);
     const pricePerLitre = milkSub?.pricePerLitre || settings.milkPrice || 60;
     const totalLitres = log.reduce((s, l) => s + l.qty, 0);
     const milkAmt = log.reduce((s, l) => s + l.qty * (l.price || pricePerLitre), 0);
     const milkPaid = milkPayments.reduce((s, p) => s + p.amount, 0);
-    const totalUdhar = udharEntries.reduce((s, e) => s + (e.amount || 0), 0);
-    const totalUdharPaid = udharPayments.reduce((s, p) => s + (p.amount || 0), 0);
+    const ledgerBalance = ledgerEntries.reduce((s, e) => e.type === 'credit' ? s + e.amount : s - e.amount, 0);
+    const oldUdharBalance = udharEntries.reduce((s, e) => s + (e.amount || 0), 0) - udharPayments.reduce((s, p) => s + (p.amount || 0), 0);
     const { pin, ...safeCustomer } = c;
     res.json({
       customer: safeCustomer, milkSubscription: milkSub || null,
       log, totalLitres, milkAmt, milkPaid, pricePerLitre, month: key,
-      orders, udharEntries, udharPayments,
-      totalUdhar, totalUdharPaid, udharBalance: totalUdhar - totalUdharPaid
+      orders, udharEntries, udharPayments, ledgerEntries,
+      udharBalance: ledgerBalance + oldUdharBalance
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -799,17 +1058,29 @@ app.get('/api/customer/ledger', customerAuth, async (req, res) => {
     const settings = await db.collection('settings').findOne({ _id: 'main' });
     const month = req.query.month || new Date().toISOString().slice(0, 7);
     const entries = [];
-    const [milkLogs, milkPayments, orders, udharEntries, udharPayments] = await Promise.all([
+    const [milkLogs, milkPayments, orders, udharEntries, udharPayments, ledgerEntries] = await Promise.all([
       db.collection('milkLogs').find({ customerId: cid, month }).toArray(),
       db.collection('milkPayments').find({ customerId: cid, month }).toArray(),
       db.collection('orders').find({ $or: [{ customerId: cid }, { phone: c.phone }], status: { $ne: 'cancelled' } }).toArray(),
       db.collection('udharEntries').find({ customerId: cid }).toArray(),
       db.collection('udharPayments').find({ customerId: cid }).toArray(),
+      db.collection('ledger').find({ customerId: cid }).toArray(),
     ]);
     milkLogs.forEach(l => entries.push({ id: 'milk_' + l.id, date: l.date, type: 'milk', source: 'SUBSCRIPTION', description: `Milk delivery — ${l.qty}L`, amount: parseFloat((l.qty * (l.price || settings.milkPrice || 60)).toFixed(2)), debit: true, time: l.markedAt, note: '' }));
-    milkPayments.forEach(p => entries.push({ id: 'milkpay_' + (p.paidAt || '').slice(0, 10) + '_' + p.amount, date: p.paidAt ? p.paidAt.slice(0, 10) : month + '-01', type: 'payment', source: 'PAYMENT', description: `Milk payment — ${p.note || 'Cash'}`, amount: parseFloat(p.amount), debit: false, time: p.paidAt, note: p.note || '' }));
+    milkPayments.forEach(p => entries.push({ id: 'milkpay_' + p.paidAt?.slice(0,10) + '_' + p.amount, date: p.paidAt ? p.paidAt.slice(0, 10) : month + '-01', type: 'payment', source: 'PAYMENT', description: `Milk payment — ${p.note || 'Cash'}`, amount: parseFloat(p.amount), debit: false, time: p.paidAt, note: p.note || '' }));
     orders.filter(o => o.createdAt && o.createdAt.slice(0, 7) === month).forEach(o => entries.push({ id: 'order_' + o.id, date: o.createdAt.slice(0, 10), type: 'order', source: 'APP', description: `App order #${o.id} — ${(o.items || []).slice(0, 2).map(i => i.name).join(', ')}${(o.items || []).length > 2 ? ` +${o.items.length - 2} more` : ''}`, amount: parseFloat(o.total), debit: true, time: o.createdAt, note: o.note || '', orderId: o.id, orderStatus: o.status }));
-    udharEntries.filter(e => e.date && e.date.slice(0, 7) === month).forEach(e => entries.push({ id: 'udhar_' + e.id, date: e.date, type: 'udhar', source: 'STORE', description: (e.items || []).length ? e.items.slice(0, 2).map(i => i.name).join(', ') + (e.items.length > 2 ? ` +${e.items.length - 2} more` : '') : (e.note || 'Store purchase'), amount: parseFloat(e.amount), debit: true, time: e.createdAt, note: e.note || '' }));
+    // New ledger entries
+    ledgerEntries.filter(e => e.date && e.date.slice(0, 7) === month).forEach(e => {
+      if (e.source === 'app_order' || e.source === 'legacy_udhar') {
+        entries.push({ id: 'ledger_' + e.id, date: e.date, type: e.type === 'credit' ? 'udhar' : 'udhar_payment', source: 'STORE', description: e.note || 'Store purchase', amount: parseFloat(e.amount), debit: e.type === 'credit', time: e.createdAt, note: e.note || '' });
+      } else if (e.type === 'payment') {
+        entries.push({ id: 'ledger_' + e.id, date: e.date, type: 'udhar_payment', source: 'PAYMENT', description: `Payment received — ${e.note || 'Cash'}`, amount: parseFloat(e.amount), debit: false, time: e.createdAt, note: e.note || '' });
+      } else if (e.type === 'credit') {
+        entries.push({ id: 'ledger_' + e.id, date: e.date, type: 'udhar', source: 'STORE', description: e.note || 'Store purchase', amount: parseFloat(e.amount), debit: true, time: e.createdAt, note: e.note || '' });
+      }
+    });
+    // Old udhar (not in new ledger)
+    udharEntries.filter(e => e.date && e.date.slice(0, 7) === month && !e.inLedger).forEach(e => entries.push({ id: 'udhar_' + e.id, date: e.date, type: 'udhar', source: 'STORE', description: (e.items || []).length ? e.items.slice(0, 2).map(i => i.name).join(', ') + (e.items.length > 2 ? ` +${e.items.length - 2} more` : '') : (e.note || 'Store purchase'), amount: parseFloat(e.amount), debit: true, time: e.createdAt, note: e.note || '' }));
     udharPayments.filter(p => p.date && p.date.slice(0, 7) === month).forEach(p => entries.push({ id: 'udpay_' + p.id, date: p.date, type: 'udhar_payment', source: 'PAYMENT', description: `Payment received — ${p.method || 'Cash'}`, amount: parseFloat(p.amount), debit: false, time: p.paidAt, note: p.note || '' }));
     entries.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
     const milkTotal = entries.filter(e => e.type === 'milk').reduce((s, e) => s + e.amount, 0);

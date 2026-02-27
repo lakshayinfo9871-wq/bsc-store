@@ -10,6 +10,7 @@
   --bg:#f5f6fa; --white:#fff; --border:#e8eaed; --text:#1a1a1a; --text2:#6b7280; --text3:#9ca3af;
   --green:#16a34a; --green-bg:#f0fdf4; --red:#dc2626; --red-bg:#fef2f2;
   --yellow:#d97706; --yellow-bg:#fffbeb; --blue:#2563eb; --blue-bg:#eff6ff;
+  --purple:#7c3aed; --purple-bg:#f5f3ff;
   --sidebar:#0f172a; --r:12px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -67,6 +68,9 @@ input,select,textarea{font-family:'Inter',sans-serif;}
 .btn-gray:hover{background:var(--border);}
 .btn-blue{background:var(--blue-bg);color:var(--blue);border:1px solid #bfdbfe;}
 .btn-blue:hover{background:#dbeafe;}
+.btn-yellow{background:var(--yellow-bg);color:var(--yellow);border:1px solid #fde68a;}
+.btn-yellow:hover{background:#fde68a;}
+.btn-purple{background:var(--purple-bg);color:var(--purple);border:1px solid #ddd6fe;}
 
 table{width:100%;border-collapse:collapse;}
 th{font-size:.75rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:.75rem 1rem;background:var(--bg);text-align:left;border-bottom:1px solid var(--border);}
@@ -75,12 +79,13 @@ tr:last-child td{border-bottom:none;}
 tr:hover td{background:#fafafa;}
 .td-img{width:44px;height:44px;border-radius:8px;object-fit:cover;}
 .td-img-ph{width:44px;height:44px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:1.3rem;border:1px solid var(--border);}
-.actions{display:flex;gap:.4rem;}
+.actions{display:flex;gap:.4rem;flex-wrap:wrap;}
 .badge{display:inline-block;padding:.2rem .6rem;border-radius:50px;font-size:.72rem;font-weight:600;}
 .badge-green{background:var(--green-bg);color:var(--green);}
 .badge-red{background:var(--red-bg);color:var(--red);}
 .badge-yellow{background:var(--yellow-bg);color:var(--yellow);}
 .badge-blue{background:var(--blue-bg);color:var(--blue);}
+.badge-purple{background:var(--purple-bg);color:var(--purple);}
 
 .form-group{margin-bottom:1rem;}
 .form-group label{display:block;font-size:.78rem;font-weight:600;color:var(--text2);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;}
@@ -100,8 +105,6 @@ tr:hover td{background:#fafafa;}
 .tier-row input:focus{outline:none;border-color:var(--green);}
 .tier-del{background:none;color:var(--red);font-size:1.1rem;padding:.2rem .4rem;border-radius:5px;flex-shrink:0;}
 .tier-del:hover{background:var(--red-bg);}
-.tier-header{display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;padding:0 .6rem;margin-bottom:.2rem;}
-.tier-header span{font-size:.7rem;font-weight:600;color:var(--text3);text-transform:uppercase;}
 
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
 .modal-overlay.open{display:flex;}
@@ -131,85 +134,34 @@ tr:hover td{background:#fafafa;}
 .empty-state .ei{font-size:2.5rem;margin-bottom:.5rem;}
 .empty-state p{font-size:.88rem;line-height:1.6;}
 
-@media(max-width:768px){
-  /* ===== BOTTOM NAV BAR ===== */
-  #app{flex-direction:column;}
-  .sidebar{
-    width:100%;height:auto;flex-direction:row;
-    position:fixed;bottom:0;left:0;right:0;top:auto;
-    z-index:200;border-top:1px solid rgba(255,255,255,.12);
-    box-shadow:0 -2px 16px rgba(0,0,0,.35);
-    overflow:hidden;
-  }
-  .sidebar-logo,.sidebar-footer{display:none!important;}
-  .sidebar-nav{
-    display:flex!important;flex-direction:row!important;
-    padding:0!important;width:100%!important;
-    overflow-x:auto;-webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-  }
-  .sidebar-nav::-webkit-scrollbar{display:none;}
-  .nav-link{
-    flex-direction:column!important;
-    gap:2px!important;
-    padding:.45rem .2rem!important;
-    border-left:none!important;
-    border-bottom:3px solid transparent!important;
-    flex:1!important;
-    min-width:52px!important;
-    justify-content:center!important;
-    align-items:center!important;
-  }
-  .nav-link.active{
-    border-bottom-color:#4ade80!important;
-    border-left:none!important;
-    background:rgba(255,255,255,.1)!important;
-  }
-  .nav-link span:not(.icon){
-    display:block!important;
-    font-size:.52rem!important;
-    color:inherit!important;
-    line-height:1.1!important;
-  }
-  .nav-link .icon{font-size:1.25rem!important;width:auto!important;}
+/* Profile tabs */
+.profile-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg);overflow-x:auto;}
+.ptab-btn{padding:.65rem 1.2rem;font-size:.82rem;font-weight:600;border:none;cursor:pointer;background:none;border-bottom:3px solid transparent;color:var(--text2);transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.ptab-btn.active{border-bottom-color:var(--green);color:var(--green);}
 
-  /* ===== MAIN CONTENT ===== */
+@media(max-width:768px){
+  #app{flex-direction:column;}
+  .sidebar{width:100%;height:auto;flex-direction:row;position:fixed;bottom:0;left:0;right:0;top:auto;z-index:200;border-top:1px solid rgba(255,255,255,.12);box-shadow:0 -2px 16px rgba(0,0,0,.35);overflow:hidden;}
+  .sidebar-logo,.sidebar-footer{display:none!important;}
+  .sidebar-nav{display:flex!important;flex-direction:row!important;padding:0!important;width:100%!important;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .sidebar-nav::-webkit-scrollbar{display:none;}
+  .nav-link{flex-direction:column!important;gap:2px!important;padding:.45rem .2rem!important;border-left:none!important;border-bottom:3px solid transparent!important;flex:1!important;min-width:52px!important;justify-content:center!important;align-items:center!important;}
+  .nav-link.active{border-bottom-color:#4ade80!important;border-left:none!important;background:rgba(255,255,255,.1)!important;}
+  .nav-link span:not(.icon){display:block!important;font-size:.52rem!important;color:inherit!important;line-height:1.1!important;}
+  .nav-link .icon{font-size:1.25rem!important;width:auto!important;}
   .main{width:100%!important;padding-bottom:72px!important;}
   .topbar{padding:.6rem .9rem!important;}
   .topbar h1{font-size:.95rem!important;}
   .content{padding:.75rem!important;}
-
-  /* ===== STATS GRID ===== */
   .stats-grid{grid-template-columns:1fr 1fr!important;}
   .stat-val{font-size:1.35rem!important;}
-
-  /* ===== CARDS ===== */
   .card-header{flex-wrap:wrap!important;gap:.4rem!important;}
   .card-body{padding:.9rem!important;}
-
-  /* ===== TABLES – horizontal scroll ===== */
   .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;}
-
-  /* ===== FORMS ===== */
   .form-row{grid-template-columns:1fr!important;}
-
-  /* ===== SETTINGS 2-col grid ===== */
-  #content>div[style*="grid-template-columns"]{
-    display:flex!important;
-    flex-direction:column!important;
-    gap:.9rem!important;
-    max-width:100%!important;
-  }
-
-  /* ===== MODALS – slide from bottom ===== */
+  #content>div[style*="grid-template-columns"]{display:flex!important;flex-direction:column!important;gap:.9rem!important;max-width:100%!important;}
   .modal-overlay{align-items:flex-end!important;padding:0!important;}
-  .modal{
-    border-radius:16px 16px 0 0!important;
-    width:100%!important;
-    max-height:88vh!important;
-  }
-
-  /* ===== ACTIONS ===== */
+  .modal{border-radius:16px 16px 0 0!important;width:100%!important;max-height:88vh!important;}
   .actions{flex-wrap:wrap!important;}
   .search-input{min-width:0!important;width:100%!important;}
 }
@@ -259,7 +211,7 @@ tr:hover td{background:#fafafa;}
   <div class="modal">
     <div class="modal-head">
       <h2 id="productModalTitle">Add Product</h2>
-      <button class="modal-close" onclick="closeModal('productModal')">X</button>
+      <button class="modal-close" onclick="closeModal('productModal')">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="pEditId">
@@ -292,7 +244,6 @@ tr:hover td{background:#fafafa;}
           <label style="margin:0">Variants (sizes / units)</label>
           <button class="btn btn-green" style="font-size:.75rem;padding:.35rem .8rem" onclick="addVariant()">+ Add Variant</button>
         </div>
-        <div style="font-size:.72rem;color:var(--text3);margin-bottom:8px">Each variant can have its own image, MRP, stock status, and bulk pricing tiers.</div>
         <div id="variantEditor"></div>
       </div>
     </div>
@@ -308,7 +259,7 @@ tr:hover td{background:#fafafa;}
   <div class="modal">
     <div class="modal-head">
       <h2 id="catModalTitle">Add Category</h2>
-      <button class="modal-close" onclick="closeModal('categoryModal')">X</button>
+      <button class="modal-close" onclick="closeModal('categoryModal')">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="cEditId">
@@ -336,7 +287,7 @@ tr:hover td{background:#fafafa;}
   <div class="modal">
     <div class="modal-head">
       <h2 id="bannerModalTitle">Add Banner</h2>
-      <button class="modal-close" onclick="closeModal('bannerModal')">X</button>
+      <button class="modal-close" onclick="closeModal('bannerModal')">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="bEditId">
@@ -435,36 +386,14 @@ async function loadAll() {
 
 const ah = () => ({Authorization:'Bearer '+token,'Content-Type':'application/json'});
 
-function goTo(page) 
-{
+const PAGE_NAMES = ['dashboard','customers','orders','milk','udhar','products','categories','banners','settings'];
+
+function goTo(page) {
   currentPage = page;
-  const pages = [
-  'dashboard',
-  'customers',
-  'orders',
-  'milk',
-  'udhar',
-  'products',
-  'categories',
-  'banners',
-  'settings'
-];
-  document.querySelectorAll('.nav-link').forEach((l,i) => l.classList.toggle('active', pages[i]===page));
-  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Ledger',products:'Products',categories:'Categories',banners:'Banners',settings:'Settings'};
+  document.querySelectorAll('.nav-link').forEach((l,i) => l.classList.toggle('active', PAGE_NAMES[i]===page));
+  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Credit',products:'Products',categories:'Categories',banners:'Banners',settings:'Settings'};
   document.getElementById('pageTitle').textContent = titles[page]||page;
-  const fns = {
-  dashboard: renderDashboard,
-  customers: renderAccounts,
-  orders: renderOrders,
-  milk: renderMilk,
-  udhar: renderUdharPage,
-  products: renderProducts,
-  categories: renderCategories,
-  banners: renderBanners,
-  settings: renderSettings,
-  // legacy alias
-  accounts: renderAccounts,
-};
+  const fns = {dashboard:renderDashboard,customers:renderCustomers,orders:renderOrders,milk:renderMilk,udhar:renderUdhar,products:renderProducts,categories:renderCategories,banners:renderBanners,settings:renderSettings};
   if (fns[page]) {
     const r = fns[page]();
     if (r && r.then) r.then(() => wrapTables()); else setTimeout(wrapTables, 80);
@@ -481,184 +410,1016 @@ function wrapTables() {
   });
 }
 
+// ═══════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════
 async function renderDashboard() {
-  document.getElementById('content').innerHTML = `<div class="empty-state"><div class="ei">⏳</div><p>Loading dashboard...</p></div>`;
   try {
-    const r = await fetch('/api/admin/dashboard', { headers: ah() });
-    const d = await r.json();
+    const [ordersR, custR] = await Promise.all([
+      fetch('/api/admin/orders?status=pending',{headers:ah()}),
+      fetch('/api/admin/customers',{headers:ah()}),
+    ]);
+    const pendingOrders = ordersR.ok ? await ordersR.json() : [];
+    const customers = custR.ok ? await custR.json() : [];
+    const milkCount = customers.filter(c=>c.milkSubscription).length;
 
-    const orderStatusColor = { pending:'badge-yellow', confirmed:'badge-blue', delivered:'badge-green', cancelled:'badge-red' };
-
-    document.getElementById('content').innerHTML = `
-      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
-        <div class="stat-card">
-          <div class="stat-val" style="color:var(--green)">₹${(d.revenueToday||0).toFixed(0)}</div>
-          <div class="stat-lbl">Revenue Today</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-val" style="color:var(--yellow)">${d.pendingOrders||0}</div>
-          <div class="stat-lbl">Pending Orders</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-val" style="color:var(--blue)">${d.milkDeliveredToday||0} / ${d.milkActiveSubs||0}</div>
-          <div class="stat-lbl">Milk Marked Today</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-val" style="color:var(--red)">₹${(d.udharOutstanding||0).toFixed(0)}</div>
-          <div class="stat-lbl">Udhar Outstanding</div>
-        </div>
-      </div>
-      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
-        <div class="stat-card">
-          <div class="stat-val">${d.totalCustomers||0}</div>
-          <div class="stat-lbl">Total Customers</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-val">${d.ordersToday||0}</div>
-          <div class="stat-lbl">Orders Today</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-val" style="color:var(--green)">₹${(d.milkMonthRevenue||0).toFixed(0)}</div>
-          <div class="stat-lbl">Milk Revenue (Month)</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-val">${d.totalProducts||0}</div>
-          <div class="stat-lbl">Products Listed</div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
-        <div class="card">
-          <div class="card-header"><h2>⚡ Quick Actions</h2></div>
-          <div class="card-body" style="display:flex;flex-direction:column;gap:.6rem">
-            <button class="btn btn-green" style="justify-content:center" onclick="goTo('orders')">📦 View All Orders ${d.pendingOrders>0?`<span style='background:rgba(255,255,255,.3);border-radius:20px;padding:1px 8px;margin-left:4px'>${d.pendingOrders} pending</span>`:''}</button>
-            <button class="btn btn-blue" style="justify-content:center" onclick="goTo('customers');setTimeout(openAddCustomerModal,120)">👤 Add Customer</button>
-            <button class="btn btn-gray" style="justify-content:center" onclick="goTo('milk')">🥛 Mark Milk Deliveries</button>
-            <a href="/" target="_blank"><button class="btn btn-gray" style="width:100%;justify-content:center">🛒 View Store</button></a>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header"><h2>📦 Recent Orders</h2><button class="btn btn-gray" style="font-size:.78rem" onclick="goTo('orders')">See all</button></div>
-          ${!(d.recentOrders||[]).length ? `<div class="empty-state" style="padding:1.5rem"><div class="ei">📦</div><p>No orders yet.</p></div>` : `
-          <div style="max-height:320px;overflow-y:auto">
-            ${d.recentOrders.map(o => {
-              const time = new Date(o.createdAt||Date.now()).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-              const sc = orderStatusColor[o.status] || 'badge-yellow';
-              return `<div style="padding:.75rem 1.2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.5rem">
-                <div>
-                  <div style="font-weight:700;font-size:.88rem">Order #${o.id} · ${o.customerName||'Guest'}</div>
-                  <div style="font-size:.74rem;color:var(--text2)">${time} · ${o.block||''} ${o.villa||''}</div>
-                </div>
-                <div style="text-align:right;flex-shrink:0">
-                  <div style="font-weight:800;color:var(--green)">₹${o.total}</div>
-                  <span class="badge ${sc}">${o.status||'new'}</span>
-                </div>
-              </div>`;
-            }).join('')}
-          </div>`}
-        </div>
-      </div>`;
-  } catch(e) {
-    // fallback if dashboard API fails
     document.getElementById('content').innerHTML = `
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-val">${allProducts.length}</div><div class="stat-lbl">Total Products</div></div>
-        <div class="stat-card"><div class="stat-val">${allCategories.length}</div><div class="stat-lbl">Categories</div></div>
-        <div class="stat-card"><div class="stat-val">${allBanners.length}</div><div class="stat-lbl">Banners</div></div>
+        <div class="stat-card"><div class="stat-val">${customers.length}</div><div class="stat-lbl">Total Customers</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--yellow)">${pendingOrders.length}</div><div class="stat-lbl">Pending Orders</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${milkCount}</div><div class="stat-lbl">Milk Subscribers</div></div>
+        <div class="stat-card"><div class="stat-val">${allProducts.length}</div><div class="stat-lbl">Products</div></div>
       </div>
-      <div class="card"><div class="card-body" style="display:flex;gap:.8rem;flex-wrap:wrap">
-        <button class="btn btn-green" onclick="goTo('products');setTimeout(openProductModal,100)">+ Add Product</button>
-        <button class="btn btn-blue" onclick="goTo('categories');setTimeout(openCatModal,100)">+ Add Category</button>
-        <a href="/" target="_blank"><button class="btn btn-gray">View Store</button></a>
-      </div></div>`;
-  }
+      <div class="card">
+        <div class="card-header"><h2>⚡ Quick Actions</h2></div>
+        <div class="card-body" style="display:flex;gap:.8rem;flex-wrap:wrap">
+          <button class="btn btn-green" onclick="goTo('customers');setTimeout(openAddCustomerModal,100)">+ Add Customer</button>
+          <button class="btn btn-blue" onclick="goTo('orders')">View Orders</button>
+          <button class="btn btn-gray" onclick="goTo('milk')">🥛 Milk Delivery</button>
+          <button class="btn btn-yellow" onclick="goTo('udhar')">📒 Udhar Summary</button>
+          <a href="/" target="_blank"><button class="btn btn-gray">View Store</button></a>
+        </div>
+      </div>
+      ${pendingOrders.length > 0 ? `
+      <div class="card">
+        <div class="card-header"><h2>📦 Pending Orders (${pendingOrders.length})</h2><button class="btn btn-blue" onclick="goTo('orders')">View All</button></div>
+        <table>
+          <thead><tr><th>#</th><th>Customer</th><th>Items</th><th>Total</th><th>Action</th></tr></thead>
+          <tbody>${pendingOrders.slice(0,5).map(o=>`<tr>
+            <td>#${o.id}</td>
+            <td><div style="font-weight:600">${o.customerName}</div><div style="font-size:.75rem;color:var(--text2)">${o.phone}</div></td>
+            <td style="font-size:.82rem">${(o.items||[]).slice(0,2).map(i=>i.name+'×'+i.qty).join(', ')}${(o.items||[]).length>2?'...':''}</td>
+            <td style="font-weight:700;color:var(--green)">₹${o.total}</td>
+            <td><button class="btn btn-green" style="font-size:.75rem" onclick="quickUpdateOrder(${o.id},'delivered')">✓ Delivered</button></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>` : ''}`;
+  } catch(e) { toast('Dashboard load error'); }
 }
 
 // ═══════════════════════════════════════
-// ORDERS PAGE — FULL VERSION
+// CUSTOMERS — Main control panel
 // ═══════════════════════════════════════
-let ordersFilter = 'all';
+let allCustomers = [], udharSummaries = [], accountSelectedId = null;
+
+async function renderCustomers() {
+  await loadCustomersData();
+  renderCustomersPage();
+}
+
+async function loadCustomersData() {
+  const [cR, sR] = await Promise.all([
+    fetch('/api/admin/customers',{headers:ah()}),
+    fetch('/api/admin/udhar-summary',{headers:ah()}),
+  ]);
+  allCustomers = cR.ok ? await cR.json() : [];
+  udharSummaries = sR.ok ? await sR.json() : [];
+}
+
+function renderCustomersPage() {
+  const udharMap = {};
+  udharSummaries.forEach(s => { udharMap[s.customer.id] = s; });
+  const totalOut = udharSummaries.reduce((s,x)=>s+(x.balance>0?x.balance:0),0);
+  const milkCount = allCustomers.filter(c=>c.milkSubscription).length;
+
+  document.getElementById('content').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val">${allCustomers.length}</div><div class="stat-lbl">All Customers</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)">₹${totalOut.toFixed(0)}</div><div class="stat-lbl">Total Outstanding</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${milkCount}</div><div class="stat-lbl">Milk Subscribers</div></div>
+      <div class="stat-card"><div class="stat-val">${udharSummaries.length}</div><div class="stat-lbl">Have Udhar</div></div>
+    </div>
+    <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+      <input type="text" id="custSearch" placeholder="🔍 Search name or phone..." class="search-input" style="flex:1;min-width:180px" oninput="filterCustTable(this.value)">
+      <button class="btn btn-green" onclick="openAddCustomerModal()">+ Add Customer</button>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>👥 All Customers (${allCustomers.length})</h2></div>
+      <div class="table-scroll"><table id="custTable">
+        <thead><tr><th>Customer</th><th>Address</th><th>Milk</th><th>Balance</th><th>Actions</th></tr></thead>
+        <tbody>${allCustomers.map(c => {
+          const s = udharMap[c.customerId] || {totalUdhar:0,totalPaid:0,balance:0};
+          const bal = c.balance || s.balance || 0;
+          const hasMilk = !!c.milkSubscription;
+          const milkBadge = hasMilk
+            ? `<span class="badge ${c.milkSubscription.status==='active'?'badge-green':'badge-yellow'}">${c.milkSubscription.status==='active'?'🥛 Active':'⏸ Paused'}</span>`
+            : '<span style="color:var(--text3);font-size:.75rem">—</span>';
+          const balColor = bal>0?'var(--red)':bal<0?'var(--blue)':'var(--green)';
+          const balText = bal>0?'₹'+bal.toFixed(0)+' due':bal<0?'Adv ₹'+Math.abs(bal).toFixed(0):'Settled';
+          const n = c.name.replace(/'/g,"\\'");
+          return `<tr onclick="openCustomerProfile(${c.customerId})" style="cursor:pointer">
+            <td>
+              <div style="font-weight:700">${c.name}</div>
+              <div style="font-size:.73rem;color:var(--text2)">${c.phone}</div>
+            </td>
+            <td style="font-size:.82rem;color:var(--text2)">${c.address||'—'}</td>
+            <td>${milkBadge}</td>
+            <td style="font-weight:700;color:${balColor}">${balText}</td>
+            <td onclick="event.stopPropagation()"><div class="actions">
+              <button class="btn btn-blue" onclick="openCustomerProfile(${c.customerId})">👤 Open</button>
+              <button class="btn btn-green" onclick="quickAddCredit(${c.customerId},'${n}')">+ Udhar</button>
+              ${bal>0?`<button class="btn btn-gray" onclick="quickPayment(${c.customerId},'${n}',${bal.toFixed(0)})">Paid</button>`:''}
+            </div></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>
+    <div id="customerProfile"></div>`;
+}
+
+function filterCustTable(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#custTable tbody tr').forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ── CUSTOMER PROFILE ─────────────────────────────────────────────────────────
+let _profileData = null;
+
+async function openCustomerProfile(customerId) {
+  accountSelectedId = customerId;
+  const profDiv = document.getElementById('customerProfile');
+  if (!profDiv) return goTo('customers');
+  profDiv.innerHTML = `<div class="card" style="margin-top:1.2rem"><div class="card-body" style="text-align:center;padding:2rem;color:var(--text2)">Loading profile...</div></div>`;
+  profDiv.scrollIntoView({behavior:'smooth'});
+
+  const r = await fetch('/api/admin/customers/'+customerId, {headers:ah()});
+  if (!r.ok) { toast('Could not load customer'); return; }
+  _profileData = await r.json();
+  renderProfileUI(customerId, 'ledger');
+}
+
+function renderProfileUI(customerId, activeTab) {
+  const data = _profileData;
+  if (!data) return;
+  const c = data.customer;
+  const sub = data.milkSubscription;
+  const profDiv = document.getElementById('customerProfile');
+  if (!profDiv) return;
+
+  const bal = data.balance || 0;
+  const totalL = (data.milkLogs||[]).reduce((s,l)=>s+l.qty,0);
+  const milkAmt = (data.milkLogs||[]).reduce((s,l)=>s+l.qty*(l.price||60),0);
+  const n = c.name.replace(/'/g,"\\'");
+
+  profDiv.innerHTML = `
+    <div class="card" style="margin-top:1.2rem">
+      <div class="card-header" style="background:linear-gradient(135deg,#f0fdf4,#fff)">
+        <div>
+          <div style="font-size:1.05rem;font-weight:800">${c.name}</div>
+          <div style="font-size:.8rem;color:var(--text2)">${c.phone}${c.address?' · '+c.address:''}</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-green" onclick="quickAddCredit(${customerId},'${n}')">+ Udhar</button>
+          <button class="btn btn-blue" onclick="quickPayment(${customerId},'${n}',${bal.toFixed(0)})">💰 Payment</button>
+          <button class="btn btn-gray" onclick="document.getElementById('customerProfile').innerHTML=''">✕ Close</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;padding:1rem 1.4rem;background:var(--bg);border-bottom:1px solid var(--border)">
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem;color:${bal>0?'var(--red)':'var(--green)'}">${bal>0?'₹'+bal.toFixed(0)+' due':bal<0?'Adv ₹'+Math.abs(bal).toFixed(0):'Settled'}</div><div class="stat-lbl">Balance</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">${(data.orders||[]).length}</div><div class="stat-lbl">Orders</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">${totalL.toFixed(1)}L</div><div class="stat-lbl">Milk (Month)</div></div>
+        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">₹${milkAmt.toFixed(0)}</div><div class="stat-lbl">Milk Bill</div></div>
+      </div>
+      <div class="profile-tabs">
+        ${[['ledger','📒 Udhar Ledger'],['orders','🛒 Orders'],['milk','🥛 Milk'],['info','👤 Profile']].map(([tab,label])=>`
+          <button class="ptab-btn ${tab===activeTab?'active':''}" onclick="switchProfileTab('${tab}',${customerId})">${label}</button>`).join('')}
+      </div>
+      <div id="profileTabContent">
+        ${activeTab==='ledger'?renderLedgerTab(data,customerId):''}
+        ${activeTab==='orders'?renderOrdersTab(data,customerId):''}
+        ${activeTab==='milk'?renderMilkTab(data,customerId):''}
+        ${activeTab==='info'?renderInfoTab(data,customerId):''}
+      </div>
+    </div>`;
+  profDiv.scrollIntoView({behavior:'smooth'});
+}
+
+function switchProfileTab(tab, customerId) {
+  document.querySelectorAll('.ptab-btn').forEach(b => {
+    const t = b.getAttribute('onclick').match(/'(\w+)'/)[1];
+    b.classList.toggle('active', t===tab);
+  });
+  const content = document.getElementById('profileTabContent');
+  if (!content) return;
+  if (tab==='ledger') content.innerHTML = renderLedgerTab(_profileData, customerId);
+  else if (tab==='orders') content.innerHTML = renderOrdersTab(_profileData, customerId);
+  else if (tab==='milk') content.innerHTML = renderMilkTab(_profileData, customerId);
+  else if (tab==='info') content.innerHTML = renderInfoTab(_profileData, customerId);
+}
+
+function renderLedgerTab(data, customerId) {
+  const ledger = [
+    ...(data.ledgerEntries||[]).map(e=>({...e,_src:'ledger'})),
+    ...(data.udharEntries||[]).map(e=>({...e,_t:'credit',_src:'old',_d:e.date})),
+    ...(data.udharPayments||[]).map(p=>({...p,_t:'payment',_src:'old',_d:p.date||p.paidAt?.slice(0,10)||''}))
+  ].sort((a,b)=>(b.date||b._d||'').localeCompare(a.date||a._d||''));
+
+  const rows = ledger.length===0
+    ? `<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:2rem">No transactions yet</td></tr>`
+    : ledger.map(entry => {
+        if (entry._src === 'ledger') {
+          const isCredit = entry.type === 'credit';
+          return `<tr>
+            <td style="white-space:nowrap">${fmtDate(entry.date)}</td>
+            <td>${isCredit?'<span class="badge badge-red">Udhar</span>':'<span class="badge badge-green">Payment</span>'}</td>
+            <td>${entry.note||'—'}</td>
+            <td style="font-weight:700;color:${isCredit?'var(--red)':'var(--green)'}">${isCredit?'+':'−'}₹${(entry.amount||0).toFixed(0)}</td>
+            <td><div class="actions">
+              <button class="btn btn-red" style="font-size:.7rem;padding:.22rem .55rem" onclick="delLedgerEntry(${entry.id},${customerId})">Del</button>
+            </div></td>
+          </tr>`;
+        } else if (entry._t === 'credit') {
+          const desc = (entry.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')||entry.note||'Purchase';
+          return `<tr>
+            <td style="white-space:nowrap">${fmtDate(entry._d)}</td>
+            <td><span class="badge badge-red">Udhar</span></td>
+            <td>${desc}</td>
+            <td style="font-weight:700;color:var(--red)">+₹${(entry.amount||0).toFixed(0)}</td>
+            <td><div class="actions">
+              <button class="btn btn-blue" style="font-size:.7rem;padding:.22rem .55rem" onclick="editUdharEntry(${entry.id},${customerId})">Edit</button>
+              <button class="btn btn-red" style="font-size:.7rem;padding:.22rem .55rem" onclick="delUdharEntry(${entry.id},${customerId})">Del</button>
+            </div></td>
+          </tr>`;
+        } else {
+          return `<tr style="background:#f0fdf4">
+            <td style="white-space:nowrap">${fmtDate(entry._d)}</td>
+            <td><span class="badge badge-green">Payment</span></td>
+            <td>${entry.note||entry.method||'Cash'}</td>
+            <td style="font-weight:700;color:var(--green)">−₹${(entry.amount||0).toFixed(0)}</td>
+            <td><button class="btn btn-red" style="font-size:.7rem;padding:.22rem .55rem" onclick="delUdharPayment(${entry.id},${customerId})">Del</button></td>
+          </tr>`;
+        }
+      }).join('');
+
+  return `
+    <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border);background:#fffbeb">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.7rem">+ Add Udhar / Credit Entry</div>
+      <div id="udharItemsContainer">
+        <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem">
+          <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.84rem;font-family:inherit">
+          <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
+          <input type="number" placeholder="₹" class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
+          <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:.4rem .6rem;cursor:pointer">✕</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.4rem">
+        <button class="btn btn-gray" style="font-size:.78rem" onclick="addUdharItemRow()">+ More items</button>
+        <input type="date" id="ud_date" value="${new Date().toISOString().slice(0,10)}" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.82rem;font-family:inherit">
+        <input type="text" id="ud_note" placeholder="Note (optional)" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.82rem;font-family:inherit;flex:1;min-width:100px">
+        <input type="number" id="ud_manual_total" placeholder="Or total ₹" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.82rem;font-family:inherit;width:120px">
+        <button class="btn btn-red" style="font-weight:700" onclick="saveUdharEntry(${customerId})">Save Udhar</button>
+      </div>
+    </div>
+    <div style="padding:1rem 1.4rem">
+      <div style="font-size:.82rem;font-weight:700;margin-bottom:.6rem">📒 Transaction Ledger</div>
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderOrdersTab(data, customerId) {
+  const orders = (data.orders||[]).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  if (!orders.length) return `<div class="empty-state"><div class="ei">🛒</div><p>No orders yet.</p></div>`;
+  return `<div style="padding:1rem 1.4rem">
+    <div style="font-size:.82rem;font-weight:700;margin-bottom:.8rem">🛒 Orders (${orders.length})</div>
+    ${orders.map(o=>`
+      <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.7rem">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:.5rem">
+          <div>
+            <div style="font-weight:700">Order #${o.id}</div>
+            <div style="font-size:.75rem;color:var(--text2)">${fmtDateTime(o.createdAt)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:800;color:var(--green)">₹${o.total}</div>
+            <span class="badge ${o.status==='delivered'?'badge-green':o.status==='cancelled'?'badge-red':'badge-yellow'}">${o.status}</span>
+          </div>
+        </div>
+        <div style="font-size:.82rem;color:var(--text2);margin-bottom:.6rem">${(o.items||[]).map(i=>i.name+' ×'+i.qty).join(', ')}</div>
+        <div class="actions">
+          <button class="btn btn-green" style="font-size:.75rem" onclick="quickUpdateOrder(${o.id},'delivered')">✓ Delivered</button>
+          <button class="btn btn-blue" style="font-size:.75rem" onclick="quickUpdateOrder(${o.id},'accepted')">Accept</button>
+          <button class="btn btn-yellow" style="font-size:.75rem" onclick="convertOrderToUdhar(${o.id},${customerId})" ${o.addedToUdhar?'disabled':''}>
+            ${o.addedToUdhar?'✓ In Udhar':'→ Add to Udhar'}
+          </button>
+          <button class="btn btn-gray" style="font-size:.75rem" onclick="markOrderPaid(${o.id},${customerId})">Mark Paid</button>
+          <button class="btn btn-red" style="font-size:.75rem" onclick="deleteOrderFromProfile(${o.id},${customerId})">Delete</button>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function renderMilkTab(data, customerId) {
+  const sub = data.milkSubscription;
+  const logs = [...(data.milkLogs||[])].sort((a,b)=>b.date.localeCompare(a.date));
+  const totalL = logs.reduce((s,l)=>s+l.qty,0);
+  const milkAmt = logs.reduce((s,l)=>s+l.qty*(l.price||60),0);
+
+  return `
+    <div style="padding:1rem 1.4rem">
+      ${sub ? `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <div>
+            <div style="font-weight:700">🥛 Milk Subscription</div>
+            <div style="font-size:.78rem;color:var(--text2)">Started ${fmtDate(sub.startDate)}</div>
+          </div>
+          <div class="actions">
+            <span class="badge ${sub.status==='active'?'badge-green':'badge-yellow'}">${sub.status}</span>
+            ${sub.status==='active'
+              ?`<button class="btn btn-gray" style="font-size:.75rem" onclick="pauseMilkSub(${customerId})">Pause</button>`
+              :`<button class="btn btn-green" style="font-size:.75rem" onclick="resumeMilkSub(${customerId})">Resume</button>`}
+            <button class="btn btn-blue" style="font-size:.75rem" onclick="editMilkSub(${customerId},${sub.defaultQty},${sub.pricePerLitre||60})">Edit</button>
+            <button class="btn btn-red" style="font-size:.75rem" onclick="deleteMilkSub(${customerId})">Remove</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-bottom:1rem">
+          <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">${sub.defaultQty}L</div><div class="stat-lbl">Daily Qty</div></div>
+          <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">${totalL.toFixed(1)}L</div><div class="stat-lbl">This Month</div></div>
+          <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">₹${milkAmt.toFixed(0)}</div><div class="stat-lbl">Milk Bill</div></div>
+        </div>
+        <div style="margin-bottom:.7rem;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:.82rem;font-weight:700">Delivery Log</div>
+          <button class="btn btn-green" style="font-size:.75rem" onclick="editMilkLogFromProfile(${customerId},'${new Date().toISOString().slice(0,10)}',${sub.defaultQty||0.5})">+ Mark Today</button>
+        </div>
+        <table>
+          <thead><tr><th>Date</th><th>Qty</th><th>Amount</th><th></th></tr></thead>
+          <tbody>${logs.slice(0,30).map(l=>`<tr>
+            <td>${fmtDate(l.date)}</td>
+            <td>${l.qty}L</td>
+            <td>₹${(l.qty*(l.price||60)).toFixed(0)}</td>
+            <td><button class="btn btn-gray" style="font-size:.7rem;padding:.2rem .5rem" onclick="editMilkLogFromProfile(${customerId},'${l.date}',${l.qty})">Edit</button></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      ` : `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0">
+          <div style="color:var(--text2);font-size:.88rem">No milk subscription yet</div>
+          <button class="btn btn-blue" onclick="addMilkSubForCustomer(${customerId})">+ Add Milk Subscription</button>
+        </div>`}
+    </div>`;
+}
+
+function renderInfoTab(data, customerId) {
+  const c = data.customer;
+  return `
+    <div style="padding:1.2rem 1.4rem">
+      <div style="font-size:.82rem;font-weight:700;margin-bottom:.8rem">👤 Customer Info</div>
+      <div class="form-row">
+        <div class="form-group" style="margin:0"><label>Full Name</label><input type="text" id="ei_name" value="${c.name}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+        <div class="form-group" style="margin:0"><label>Phone</label><input type="text" id="ei_phone" value="${c.phone}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+      </div>
+      <div class="form-group" style="margin-top:.7rem"><label>Address</label><input type="text" id="ei_address" value="${c.address||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+      <div class="form-row">
+        <div class="form-group" style="margin:0"><label>Block</label><input type="text" id="ei_block" value="${c.block||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+        <div class="form-group" style="margin:0"><label>Villa / Flat</label><input type="text" id="ei_villa" value="${c.villa||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+      </div>
+      <div class="form-group" style="margin-top:.7rem"><label>Notes</label><textarea id="ei_notes" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;resize:vertical">${c.notes||''}</textarea></div>
+      <div class="form-group"><label>New PIN (leave blank to keep)</label><input type="number" id="ei_pin" placeholder="4-digit PIN" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="btn btn-green" onclick="saveCustomerInfo(${customerId})">💾 Save Info</button>
+        <button class="btn btn-red" onclick="deleteCustomer(${customerId})">🗑️ Delete Customer</button>
+      </div>
+    </div>`;
+}
+
+// ── CUSTOMER CRUD ─────────────────────────────────────────────────────────────
+function openAddCustomerModal() {
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="addCustModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(500px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.25)">
+        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
+          <div><div style="font-weight:700;font-size:1rem">Add New Customer</div><div style="font-size:.74rem;color:var(--text2)">Customer only. Milk added separately by admin.</div></div>
+          <button onclick="document.getElementById('addCustModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
+        </div>
+        <div style="padding:1.4rem">
+          <div class="form-row">
+            <div class="form-group" style="margin:0"><label>Full Name *</label><input type="text" id="nc_name" placeholder="e.g. Raj Kumar" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            <div class="form-group" style="margin:0"><label>Phone *</label><input type="tel" id="nc_phone" placeholder="10-digit" maxlength="10" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          </div>
+          <div class="form-group" style="margin-top:.7rem"><label>Address</label><input type="text" id="nc_address" placeholder="Villa / Block" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          <div class="form-row" style="margin-top:.7rem">
+            <div class="form-group" style="margin:0"><label>Block</label><input type="text" id="nc_block" placeholder="A / B / C..." style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            <div class="form-group" style="margin:0"><label>Villa / Flat</label><input type="text" id="nc_villa" placeholder="14" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          </div>
+          <div class="form-group" style="margin-top:.7rem"><label>4-digit PIN (customer portal login)</label><input type="number" id="nc_pin" placeholder="e.g. 1234" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:.8rem 0">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
+            <input type="checkbox" id="nc_addMilk" onchange="toggleMilkSection()" style="width:16px;height:16px;accent-color:var(--green)">
+            <label for="nc_addMilk" style="font-size:.88rem;font-weight:600;cursor:pointer">🥛 Also add milk subscription</label>
+          </div>
+          <div id="nc_milkSection" style="display:none;background:var(--bg);border-radius:10px;padding:1rem;border:1px solid var(--border)">
+            <div class="form-row">
+              <div class="form-group" style="margin:0"><label>Daily Qty (L)</label><input type="number" id="nc_milkQty" value="0.5" min="0.5" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+              <div class="form-group" style="margin:0"><label>Price per Litre (₹)</label><input type="number" id="nc_milkPrice" value="60" min="1" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            </div>
+            <div class="form-group" style="margin-top:.7rem;margin-bottom:0"><label>Start Date</label><input type="date" id="nc_milkStart" value="${new Date().toISOString().slice(0,10)}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          </div>
+        </div>
+        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-gray" onclick="document.getElementById('addCustModal').remove()">Cancel</button>
+          <button class="btn btn-green" onclick="saveNewCustomer()">Add Customer</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function toggleMilkSection() {
+  document.getElementById('nc_milkSection').style.display = document.getElementById('nc_addMilk').checked ? 'block' : 'none';
+}
+
+async function saveNewCustomer() {
+  const name = document.getElementById('nc_name')?.value.trim();
+  const phone = document.getElementById('nc_phone')?.value.trim();
+  if (!name) return toast('Name is required');
+  if (!phone || phone.length < 10) return toast('Valid 10-digit phone required');
+  const body = {name, phone, address: document.getElementById('nc_address')?.value.trim()||'', block: document.getElementById('nc_block')?.value.trim()||'', villa: document.getElementById('nc_villa')?.value.trim()||'', pin: document.getElementById('nc_pin')?.value.trim()||null};
+  const r = await fetch('/api/admin/customers',{method:'POST',headers:ah(),body:JSON.stringify(body)});
+  const d = await r.json();
+  if (!r.ok) return toast(d.error||'Failed to add customer');
+  const cid = d.customer.customerId;
+  if (document.getElementById('nc_addMilk')?.checked) {
+    await fetch('/api/admin/milk/subscriptions',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,defaultQty:parseFloat(document.getElementById('nc_milkQty')?.value)||0.5,pricePerLitre:parseFloat(document.getElementById('nc_milkPrice')?.value)||60,startDate:document.getElementById('nc_milkStart')?.value||new Date().toISOString().slice(0,10)})});
+  }
+  document.getElementById('addCustModal')?.remove();
+  toast('Customer added!');
+  await loadCustomersData();
+  renderCustomersPage();
+}
+
+async function saveCustomerInfo(customerId) {
+  const body = {name:document.getElementById('ei_name')?.value.trim(),phone:document.getElementById('ei_phone')?.value.trim(),address:document.getElementById('ei_address')?.value.trim(),block:document.getElementById('ei_block')?.value.trim(),villa:document.getElementById('ei_villa')?.value.trim(),notes:document.getElementById('ei_notes')?.value.trim()};
+  const pin = document.getElementById('ei_pin')?.value.trim();
+  if (pin) body.pin = pin;
+  const r = await fetch('/api/admin/customers/'+customerId,{method:'PUT',headers:ah(),body:JSON.stringify(body)});
+  if (!r.ok) return toast('Failed to save');
+  toast('Customer info saved!');
+  await refreshProfile(customerId);
+}
+
+async function deleteCustomer(customerId) {
+  if (!confirm('Soft delete this customer? Their data will be preserved but account hidden.')) return;
+  await fetch('/api/admin/customers/'+customerId,{method:'DELETE',headers:ah()});
+  toast('Customer deleted (soft)');
+  document.getElementById('customerProfile').innerHTML = '';
+  await loadCustomersData();
+  renderCustomersPage();
+}
+
+async function refreshProfile(customerId) {
+  const r = await fetch('/api/admin/customers/'+customerId,{headers:ah()});
+  if (r.ok) { _profileData = await r.json(); renderProfileUI(customerId,'ledger'); }
+}
+
+// ── LEDGER ACTIONS ────────────────────────────────────────────────────────────
+async function delLedgerEntry(id, customerId) {
+  if (!confirm('Delete this ledger entry?')) return;
+  await fetch('/api/admin/ledger/'+id,{method:'DELETE',headers:ah()});
+  toast('Entry deleted');
+  await refreshProfile(customerId);
+}
+
+async function delUdharEntry(id, customerId) {
+  if (!confirm('Delete this udhar entry?')) return;
+  await fetch('/api/admin/udhar/'+id,{method:'DELETE',headers:ah()});
+  toast('Entry deleted');
+  await refreshProfile(customerId);
+}
+
+async function editUdharEntry(id, customerId) {
+  const e = (_profileData.udharEntries||[]).find(x=>x.id===id);
+  if (!e) return;
+  const newAmt = prompt('Edit amount (₹):',e.amount);
+  if (newAmt===null) return;
+  const newNote = prompt('Note:',e.note||'');
+  await fetch('/api/admin/udhar/'+id,{method:'PUT',headers:ah(),body:JSON.stringify({amount:parseFloat(newAmt)||e.amount,note:newNote||''})});
+  toast('Updated!');
+  await refreshProfile(customerId);
+}
+
+async function delUdharPayment(id, customerId) {
+  if (!confirm('Delete this payment record?')) return;
+  await fetch('/api/admin/udhar-payments/'+id,{method:'DELETE',headers:ah()});
+  toast('Payment deleted');
+  await refreshProfile(customerId);
+}
+
+function addUdharItemRow() {
+  document.getElementById('udharItemsContainer').insertAdjacentHTML('beforeend',`
+    <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem">
+      <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.84rem;font-family:inherit">
+      <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
+      <input type="number" placeholder="₹" class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
+      <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:.4rem .6rem;cursor:pointer">✕</button>
+    </div>`);
+}
+
+async function saveUdharEntry(customerId) {
+  const rows = document.querySelectorAll('.udhar-item-row');
+  const items = []; let total = 0;
+  rows.forEach(row => {
+    const name = row.querySelector('.ui_name')?.value.trim();
+    const qty = parseFloat(row.querySelector('.ui_qty')?.value)||1;
+    const price = parseFloat(row.querySelector('.ui_price')?.value)||0;
+    if (name) { items.push({name,qty,price}); total += qty*price; }
+  });
+  const manual = parseFloat(document.getElementById('ud_manual_total')?.value)||0;
+  const amount = manual || total;
+  if (!amount) return toast('Enter items with prices or a manual total');
+  await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId,type:'credit',amount,note:document.getElementById('ud_note')?.value.trim()||(items.length?items.map(i=>i.name).join(', '):''),date:document.getElementById('ud_date')?.value})});
+  // Also save to legacy udhar for customer portal compat
+  await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId,items,amount,date:document.getElementById('ud_date')?.value,note:document.getElementById('ud_note')?.value.trim()||''})});
+  toast('Udhar ₹'+amount+' saved!');
+  await refreshProfile(customerId);
+}
+
+// ── ORDER ACTIONS FROM PROFILE ────────────────────────────────────────────────
+async function convertOrderToUdhar(orderId, customerId) {
+  const r = await fetch('/api/admin/orders/'+orderId+'/convert-to-udhar',{method:'POST',headers:ah()});
+  const d = await r.json();
+  if (!r.ok) return toast(d.error||'Failed');
+  toast('Order added to udhar!');
+  await refreshProfile(customerId);
+}
+
+async function markOrderPaid(orderId, customerId) {
+  const r = await fetch('/api/admin/orders/'+orderId+'/mark-paid',{method:'POST',headers:ah()});
+  if (!r.ok) return toast('Failed');
+  toast('Order marked as paid!');
+  await refreshProfile(customerId);
+}
+
+async function deleteOrderFromProfile(orderId, customerId) {
+  if (!confirm('Delete this order?')) return;
+  await fetch('/api/admin/orders/'+orderId,{method:'DELETE',headers:ah()});
+  toast('Order deleted');
+  await refreshProfile(customerId);
+}
+
+// ── MILK ACTIONS FROM PROFILE ─────────────────────────────────────────────────
+async function addMilkSubForCustomer(customerId) {
+  const settings = await fetch('/api/admin/settings',{headers:ah()}).then(r=>r.json()).catch(()=>({milkPrice:60}));
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="addMilkSubModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(440px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
+        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-weight:700">🥛 Add Milk Subscription</div>
+          <button onclick="document.getElementById('addMilkSubModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
+        </div>
+        <div style="padding:1.4rem">
+          <div class="form-row">
+            <div class="form-group" style="margin:0"><label>Daily Quantity (L)</label><input type="number" id="ms_qty" value="0.5" min="0.5" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+            <div class="form-group" style="margin:0"><label>Price per Litre (₹)</label><input type="number" id="ms_price" value="${settings.milkPrice||60}" min="1" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          </div>
+          <div class="form-group" style="margin-top:.7rem;margin-bottom:0"><label>Start Date</label><input type="date" id="ms_start" value="${new Date().toISOString().slice(0,10)}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+        </div>
+        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-gray" onclick="document.getElementById('addMilkSubModal').remove()">Cancel</button>
+          <button class="btn btn-green" onclick="saveMilkSubForCustomer(${customerId})">Add Subscription</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function saveMilkSubForCustomer(customerId) {
+  const qty = parseFloat(document.getElementById('ms_qty')?.value)||0.5;
+  const price = parseFloat(document.getElementById('ms_price')?.value)||60;
+  const start = document.getElementById('ms_start')?.value||new Date().toISOString().slice(0,10);
+  const r = await fetch('/api/admin/milk/subscriptions',{method:'POST',headers:ah(),body:JSON.stringify({customerId,defaultQty:qty,pricePerLitre:price,startDate:start})});
+  const d = await r.json();
+  if (!r.ok) return toast(d.error||'Failed');
+  document.getElementById('addMilkSubModal')?.remove();
+  toast('Milk subscription added!');
+  await refreshProfile(customerId);
+}
+
+async function editMilkSub(customerId, currentQty, currentPrice) {
+  const qty = prompt('Daily quantity (litres):',currentQty);
+  if (qty===null) return;
+  const price = prompt('Price per litre (₹):',currentPrice);
+  if (price===null) return;
+  await fetch('/api/admin/milk/subscriptions/'+customerId,{method:'PUT',headers:ah(),body:JSON.stringify({defaultQty:parseFloat(qty)||0.5,pricePerLitre:parseFloat(price)||60})});
+  toast('Subscription updated!');
+  await refreshProfile(customerId);
+}
+
+async function pauseMilkSub(customerId) {
+  await fetch('/api/admin/milk/subscriptions/'+customerId+'/pause',{method:'POST',headers:ah(),body:JSON.stringify({})});
+  toast('Subscription paused');
+  await refreshProfile(customerId);
+}
+
+async function resumeMilkSub(customerId) {
+  await fetch('/api/admin/milk/subscriptions/'+customerId+'/resume',{method:'POST',headers:ah(),body:JSON.stringify({})});
+  toast('Subscription resumed!');
+  await refreshProfile(customerId);
+}
+
+async function deleteMilkSub(customerId) {
+  if (!confirm('Remove milk subscription? Delivery logs will be kept.')) return;
+  await fetch('/api/admin/milk/subscriptions/'+customerId,{method:'DELETE',headers:ah()});
+  toast('Subscription removed');
+  await refreshProfile(customerId);
+}
+
+async function editMilkLogFromProfile(customerId, date, defaultQty) {
+  const newQty = prompt('Litres delivered on '+date+':',defaultQty);
+  if (newQty===null) return;
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(newQty)||0,price:60})});
+  toast('Milk log updated!');
+  await refreshProfile(customerId);
+}
+
+// ── QUICK MODALS ──────────────────────────────────────────────────────────────
+async function quickAddCredit(customerId, name) {
+  const amount = prompt(`Add udhar for ${name} (₹):`);
+  if (!amount || isNaN(amount)) return;
+  const note = prompt('Note / item (optional):','');
+  await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId,type:'credit',amount:parseFloat(amount),note:note||''})});
+  // Legacy compat
+  await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId,items:[],amount:parseFloat(amount),note:note||''})});
+  toast('Udhar ₹'+amount+' added!');
+  if (accountSelectedId===customerId) await refreshProfile(customerId);
+  else { await loadCustomersData(); renderCustomersPage(); }
+}
+
+async function quickPayment(customerId, name, currentBalance) {
+  const amount = prompt(`Record payment for ${name} (₹):`, currentBalance>0?currentBalance:'');
+  if (!amount || isNaN(amount)) return;
+  const method = prompt('Method (cash/UPI/bank):', 'cash');
+  await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId,type:'payment',amount:parseFloat(amount),note:method||'cash'})});
+  // Legacy compat
+  await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId,amount:parseFloat(amount),method:method||'cash'})});
+  toast('Payment ₹'+amount+' recorded!');
+  if (accountSelectedId===customerId) await refreshProfile(customerId);
+  else { await loadCustomersData(); renderCustomersPage(); }
+}
+
+// ═══════════════════════════════════════
+// ORDERS
+// ═══════════════════════════════════════
+let ordersData = [];
 
 async function renderOrders() {
   try {
-    const url = '/api/admin/orders' + (ordersFilter !== 'all' ? '?status='+ordersFilter : '');
-    const r = await fetch(url, { headers: ah() });
-    const orders = await r.json();
+    const r = await fetch('/api/admin/orders',{headers:ah()});
+    ordersData = r.ok ? await r.json() : [];
+    renderOrdersPage();
+  } catch { toast('Failed to load orders'); }
+}
 
-    const statusColors = { pending:'badge-yellow', confirmed:'badge-blue', packed:'badge-blue', delivered:'badge-green', cancelled:'badge-red' };
-    const filterBtns = ['all','pending','confirmed','packed','delivered','cancelled'].map(s =>
-      `<button class="btn ${ordersFilter===s?'btn-green':'btn-gray'}" style="font-size:.78rem;padding:.35rem .8rem" onclick="ordersFilter='${s}';renderOrders()">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`
-    ).join('');
+function renderOrdersPage(filterStatus='') {
+  const filtered = filterStatus ? ordersData.filter(o=>o.status===filterStatus) : ordersData;
+  const statuses = ['pending','accepted','packed','delivered','cancelled'];
+  const counts = {};
+  statuses.forEach(s => { counts[s] = ordersData.filter(o=>o.status===s).length; });
+
+  document.getElementById('content').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val" style="color:var(--yellow)">${counts.pending||0}</div><div class="stat-lbl">Pending</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${counts.accepted||0}</div><div class="stat-lbl">Accepted</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">${counts.delivered||0}</div><div class="stat-lbl">Delivered</div></div>
+      <div class="stat-card"><div class="stat-val">${ordersData.length}</div><div class="stat-lbl">Total Today</div></div>
+    </div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem">
+      <button class="btn ${!filterStatus?'btn-green':'btn-gray'}" onclick="renderOrdersPage('')">All (${ordersData.length})</button>
+      ${statuses.map(s=>`<button class="btn ${filterStatus===s?'btn-green':'btn-gray'}" onclick="renderOrdersPage('${s}')">${s} (${counts[s]||0})</button>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>📦 Orders (${filtered.length})</h2></div>
+      ${filtered.length===0?`<div class="empty-state"><div class="ei">📦</div><p>No orders.</p></div>`:
+      filtered.map(o=>{
+        const time = fmtDateTime(o.createdAt);
+        const statusColors = {pending:'badge-yellow',accepted:'badge-blue',packed:'badge-purple',delivered:'badge-green',cancelled:'badge-red'};
+        return `
+        <div style="border-bottom:1px solid var(--border);padding:1rem 1.2rem">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:.4rem">
+            <div>
+              <div style="font-weight:800">Order #${o.id}</div>
+              <div style="font-size:.75rem;color:var(--text2)">${time}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:800;font-size:1rem;color:var(--green)">₹${o.total}</div>
+              <span class="badge ${statusColors[o.status]||'badge-yellow'}">${o.status||'new'}</span>
+            </div>
+          </div>
+          <div style="font-size:.85rem;margin-bottom:.3rem"><strong>${o.customerName||'Customer'}</strong> · ${o.phone||''}</div>
+          ${o.block||o.villa?`<div style="font-size:.78rem;color:var(--text2);margin-bottom:.5rem">${[o.block,o.villa].filter(Boolean).join(' ')}</div>`:''}
+          <div style="background:var(--bg);border-radius:8px;padding:.6rem .8rem;margin-bottom:.6rem">
+            ${(o.items||[]).map(i=>`<div style="display:flex;justify-content:space-between;font-size:.83rem;padding:2px 0"><span>${i.name} × ${i.qty}</span><span>₹${i.price*i.qty}</span></div>`).join('')}
+          </div>
+          <div class="actions">
+            <button class="btn btn-blue" onclick="quickUpdateOrder(${o.id},'accepted')">Accept</button>
+            <button class="btn btn-gray" onclick="quickUpdateOrder(${o.id},'packed')">Packed</button>
+            <button class="btn btn-green" onclick="quickUpdateOrder(${o.id},'delivered')">✓ Delivered</button>
+            <button class="btn btn-yellow" onclick="convertOrderToUdharFromList(${o.id})" ${o.addedToUdhar?'disabled title=\"Already in Udhar\"':''}>
+              ${o.addedToUdhar?'✓ Udhar':'→ Udhar'}
+            </button>
+            <button class="btn btn-red" onclick="quickUpdateOrder(${o.id},'cancelled')">Cancel</button>
+            <button class="btn btn-red" style="background:var(--red-bg);color:var(--red)" onclick="deleteOrderFromList(${o.id})">🗑️</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+async function quickUpdateOrder(id, status) {
+  await fetch('/api/admin/orders/'+id,{method:'PUT',headers:ah(),body:JSON.stringify({status})});
+  toast('Order → '+status);
+  // refresh
+  const r = await fetch('/api/admin/orders',{headers:ah()});
+  ordersData = r.ok ? await r.json() : ordersData;
+  renderOrdersPage();
+}
+
+async function convertOrderToUdharFromList(orderId) {
+  const r = await fetch('/api/admin/orders/'+orderId+'/convert-to-udhar',{method:'POST',headers:ah()});
+  const d = await r.json();
+  if (!r.ok) return toast(d.error||'Failed: '+d.error);
+  toast('Added to udhar!');
+  const r2 = await fetch('/api/admin/orders',{headers:ah()});
+  ordersData = r2.ok ? await r2.json() : ordersData;
+  renderOrdersPage();
+}
+
+async function deleteOrderFromList(orderId) {
+  if (!confirm('Delete this order?')) return;
+  await fetch('/api/admin/orders/'+orderId,{method:'DELETE',headers:ah()});
+  toast('Order deleted');
+  ordersData = ordersData.filter(o=>o.id!==orderId);
+  renderOrdersPage();
+}
+
+// ═══════════════════════════════════════
+// UDHAR SUMMARY PAGE
+// ═══════════════════════════════════════
+async function renderUdhar() {
+  try {
+    const r = await fetch('/api/admin/udhar-summary',{headers:ah()});
+    const summary = r.ok ? await r.json() : [];
+    const totalOut = summary.reduce((s,x)=>s+(x.balance>0?x.balance:0),0);
+    const totalRec = summary.reduce((s,x)=>s+x.totalPaid,0);
 
     document.getElementById('content').innerHTML = `
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center">
-        ${filterBtns}
-        <span style="margin-left:auto;font-size:.82rem;color:var(--text2)">${orders.length} order${orders.length!==1?'s':''}</span>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val">${summary.length}</div><div class="stat-lbl">Customers with Udhar</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--red)">₹${totalOut.toFixed(0)}</div><div class="stat-lbl">Total Outstanding</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--green)">₹${totalRec.toFixed(0)}</div><div class="stat-lbl">Total Received</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${summary.filter(x=>x.balance<=0).length}</div><div class="stat-lbl">Settled</div></div>
       </div>
-      ${!orders.length ? `<div class="empty-state"><div class="ei">📦</div><p>No orders${ordersFilter!=='all'?' with status "'+ordersFilter+'"':''}.</p></div>` : `
       <div class="card">
-        ${orders.map(o => {
-          const time = new Date(o.createdAt||Date.now()).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-          const sc = statusColors[o.status] || 'badge-yellow';
-          const itemsHtml = (o.items||[]).map(i =>
-            `<div style="display:flex;justify-content:space-between;font-size:.83rem;padding:3px 0;${i.isFreeGift?'color:var(--green)':''}">
-              <span>${i.isFreeGift?'🎁 ':''} ${i.name}${i.variant?' ('+i.variant+')':''} × ${i.qty}</span>
-              <span>₹${(i.price*i.qty).toFixed(0)}</span>
-            </div>`).join('');
-          return `
-          <div style="border-bottom:1px solid var(--border);padding:14px 16px">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
-              <div>
-                <div style="font-weight:800;font-size:.95rem">Order #${o.id}</div>
-                <div style="font-size:.75rem;color:var(--text2)">${time}</div>
-              </div>
-              <div style="text-align:right;flex-shrink:0">
-                <div style="font-weight:800;font-size:1rem;color:var(--green)">₹${o.total}</div>
-                <span class="badge ${sc}">${o.status||'new'}</span>
-                ${o.paymentMethod?`<div style="font-size:.7rem;color:var(--text2);margin-top:2px">${o.paymentMethod.toUpperCase()}</div>`:''}
-              </div>
-            </div>
-            <div style="margin-top:5px;font-size:.85rem"><strong>${o.customerName||'Guest'}</strong> · ${o.phone||''}</div>
-            <div style="font-size:.78rem;color:var(--text2)">${o.block||''} ${o.villa||''} ${o.note?'· Note: '+o.note:''}</div>
-            <div style="margin-top:8px;background:var(--bg);padding:8px 10px;border-radius:8px">${itemsHtml}</div>
-            <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
-              ${o.status!=='delivered'?`<button class="btn btn-green" style="font-size:.78rem" onclick="updateOrder(${o.id},'delivered')">✓ Delivered</button>`:''}
-              ${o.status==='pending'?`<button class="btn btn-blue" style="font-size:.78rem" onclick="updateOrder(${o.id},'confirmed')">Confirm</button>`:''}
-              ${o.status!=='cancelled'&&o.status!=='delivered'?`<button class="btn btn-red" style="font-size:.78rem" onclick="updateOrder(${o.id},'cancelled')">Cancel</button>`:''}
-              ${!o.addedToUdhar&&o.status!=='cancelled'?`<button class="btn btn-gray" style="font-size:.78rem" onclick="convertOrderToUdhar(${o.id})">📒 → Udhar</button>`:''}
-              ${o.addedToUdhar?`<span class="badge badge-blue" style="font-size:.72rem">Udhar Added</span>`:''}
-              <button class="btn btn-red" style="font-size:.78rem;margin-left:auto" onclick="deleteOrder(${o.id})">🗑️ Delete</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`}`;
-  } catch(e) {
-    toast('Failed to load orders');
-  }
+        <div class="card-header"><h2>📒 Udhar Balances</h2></div>
+        <table>
+          <thead><tr><th>Customer</th><th>Total Udhar</th><th>Paid</th><th>Balance</th><th>Actions</th></tr></thead>
+          <tbody>${summary.map(s=>{
+            const bal = s.balance;
+            return `<tr>
+              <td>
+                <div style="font-weight:700;cursor:pointer;color:var(--blue)" onclick="goTo('customers');setTimeout(()=>openCustomerProfile(${s.customer.id}),200)">${s.customer.name}</div>
+                <div style="font-size:.73rem;color:var(--text2)">${s.customer.phone}</div>
+              </td>
+              <td style="font-weight:700;color:var(--red)">₹${s.totalUdhar.toFixed(0)}</td>
+              <td style="color:var(--green)">₹${s.totalPaid.toFixed(0)}</td>
+              <td style="font-weight:800;color:${bal>0?'var(--red)':bal<0?'var(--blue)':'var(--green)'}">
+                ${bal>0?'₹'+bal.toFixed(0)+' due':bal<0?'Advance ₹'+Math.abs(bal).toFixed(0):'✓ Settled'}
+              </td>
+              <td><div class="actions">
+                <button class="btn btn-green" onclick="quickAddCredit(${s.customer.id},'${s.customer.name.replace(/'/g,"\\'")}')">+ Udhar</button>
+                ${bal>0?`<button class="btn btn-blue" onclick="quickPayment(${s.customer.id},'${s.customer.name.replace(/'/g,"\\'")}',${bal.toFixed(0)})">Paid</button>`:''}
+              </div></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>`;
+  } catch(e) { toast('Failed to load udhar summary'); }
 }
 
-async function updateOrder(id, status) {
-  await fetch('/api/admin/orders/' + id, { method:'PUT', headers:ah(), body:JSON.stringify({status}) });
-  toast('Order → ' + status);
-  renderOrders();
+// ═══════════════════════════════════════
+// MILK
+// ═══════════════════════════════════════
+let milkCustomers=[], milkLogs=[], milkPayments=[], milkPrice=60;
+let milkMonth=new Date().toISOString().slice(0,7);
+let milkTab='deliveries';
+
+async function renderMilk() {
+  await loadMilkData();
+  renderMilkPage();
 }
 
-async function deleteOrder(id) {
-  if(!confirm('Delete order #'+id+'? This cannot be undone.')) return;
-  await fetch('/api/admin/orders/'+id, {method:'DELETE', headers:ah()});
-  toast('Order deleted');
-  renderOrders();
+async function loadMilkData() {
+  try {
+    const [cR,lR,pR] = await Promise.all([
+      fetch('/api/admin/milk/customers',{headers:ah()}),
+      fetch('/api/admin/milk/logs?month='+milkMonth,{headers:ah()}),
+      fetch('/api/admin/milk/payments?month='+milkMonth,{headers:ah()}),
+    ]);
+    milkCustomers = await cR.json();
+    const ld = await lR.json();
+    milkLogs = ld.logs||[];
+    milkPrice = ld.settings?.milkPrice||60;
+    milkPayments = await pR.json();
+  } catch(e) { toast('Could not load milk data'); }
 }
 
-async function convertOrderToUdhar(id) {
-  if(!confirm('Add this order to customer\'s udhar account?')) return;
-  const r = await fetch('/api/admin/orders/'+id+'/convert-to-udhar', {method:'POST', headers:ah()});
+function renderMilkPage() {
+  const billed = milkLogs.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
+  const paid = milkPayments.reduce((s,p)=>s+p.amount,0);
+  const active = milkCustomers.filter(c=>c.active).length;
+  const monthLabel = new Date(milkMonth+'-02').toLocaleString('default',{month:'long',year:'numeric'});
+
+  document.getElementById('content').innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val">${active}</div><div class="stat-lbl">Active Customers</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">₹${billed.toFixed(0)}</div><div class="stat-lbl">Billed — ${monthLabel}</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue)">₹${paid.toFixed(0)}</div><div class="stat-lbl">Collected</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)">₹${(billed-paid).toFixed(0)}</div><div class="stat-lbl">Outstanding</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+          <input type="month" value="${milkMonth}" onchange="milkMonth=this.value;renderMilk()" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .8rem;font-family:Inter,sans-serif;font-size:.85rem">
+          <button class="btn ${milkTab==='deliveries'?'btn-green':'btn-gray'}" onclick="milkTab='deliveries';renderMilkPage()">Deliveries</button>
+          <button class="btn ${milkTab==='customers'?'btn-green':'btn-gray'}" onclick="milkTab='customers';renderMilkPage()">Customers</button>
+          <button class="btn ${milkTab==='billing'?'btn-green':'btn-gray'}" onclick="milkTab='billing';renderMilkPage()">Billing</button>
+        </div>
+        <button class="btn btn-blue" onclick="goTo('customers');setTimeout(openAddCustomerModal,100)">+ Add Customer</button>
+      </div>
+    </div>
+    <div id="milkTabContent"></div>`;
+
+  if (milkTab==='deliveries') renderMilkDeliveries();
+  else if (milkTab==='customers') renderMilkCustomers();
+  else renderMilkBilling();
+}
+
+function renderMilkDeliveries() {
+  const today = new Date().toISOString().slice(0,10);
+  const active = milkCustomers.filter(c=>c.active);
+  const rows = active.map(c=>{
+    const cl = milkLogs.filter(l=>l.customerId===c.id);
+    const totalL = cl.reduce((s,l)=>s+l.qty,0);
+    const totalAmt = cl.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
+    const todayE = cl.find(l=>l.date===today);
+    return `<tr>
+      <td><div style="font-weight:600">${c.name}</div><div style="font-size:.73rem;color:var(--text2)">${c.phone}</div></td>
+      <td>${c.defaultQty}L/day</td>
+      <td><span class="badge badge-blue">${totalL.toFixed(1)}L</span></td>
+      <td style="font-weight:700;color:var(--green)">₹${totalAmt.toFixed(0)}</td>
+      <td>${todayE?`<span class="badge badge-green">✓ ${todayE.qty}L</span>`:`<span class="badge badge-red">Not marked</span>`}</td>
+      <td><div class="actions">
+        <button class="btn btn-green" style="font-size:.75rem" onclick="markOne(${c.id},'${today}',${c.defaultQty})">Mark Today</button>
+        <button class="btn btn-gray" style="font-size:.75rem" onclick="openDayLog(${c.id})">Edit Log</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('milkTabContent').innerHTML=`
+    <div class="card">
+      <div class="card-header">
+        <h2>Today — ${new Date(today+'T12:00:00').toLocaleDateString('default',{weekday:'long',day:'numeric',month:'short'})}</h2>
+        <button class="btn btn-green" onclick="bulkMark('${today}')">✓ Mark All Delivered</button>
+      </div>
+      ${active.length===0?`<div class="empty-state"><div class="ei">🥛</div><p>No active milk customers yet.</p></div>`:`
+      <table>
+        <thead><tr><th>Customer</th><th>Default</th><th>This Month</th><th>Amount</th><th>Today</th><th>Actions</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`}
+    </div>`;
+}
+
+function renderMilkCustomers() {
+  document.getElementById('milkTabContent').innerHTML=`
+    <div class="card">
+      <div class="card-header"><h2>Milk Subscribers (${milkCustomers.length})</h2></div>
+      ${milkCustomers.length===0?`<div class="empty-state"><div class="ei">👥</div><p>No milk subscribers yet. Add from Customers section.</p></div>`:`
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Address</th><th>Qty/day</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${milkCustomers.map(c=>`<tr>
+          <td style="font-weight:600;cursor:pointer;color:var(--blue)" onclick="goTo('customers');setTimeout(()=>openCustomerProfile(${c.id}),200)">${c.name}</td>
+          <td>${c.phone}</td>
+          <td style="color:var(--text2)">${c.address||'—'}</td>
+          <td>${c.defaultQty}L</td>
+          <td>${c.active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-red">Paused</span>'}</td>
+          <td><div class="actions">
+            <button class="btn btn-blue" onclick="toggleMilkCustomer(${c.id},${!c.active})">${c.active?'Pause':'Resume'}</button>
+            <button class="btn btn-red" onclick="delMilkCustomer(${c.id})">Remove</button>
+          </div></td>
+        </tr>`).join('')}</tbody>
+      </table>`}
+    </div>`;
+}
+
+function renderMilkBilling() {
+  const monthLabel = new Date(milkMonth+'-02').toLocaleString('default',{month:'long',year:'numeric'});
+  const rows = milkCustomers.filter(c=>c.active).map(c=>{
+    const cl = milkLogs.filter(l=>l.customerId===c.id);
+    const totalL = cl.reduce((s,l)=>s+l.qty,0);
+    const billed = cl.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
+    const paid = milkPayments.filter(p=>p.customerId===c.id).reduce((s,p)=>s+p.amount,0);
+    const due = billed-paid;
+    return `<tr>
+      <td><div style="font-weight:600">${c.name}</div><div style="font-size:.73rem;color:var(--text2)">${c.phone}</div></td>
+      <td>${totalL.toFixed(1)}L</td>
+      <td style="font-weight:700">₹${billed.toFixed(0)}</td>
+      <td style="color:var(--green);font-weight:600">₹${paid.toFixed(0)}</td>
+      <td style="font-weight:800;color:${due>0?'var(--red)':'var(--green)'}">₹${due.toFixed(0)}</td>
+      <td>${due>0?`<button class="btn btn-green" style="font-size:.75rem" onclick="recordMilkPayment(${c.id},'${milkMonth}',${due.toFixed(0)})">Paid ₹${due.toFixed(0)}</button>`:'<span class="badge badge-green">Settled</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('milkTabContent').innerHTML=`
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-header"><h2>Billing — ${monthLabel}</h2><span style="font-size:.82rem;color:var(--text2)">₹${milkPrice}/litre</span></div>
+      <table>
+        <thead><tr><th>Customer</th><th>Litres</th><th>Billed</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="card" style="max-width:340px">
+      <div class="card-header"><h2>Milk Price</h2></div>
+      <div class="card-body">
+        <div class="form-group"><label>Price per Litre (₹)</label><input type="number" id="milkPriceInp" value="${milkPrice}" min="1" step="0.5"><div class="form-hint">Applies to new deliveries</div></div>
+        <button class="btn btn-green" onclick="saveMilkPrice()">Save Price</button>
+      </div>
+    </div>`;
+}
+
+async function markOne(customerId, date, qty) {
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty,price:milkPrice})});
+  await loadMilkData(); renderMilkPage(); toast('Marked '+qty+'L delivered');
+}
+
+async function bulkMark(date) {
+  const r = await fetch('/api/admin/milk/bulk-mark',{method:'POST',headers:ah(),body:JSON.stringify({date})});
   const d = await r.json();
-  if(!r.ok) return toast(d.error||'Failed — customer may not have a registered account');
-  toast('Added to udhar!');
-  renderOrders();
+  await loadMilkData(); renderMilkPage(); toast('Marked '+d.marked+' customers delivered');
 }
+
+async function toggleMilkCustomer(id, active) {
+  if (active) await fetch('/api/admin/milk/subscriptions/'+id+'/resume',{method:'POST',headers:ah(),body:JSON.stringify({})});
+  else await fetch('/api/admin/milk/subscriptions/'+id+'/pause',{method:'POST',headers:ah(),body:JSON.stringify({})});
+  await loadMilkData(); renderMilkPage();
+}
+
+async function delMilkCustomer(id) {
+  if (!confirm('Remove milk subscription for this customer?')) return;
+  await fetch('/api/admin/milk/subscriptions/'+id,{method:'DELETE',headers:ah()});
+  await loadMilkData(); renderMilkPage(); toast('Subscription removed');
+}
+
+async function recordMilkPayment(customerId, month, amount) {
+  await fetch('/api/admin/milk/payment',{method:'POST',headers:ah(),body:JSON.stringify({customerId,month,amount,note:'Manual'})});
+  await loadMilkData(); renderMilkPage(); toast('Payment ₹'+amount+' recorded');
+}
+
+async function saveMilkPrice() {
+  const price = parseFloat(document.getElementById('milkPriceInp').value);
+  if (!price||price<=0) return toast('Invalid price');
+  await fetch('/api/admin/milk/settings',{method:'PUT',headers:ah(),body:JSON.stringify({milkPrice:price})});
+  milkPrice = price; toast('Price updated to ₹'+price+'/L');
+}
+
+function openDayLog(customerId) {
+  const c = milkCustomers.find(x=>x.id===customerId);
+  const cl = milkLogs.filter(l=>l.customerId===customerId);
+  const [yr,mo] = milkMonth.split('-').map(Number);
+  const days = new Date(yr,mo,0).getDate();
+  let rows = '';
+  for (let d=days;d>=1;d--) {
+    const ds = milkMonth+'-'+String(d).padStart(2,'0');
+    if (new Date(ds)>new Date()) continue;
+    const entry = cl.find(l=>l.date===ds);
+    rows += `<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
+      <div style="width:32px;text-align:center;font-weight:700;font-size:.82rem;color:var(--text2)">${d}</div>
+      <input type="number" value="${entry?.qty||''}" min="0" max="10" step="0.5" placeholder="—"
+        style="width:80px;border:1.5px solid var(--border);border-radius:8px;padding:.3rem .5rem;font-size:.85rem"
+        onchange="saveLogEntry(${customerId},'${ds}',this.value)">
+      <span style="font-size:.75rem;color:var(--text2)">litres</span>
+      ${entry?`<span style="font-size:.72rem;color:var(--green)">✓</span>`:''}
+    </div>`;
+  }
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="dlModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(360px,100%);max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)">
+        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
+          <div><div style="font-weight:700">${c?.name}</div><div style="font-size:.75rem;color:var(--text2)">Edit delivery log</div></div>
+          <button onclick="document.getElementById('dlModal').remove();renderMilk()" style="background:none;font-size:1.3rem;color:var(--text2);cursor:pointer;border:none">✕</button>
+        </div>
+        <div style="padding:1rem 1.5rem">${rows}</div>
+      </div>
+    </div>`);
+}
+
+async function saveLogEntry(customerId, date, qty) {
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(qty)||0,price:milkPrice})});
+  await loadMilkData();
+}
+
+// ═══════════════════════════════════════
+// PRODUCTS
+// ═══════════════════════════════════════
+let _editVariants = [];
 
 function renderProducts() {
   const filtered = allProducts.filter(p=>p.name.toLowerCase().includes(productSearch));
@@ -673,24 +1434,23 @@ function renderProducts() {
       </div>
       ${filtered.length===0?`<div class="empty-state"><div class="ei">🛍️</div><p>No products yet.</p></div>`:`
       <table>
-        <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Variants</th><th>Price Range</th><th>Stock</th><th>Tags</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Variants</th><th>Price Range</th><th>Stock</th><th>Actions</th></tr></thead>
         <tbody>${filtered.map(p=>{
-          const cat=allCategories.find(c=>c.id===p.catId);
-          const variants = p.variants || [];
+          const cat = allCategories.find(c=>c.id===p.catId);
+          const variants = p.variants||[];
           const allInStock = variants.every(v=>v.inStock);
           const anyInStock = variants.some(v=>v.inStock);
           const allPrices = variants.flatMap(v=>(v.priceTiers||[]).map(t=>t.price));
-          const minPrice = allPrices.length ? Math.min(...allPrices) : 0;
-          const maxPrice = allPrices.length ? Math.max(...allPrices) : 0;
-          const imgUrl = (variants[0]?.imageUrl || p.imageUrl || '');
+          const minP = allPrices.length?Math.min(...allPrices):0;
+          const maxP = allPrices.length?Math.max(...allPrices):0;
+          const imgUrl = variants[0]?.imageUrl||p.imageUrl||'';
           return `<tr>
             <td>${imgUrl?`<img class="td-img" src="${imgUrl}">`:`<div class="td-img-ph">📦</div>`}</td>
-            <td><div style="font-weight:600">${p.name}</div><div style="font-size:.72rem;color:var(--text2)">${p.featured?'⭐ Featured':''} ${p.isNew?'✨ New':''}</div></td>
-            <td>${cat?cat.name:'<span style="color:var(--text3)">Uncategorised</span>'}</td>
-            <td><span class="badge badge-blue">${variants.length} variant${variants.length!==1?'s':''}</span><div style="font-size:.7rem;color:var(--text3);margin-top:2px">${variants.map(v=>v.label).join(', ')}</div></td>
-            <td style="font-weight:700">${minPrice===maxPrice?`Rs.${minPrice}`:`Rs.${minPrice}–${maxPrice}`}</td>
-            <td>${allInStock?'<span class="badge badge-green">All In Stock</span>':anyInStock?'<span class="badge badge-yellow">Partial</span>':'<span class="badge badge-red">Out of Stock</span>'}</td>
-            <td>${p.featured?'<span class="badge badge-yellow">Featured</span>':''} ${p.isNew?'<span class="badge badge-blue">New</span>':''}</td>
+            <td><div style="font-weight:600">${p.name}</div><div style="font-size:.72rem;color:var(--text2)">${p.featured?'⭐ Featured ':''} ${p.isNew?'✨ New':''}</div></td>
+            <td>${cat?cat.name:'<span style="color:var(--text3)">—</span>'}</td>
+            <td><span class="badge badge-blue">${variants.length}</span></td>
+            <td style="font-weight:700">${minP===maxP?`₹${minP}`:`₹${minP}–${maxP}`}</td>
+            <td>${allInStock?'<span class="badge badge-green">In Stock</span>':anyInStock?'<span class="badge badge-yellow">Partial</span>':'<span class="badge badge-red">Out of Stock</span>'}</td>
             <td><div class="actions">
               <button class="btn btn-blue" onclick="openProductModal(${p.id})">Edit</button>
               <button class="btn btn-red" onclick="deleteProduct(${p.id})">Del</button>
@@ -701,9 +1461,6 @@ function renderProducts() {
     </div>`;
 }
 
-// ── VARIANT-BASED PRODUCT MODAL ──────────────────────────────────────────────
-let _editVariants = []; // working copy of variants being edited
-
 function openProductModal(id) {
   const p = id ? allProducts.find(x=>x.id===id) : null;
   document.getElementById('productModalTitle').textContent = p ? 'Edit Product' : 'Add Product';
@@ -711,13 +1468,9 @@ function openProductModal(id) {
   document.getElementById('pName').value = p?.name||'';
   document.getElementById('pTag').value = p?.featured?'featured':p?.isNew?'new':'';
   document.getElementById('pImgUrl').value = p?.imageUrl||'';
-  setImgPreview('p', p?.imageUrl||'');
-  document.getElementById('pCat').innerHTML = `<option value="0">No Category</option>`+
-    allCategories.map(c=>`<option value="${c.id}" ${c.id===p?.catId?'selected':''}>${c.name}</option>`).join('');
-
-  // Variants: use existing or create default
-  _editVariants = p?.variants ? JSON.parse(JSON.stringify(p.variants))
-    : [{ id:'v1', label:'1 unit', imageUrl:'', mrp:null, inStock:true, priceTiers:[{minQty:1,price:0}] }];
+  setImgPreview('p',p?.imageUrl||'');
+  document.getElementById('pCat').innerHTML = `<option value="0">No Category</option>`+allCategories.map(c=>`<option value="${c.id}" ${c.id===p?.catId?'selected':''}>${c.name}</option>`).join('');
+  _editVariants = p?.variants ? JSON.parse(JSON.stringify(p.variants)) : [{ id:'v1', label:'1 unit', imageUrl:'', mrp:null, inStock:true, priceTiers:[{minQty:1,price:0}] }];
   renderVariantEditor();
   document.getElementById('productModal').classList.add('open');
 }
@@ -726,7 +1479,7 @@ function renderVariantEditor() {
   const el = document.getElementById('variantEditor');
   if (!el) return;
   el.innerHTML = _editVariants.map((v,i) => `
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px" id="vblock_${i}">
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <span style="font-size:.8rem;font-weight:700;color:var(--text2)">VARIANT ${i+1}</span>
         ${_editVariants.length>1?`<button class="btn btn-red" style="padding:.3rem .6rem;font-size:.72rem" onclick="removeVariant(${i})">Remove</button>`:''}
@@ -744,14 +1497,17 @@ function renderVariantEditor() {
       </div>
       <div class="form-group">
         <label>Bulk Pricing Tiers</label>
-        <div style="font-size:.72rem;color:var(--text3);margin-bottom:6px">First tier must start at qty 1</div>
-        <div class="tier-header"><span>Min Qty</span><span>Price (₹)</span><span></span></div>
-        <div class="tiers-list" id="vtierslist_${i}">
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;padding:0 .6rem;margin-bottom:.2rem">
+          <span style="font-size:.7rem;font-weight:600;color:var(--text3);text-transform:uppercase">Min Qty</span>
+          <span style="font-size:.7rem;font-weight:600;color:var(--text3);text-transform:uppercase">Price (₹)</span>
+          <span></span>
+        </div>
+        <div class="tiers-list">
           ${(v.priceTiers||[]).map((t,ti) => `
             <div class="tier-row">
-              <div><input type="number" min="1" placeholder="e.g. 1" value="${t.minQty}" class="tier-min" oninput="updateTier(${i},${ti},'minQty',parseInt(this.value))"></div>
-              <div><input type="number" min="0" step="0.5" placeholder="price" value="${t.price}" class="tier-price" oninput="updateTier(${i},${ti},'price',parseFloat(this.value))"></div>
-              <button class="tier-del" onclick="removeTier(${i},${ti})">X</button>
+              <input type="number" min="1" value="${t.minQty}" oninput="updateTier(${i},${ti},'minQty',parseInt(this.value))">
+              <input type="number" min="0" step="0.5" value="${t.price}" oninput="updateTier(${i},${ti},'price',parseFloat(this.value))">
+              <button class="tier-del" onclick="removeTier(${i},${ti})">✕</button>
             </div>`).join('')}
         </div>
         <button class="btn btn-gray" style="font-size:.75rem;padding:.35rem .7rem;margin-top:4px" onclick="addTierToVariant(${i})">+ Add Tier</button>
@@ -759,28 +1515,11 @@ function renderVariantEditor() {
     </div>`).join('');
 }
 
-function updateTier(vi, ti, field, val) {
-  if (_editVariants[vi]?.priceTiers?.[ti]) _editVariants[vi].priceTiers[ti][field] = val;
-}
-function removeTier(vi, ti) {
-  if (_editVariants[vi]?.priceTiers) { _editVariants[vi].priceTiers.splice(ti,1); renderVariantEditor(); }
-}
-function addTierToVariant(vi) {
-  if (!_editVariants[vi].priceTiers) _editVariants[vi].priceTiers=[];
-  _editVariants[vi].priceTiers.push({minQty:1,price:0});
-  renderVariantEditor();
-}
-function removeVariant(i) {
-  _editVariants.splice(i,1);
-  renderVariantEditor();
-}
-function addVariant() {
-  const nextId = 'v'+(_editVariants.length+1);
-  _editVariants.push({ id:nextId, label:'', imageUrl:'', mrp:null, inStock:true, priceTiers:[{minQty:1,price:0}] });
-  renderVariantEditor();
-}
-
-function addTierRow(minQty='', price='') { addTierToVariant(0); } // legacy compat
+function updateTier(vi,ti,field,val){if(_editVariants[vi]?.priceTiers?.[ti])_editVariants[vi].priceTiers[ti][field]=val;}
+function removeTier(vi,ti){if(_editVariants[vi]?.priceTiers){_editVariants[vi].priceTiers.splice(ti,1);renderVariantEditor();}}
+function addTierToVariant(vi){if(!_editVariants[vi].priceTiers)_editVariants[vi].priceTiers=[];_editVariants[vi].priceTiers.push({minQty:1,price:0});renderVariantEditor();}
+function removeVariant(i){_editVariants.splice(i,1);renderVariantEditor();}
+function addVariant(){_editVariants.push({id:'v'+(_editVariants.length+1),label:'',imageUrl:'',mrp:null,inStock:true,priceTiers:[{minQty:1,price:0}]});renderVariantEditor();}
 
 async function saveProduct() {
   const id = document.getElementById('pEditId').value;
@@ -790,33 +1529,24 @@ async function saveProduct() {
   for (const v of _editVariants) {
     if (!v.label?.trim()) return toast('Each variant needs a label');
     if (!v.priceTiers?.length) return toast(`Variant "${v.label}" needs price tiers`);
-    const sorted = [...v.priceTiers].sort((a,b)=>a.minQty-b.minQty);
-    if (sorted[0].minQty !== 1) return toast(`Variant "${v.label}" first tier must start at qty 1`);
+    if ([...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)[0].minQty !== 1) return toast(`Variant "${v.label}" first tier must start at qty 1`);
   }
   const tag = document.getElementById('pTag').value;
-  const body = {
-    name,
-    catId: parseInt(document.getElementById('pCat').value)||0,
-    imageUrl: document.getElementById('pImgUrl').value,
-    featured: tag==='featured',
-    isNew: tag==='new',
-    variants: _editVariants.map((v,i) => ({
-      ...v,
-      id: v.id || ('v'+(i+1)),
-      priceTiers: [...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)
-    }))
-  };
-  await fetch(id?`/api/admin/products/${id}`:'/api/admin/products', { method:id?'PUT':'POST', headers:ah(), body:JSON.stringify(body) });
+  const body = {name,catId:parseInt(document.getElementById('pCat').value)||0,imageUrl:document.getElementById('pImgUrl').value,featured:tag==='featured',isNew:tag==='new',variants:_editVariants.map((v,i)=>({...v,id:v.id||('v'+(i+1)),priceTiers:[...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)}))};
+  await fetch(id?`/api/admin/products/${id}`:'/api/admin/products',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
   await loadAll(); closeModal('productModal'); renderProducts();
   toast(id?'Product updated!':'Product added!');
 }
 
 async function deleteProduct(id) {
-  if(!confirm('Delete this product?')) return;
+  if (!confirm('Delete this product?')) return;
   await fetch(`/api/admin/products/${id}`,{method:'DELETE',headers:ah()});
   await loadAll(); renderProducts(); toast('Product deleted');
 }
 
+// ═══════════════════════════════════════
+// CATEGORIES
+// ═══════════════════════════════════════
 function renderCategories() {
   document.getElementById('content').innerHTML=`
     <div class="card">
@@ -825,7 +1555,7 @@ function renderCategories() {
       <table>
         <thead><tr><th>Image</th><th>Name</th><th>Products</th><th>Actions</th></tr></thead>
         <tbody>${allCategories.map(c=>{
-          const count=allProducts.filter(p=>p.catId===c.id).length;
+          const count = allProducts.filter(p=>p.catId===c.id).length;
           return `<tr>
             <td>${c.imageUrl?`<img class="td-img" src="${c.imageUrl}">`:`<div class="td-img-ph">📂</div>`}</td>
             <td style="font-weight:600">${c.name}</td>
@@ -841,38 +1571,38 @@ function renderCategories() {
 }
 
 function openCatModal(id) {
-  const c=id?allCategories.find(x=>x.id===id):null;
-  document.getElementById('catModalTitle').textContent=c?'Edit Category':'Add Category';
-  document.getElementById('cEditId').value=c?.id||'';
-  document.getElementById('cName').value=c?.name||'';
-  document.getElementById('cImgUrl').value=c?.imageUrl||'';
+  const c = id?allCategories.find(x=>x.id===id):null;
+  document.getElementById('catModalTitle').textContent = c?'Edit Category':'Add Category';
+  document.getElementById('cEditId').value = c?.id||'';
+  document.getElementById('cName').value = c?.name||'';
+  document.getElementById('cImgUrl').value = c?.imageUrl||'';
   setImgPreview('c',c?.imageUrl||'');
   document.getElementById('categoryModal').classList.add('open');
 }
 
 async function saveCat() {
-  const id=document.getElementById('cEditId').value;
-  if(!document.getElementById('cName').value.trim()) return toast('Category name required');
-  const body={name:document.getElementById('cName').value.trim(),imageUrl:document.getElementById('cImgUrl').value};
+  const id = document.getElementById('cEditId').value;
+  if (!document.getElementById('cName').value.trim()) return toast('Category name required');
+  const body = {name:document.getElementById('cName').value.trim(),imageUrl:document.getElementById('cImgUrl').value};
   await fetch(id?`/api/admin/categories/${id}`:'/api/admin/categories',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
   await loadAll(); closeModal('categoryModal'); renderCategories();
   toast(id?'Category updated!':'Category added!');
 }
 
 async function deleteCat(id) {
-  const count=allProducts.filter(p=>p.catId===id).length;
-  if(count>0&&!confirm(`Has ${count} product(s). Delete anyway?`)) return;
+  const count = allProducts.filter(p=>p.catId===id).length;
+  if (count>0&&!confirm(`Has ${count} product(s). Delete anyway?`)) return;
   await fetch(`/api/admin/categories/${id}`,{method:'DELETE',headers:ah()});
   await loadAll(); renderCategories(); toast('Category deleted');
 }
 
+// ═══════════════════════════════════════
+// BANNERS
+// ═══════════════════════════════════════
 function renderBanners() {
   document.getElementById('content').innerHTML=`
     <div class="card">
       <div class="card-header"><h2>Banners (${allBanners.length})</h2><button class="btn btn-green" onclick="openBannerModal()">+ Add Banner</button></div>
-      <div style="padding:1rem 1.4rem;background:#fffbeb;border-bottom:1px solid var(--border);font-size:.8rem;color:var(--yellow)">
-        Banners appear as a scrollable carousel on the home page.
-      </div>
       ${allBanners.length===0?`<div class="empty-state"><div class="ei">🖼️</div><p>No banners yet.</p></div>`:`
       <table>
         <thead><tr><th>Image</th><th>Title</th><th>Opens</th><th>Actions</th></tr></thead>
@@ -895,23 +1625,20 @@ function renderBanners() {
 }
 
 function openBannerModal(id) {
-  const b=id?allBanners.find(x=>x.id===id):null;
-  document.getElementById('bannerModalTitle').textContent=b?'Edit Banner':'Add Banner';
-  document.getElementById('bEditId').value=b?.id||'';
-  document.getElementById('bTitle').value=b?.title||'';
-  document.getElementById('bSub').value=b?.subtitle||'';
-  document.getElementById('bBgColor').value=b?.bgColor||'#1a1a2e';
-  document.getElementById('bImgUrl').value=b?.imageUrl||'';
-  document.getElementById('bActionType').value=b?.action?.type||'';
+  const b = id?allBanners.find(x=>x.id===id):null;
+  document.getElementById('bannerModalTitle').textContent = b?'Edit Banner':'Add Banner';
+  document.getElementById('bEditId').value = b?.id||'';
+  document.getElementById('bTitle').value = b?.title||'';
+  document.getElementById('bSub').value = b?.subtitle||'';
+  document.getElementById('bBgColor').value = b?.bgColor||'#1a1a2e';
+  document.getElementById('bImgUrl').value = b?.imageUrl||'';
+  document.getElementById('bActionType').value = b?.action?.type||'';
   setImgPreview('b',b?.imageUrl||'');
-  document.getElementById('bCatId').innerHTML=allCategories.map(c=>`<option value="${c.id}" ${b?.action?.catId===c.id?'selected':''}>${c.name}</option>`).join('');
+  document.getElementById('bCatId').innerHTML = allCategories.map(c=>`<option value="${c.id}" ${b?.action?.catId===c.id?'selected':''}>${c.name}</option>`).join('');
   onBannerActionChange();
-  if(b?.action?.type==='products'){
+  if (b?.action?.type==='products') {
     setTimeout(()=>{
-      (b.action.productIds||[]).forEach(pid=>{
-        const cb=document.querySelector(`#bProdList input[value="${pid}"]`);
-        if(cb) cb.checked=true;
-      });
+      (b.action.productIds||[]).forEach(pid=>{const cb=document.querySelector(`#bProdList input[value="${pid}"]`);if(cb)cb.checked=true;});
       updatePickCount();
     },50);
   }
@@ -919,280 +1646,45 @@ function openBannerModal(id) {
 }
 
 function onBannerActionChange() {
-  const type=document.getElementById('bActionType').value;
-  document.getElementById('bActionPicker').style.display=type?'block':'none';
-  document.getElementById('bCatPicker').style.display=type==='category'?'block':'none';
-  document.getElementById('bProdPicker').style.display=type==='products'?'block':'none';
-  if(type==='products') renderBannerProdList('');
+  const type = document.getElementById('bActionType').value;
+  document.getElementById('bActionPicker').style.display = type?'block':'none';
+  document.getElementById('bCatPicker').style.display = type==='category'?'block':'none';
+  document.getElementById('bProdPicker').style.display = type==='products'?'block':'none';
+  if (type==='products') renderBannerProdList('');
 }
 
 function renderBannerProdList(filter) {
-  document.getElementById('bProdList').innerHTML=allProducts
-    .filter(p=>!filter||p.name.toLowerCase().includes(filter.toLowerCase()))
-    .map(p=>`<div class="pick-item">
-      <input type="checkbox" value="${p.id}" onchange="updatePickCount()">
-      <span class="pname">${p.name}</span>
-      <span class="pprice">Rs.${p.priceTiers?.[0]?.price??0}</span>
-    </div>`).join('');
+  document.getElementById('bProdList').innerHTML = allProducts.filter(p=>!filter||p.name.toLowerCase().includes(filter.toLowerCase())).map(p=>`<div class="pick-item"><input type="checkbox" value="${p.id}" onchange="updatePickCount()"><span class="pname">${p.name}</span><span class="pprice">₹${p.priceTiers?.[0]?.price??0}</span></div>`).join('');
 }
 
 function filterBannerProds(q){renderBannerProdList(q);}
 function updatePickCount(){document.getElementById('bPickCount').textContent=document.querySelectorAll('#bProdList input:checked').length;}
 
 async function saveBanner() {
-  const id=document.getElementById('bEditId').value;
-  const actionType=document.getElementById('bActionType').value;
-  let action=null;
-  if(actionType==='category') action={type:'category',catId:parseInt(document.getElementById('bCatId').value)};
-  else if(actionType==='products'){
-    const picks=[...document.querySelectorAll('#bProdList input:checked')].map(c=>parseInt(c.value));
-    if(!picks.length) return toast('Select at least one product');
-    action={type:'products',productIds:picks};
+  const id = document.getElementById('bEditId').value;
+  const actionType = document.getElementById('bActionType').value;
+  let action = null;
+  if (actionType==='category') action = {type:'category',catId:parseInt(document.getElementById('bCatId').value)};
+  else if (actionType==='products') {
+    const picks = [...document.querySelectorAll('#bProdList input:checked')].map(c=>parseInt(c.value));
+    if (!picks.length) return toast('Select at least one product');
+    action = {type:'products',productIds:picks};
   }
-  const body={imageUrl:document.getElementById('bImgUrl').value,title:document.getElementById('bTitle').value.trim(),subtitle:document.getElementById('bSub').value.trim(),bgColor:document.getElementById('bBgColor').value,action};
+  const body = {imageUrl:document.getElementById('bImgUrl').value,title:document.getElementById('bTitle').value.trim(),subtitle:document.getElementById('bSub').value.trim(),bgColor:document.getElementById('bBgColor').value,action};
   await fetch(id?`/api/admin/banners/${id}`:'/api/admin/banners',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
   await loadAll(); closeModal('bannerModal'); renderBanners();
   toast(id?'Banner updated!':'Banner added!');
 }
 
 async function deleteBanner(id) {
-  if(!confirm('Delete this banner?')) return;
+  if (!confirm('Delete this banner?')) return;
   await fetch(`/api/admin/banners/${id}`,{method:'DELETE',headers:ah()});
   await loadAll(); renderBanners(); toast('Banner deleted');
 }
 
-// MILK
-let milkCustomers=[],milkLogs=[],milkPayments=[],milkPrice=60;
-let milkMonth=new Date().toISOString().slice(0,7);
-let milkTab='deliveries';
-
-async function renderMilk() {
-  await loadMilkData();
-  renderMilkPage();
-}
-
-async function loadMilkData() {
-  try {
-    const [cR,lR,pR]=await Promise.all([
-      fetch('/api/admin/milk/customers',{headers:ah()}),
-      fetch('/api/admin/milk/logs?month='+milkMonth,{headers:ah()}),
-      fetch('/api/admin/milk/payments?month='+milkMonth,{headers:ah()}),
-    ]);
-    milkCustomers=await cR.json();
-    const ld=await lR.json();
-    milkLogs=ld.logs||[];
-    milkPrice=ld.settings?.milkPrice||60;
-    milkPayments=await pR.json();
-  } catch(e){toast('Could not load milk data');}
-}
-
-function renderMilkPage() {
-  const billed=milkLogs.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
-  const paid=milkPayments.reduce((s,p)=>s+p.amount,0);
-  const active=milkCustomers.filter(c=>c.active).length;
-  const monthLabel=new Date(milkMonth+'-02').toLocaleString('default',{month:'long',year:'numeric'});
-
-  document.getElementById('content').innerHTML=`
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-val">${active}</div><div class="stat-lbl">Active Customers</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--green)">Rs.${billed.toFixed(0)}</div><div class="stat-lbl">Billed — ${monthLabel}</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--blue)">Rs.${paid.toFixed(0)}</div><div class="stat-lbl">Collected</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--red)">Rs.${(billed-paid).toFixed(0)}</div><div class="stat-lbl">Outstanding</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header">
-        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-          <input type="month" value="${milkMonth}" onchange="milkMonth=this.value;renderMilk()" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .8rem;font-family:Inter,sans-serif;font-size:.85rem">
-          <button class="btn ${milkTab==='deliveries'?'btn-green':'btn-gray'}" onclick="milkTab='deliveries';renderMilkPage()">Deliveries</button>
-          <button class="btn ${milkTab==='customers'?'btn-green':'btn-gray'}" onclick="milkTab='customers';renderMilkPage()">Customers</button>
-          <button class="btn ${milkTab==='billing'?'btn-green':'btn-gray'}" onclick="milkTab='billing';renderMilkPage()">Billing</button>
-        </div>
-        <button class="btn btn-blue" onclick="openAddMilkCustomer()">+ Add Customer</button>
-      </div>
-    </div>
-    <div id="milkTabContent"></div>`;
-
-  if(milkTab==='deliveries') renderMilkDeliveries();
-  else if(milkTab==='customers') renderMilkCustomers();
-  else renderMilkBilling();
-}
-
-function renderMilkDeliveries() {
-  const today=new Date().toISOString().slice(0,10);
-  const active=milkCustomers.filter(c=>c.active);
-  const rows=active.map(c=>{
-    const cl=milkLogs.filter(l=>l.customerId===c.id);
-    const totalL=cl.reduce((s,l)=>s+l.qty,0);
-    const totalAmt=cl.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
-    const todayE=cl.find(l=>l.date===today);
-    return `<tr>
-      <td><div style="font-weight:600">${c.name}</div><div style="font-size:.73rem;color:var(--text2)">${c.phone}</div></td>
-      <td>${c.defaultQty}L/day</td>
-      <td><span class="badge badge-blue">${totalL.toFixed(1)}L</span></td>
-      <td style="font-weight:700;color:var(--green)">Rs.${totalAmt.toFixed(0)}</td>
-      <td>${todayE?`<span class="badge badge-green">Done ${todayE.qty}L</span>`:`<span class="badge badge-red">Not marked</span>`}</td>
-      <td><div class="actions">
-        <button class="btn btn-green" style="font-size:.75rem;padding:.35rem .7rem" onclick="markOne(${c.id},'${today}',${c.defaultQty})">Mark Today</button>
-        <button class="btn btn-gray" style="font-size:.75rem;padding:.35rem .7rem" onclick="openDayLog(${c.id})">Edit Log</button>
-      </div></td>
-    </tr>`;
-  }).join('');
-
-  document.getElementById('milkTabContent').innerHTML=`
-    <div class="card">
-      <div class="card-header">
-        <h2>Today — ${new Date(today+'T12:00:00').toLocaleDateString('default',{weekday:'long',day:'numeric',month:'short'})}</h2>
-        <button class="btn btn-green" onclick="bulkMark('${today}')">Mark All Delivered</button>
-      </div>
-      ${active.length===0?`<div class="empty-state"><div class="ei">🥛</div><p>No active customers yet.</p></div>`:`
-      <table>
-        <thead><tr><th>Customer</th><th>Default</th><th>This Month</th><th>Amount</th><th>Today</th><th>Actions</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`}
-    </div>`;
-}
-
-function renderMilkCustomers() {
-  document.getElementById('milkTabContent').innerHTML=`
-    <div class="card">
-      <div class="card-header"><h2>Milk Subscribers (${milkCustomers.length})</h2><button class="btn btn-green" onclick="openAddCustomerModal()">+ Add Customer</button></div>
-      ${milkCustomers.length===0?`<div class="empty-state"><div class="ei">👥</div><p>No milk subscribers yet. Add from Accounts section.</p></div>`:`
-      <table>
-        <thead><tr><th>Name</th><th>Phone</th><th>Address</th><th>Qty/day</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>${milkCustomers.map(c=>`<tr>
-          <td style="font-weight:600">${c.name}</td>
-          <td>${c.phone}</td>
-          <td style="color:var(--text2)">${c.address||'—'}</td>
-          <td>${c.defaultQty}L</td>
-          <td>${c.active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-red">Paused</span>'}</td>
-          <td><div class="actions">
-            <button class="btn btn-blue" onclick="toggleCustomer(${c.id},${!c.active})">${c.active?'Pause':'Resume'}</button>
-            <button class="btn btn-red" onclick="delMilkCustomer(${c.id})">Delete</button>
-          </div></td>
-        </tr>`).join('')}</tbody>
-      </table>`}
-    </div>`;
-}
-
-function renderMilkBilling() {
-  const monthLabel=new Date(milkMonth+'-02').toLocaleString('default',{month:'long',year:'numeric'});
-  const rows=milkCustomers.filter(c=>c.active).map(c=>{
-    const cl=milkLogs.filter(l=>l.customerId===c.id);
-    const totalL=cl.reduce((s,l)=>s+l.qty,0);
-    const billed=cl.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
-    const paid=milkPayments.filter(p=>p.customerId===c.id).reduce((s,p)=>s+p.amount,0);
-    const due=billed-paid;
-    return `<tr>
-      <td><div style="font-weight:600">${c.name}</div><div style="font-size:.73rem;color:var(--text2)">${c.phone}</div></td>
-      <td>${totalL.toFixed(1)}L</td>
-      <td style="font-weight:700">Rs.${billed.toFixed(0)}</td>
-      <td style="color:var(--green);font-weight:600">Rs.${paid.toFixed(0)}</td>
-      <td style="font-weight:800;color:${due>0?'var(--red)':'var(--green)'}">Rs.${due.toFixed(0)}</td>
-      <td>${due>0?`<button class="btn btn-green" style="font-size:.75rem" onclick="recordPayment(${c.id},'${milkMonth}',${due.toFixed(0)})">Mark Paid Rs.${due.toFixed(0)}</button>`:'<span class="badge badge-green">Settled</span>'}</td>
-    </tr>`;
-  }).join('');
-
-  document.getElementById('milkTabContent').innerHTML=`
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-header"><h2>Billing — ${monthLabel}</h2><span style="font-size:.82rem;color:var(--text2)">Rs.${milkPrice}/litre</span></div>
-      <table>
-        <thead><tr><th>Customer</th><th>Litres</th><th>Billed</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <div class="card" style="max-width:340px">
-      <div class="card-header"><h2>Milk Price Setting</h2></div>
-      <div class="card-body">
-        <div class="form-group">
-          <label>Price per Litre (Rs.)</label>
-          <input type="number" id="milkPriceInp" value="${milkPrice}" min="1" step="0.5">
-          <div class="form-hint">Applies to new deliveries only</div>
-        </div>
-        <button class="btn btn-green" onclick="saveMilkPrice()">Save Price</button>
-      </div>
-    </div>`;
-}
-
-async function markOne(customerId,date,qty) {
-  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty,price:milkPrice})});
-  await loadMilkData(); renderMilkPage(); toast('Marked '+qty+'L delivered');
-}
-
-async function bulkMark(date) {
-  const r=await fetch('/api/admin/milk/bulk-mark',{method:'POST',headers:ah(),body:JSON.stringify({date})});
-  const d=await r.json();
-  await loadMilkData(); renderMilkPage(); toast('Marked '+d.marked+' customers');
-}
-
-async function toggleCustomer(id,active) {
-  // id here is customerId
-  if(active) {
-    await fetch('/api/admin/milk/subscriptions/'+id+'/resume',{method:'POST',headers:ah(),body:JSON.stringify({})});
-  } else {
-    await fetch('/api/admin/milk/subscriptions/'+id+'/pause',{method:'POST',headers:ah(),body:JSON.stringify({})});
-  }
-  await loadMilkData(); renderMilkPage();
-}
-
-async function delMilkCustomer(id) {
-  if(!confirm('Remove milk subscription for this customer?')) return;
-  await fetch('/api/admin/milk/subscriptions/'+id,{method:'DELETE',headers:ah()});
-  await loadMilkData(); renderMilkPage(); toast('Subscription removed');
-}
-
-async function recordPayment(customerId,month,amount) {
-  await fetch('/api/admin/milk/payment',{method:'POST',headers:ah(),body:JSON.stringify({customerId,month,amount,note:'Manual'})});
-  await loadMilkData(); renderMilkPage(); toast('Payment Rs.'+amount+' recorded');
-}
-
-async function saveMilkPrice() {
-  const price=parseFloat(document.getElementById('milkPriceInp').value);
-  if(!price||price<=0) return toast('Invalid price');
-  await fetch('/api/admin/milk/settings',{method:'PUT',headers:ah(),body:JSON.stringify({milkPrice:price})});
-  milkPrice=price; toast('Price updated to Rs.'+price+'/L');
-}
-
-function openAddMilkCustomer() {
-  // Redirect to the unified Add Customer modal in Accounts
-  openAddCustomerModal();
-}
-
-function openDayLog(customerId) {
-  const c=milkCustomers.find(x=>x.id===customerId);
-  const cl=milkLogs.filter(l=>l.customerId===customerId);
-  const [yr,mo]=milkMonth.split('-').map(Number);
-  const days=new Date(yr,mo,0).getDate();
-  let rows='';
-  for(let d=days;d>=1;d--){
-    const ds=milkMonth+'-'+String(d).padStart(2,'0');
-    if(new Date(ds)>new Date()) continue;
-    const entry=cl.find(l=>l.date===ds);
-    rows+=`<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
-      <div style="width:32px;text-align:center;font-weight:700;font-size:.82rem;color:var(--text2)">${d}</div>
-      <input type="number" value="${entry?.qty||''}" min="0" max="10" step="0.5" placeholder="—"
-        style="width:80px;border:1.5px solid var(--border);border-radius:8px;padding:.3rem .5rem;font-size:.85rem"
-        onchange="saveLogEntry(${customerId},'${ds}',this.value)">
-      <span style="font-size:.75rem;color:var(--text2)">litres</span>
-      ${entry?`<span style="font-size:.72rem;color:var(--green)">saved</span>`:''}
-    </div>`;
-  }
-  document.body.insertAdjacentHTML('beforeend',`
-    <div id="dlModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem">
-      <div style="background:#fff;border-radius:18px;width:min(360px,100%);max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)">
-        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
-          <div><div style="font-weight:700">${c?.name}</div><div style="font-size:.75rem;color:var(--text2)">Edit delivery log</div></div>
-          <button onclick="document.getElementById('dlModal').remove();renderMilk()" style="background:none;font-size:1.3rem;color:var(--text2);cursor:pointer;border:none">X</button>
-        </div>
-        <div style="padding:1rem 1.5rem">${rows}</div>
-      </div>
-    </div>`);
-}
-
-async function saveLogEntry(customerId,date,qty) {
-  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(qty)||0,price:milkPrice})});
-  await loadMilkData();
-}
-
+// ═══════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════
 async function renderSettings() {
   const [sr, pr] = await Promise.all([
     fetch('/api/admin/settings',{headers:ah()}),
@@ -1204,155 +1696,84 @@ async function renderSettings() {
   window._upsellIds = new Set(upsellIds.map(Number));
 
   const prodCheckboxes = allProds.length ? allProds.map(p => `
-    <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);cursor:pointer;margin-bottom:6px;transition:background .12s">
-      <input type="checkbox" value="${p.id}" ${upsellIds.map(Number).includes(p.id)?'checked':''} 
-        onchange="window._upsellIds[this.checked?'add':'delete'](Number(this.value))"
-        style="width:15px;height:15px;accent-color:var(--green);flex-shrink:0">
+    <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);cursor:pointer;margin-bottom:6px">
+      <input type="checkbox" value="${p.id}" ${upsellIds.map(Number).includes(p.id)?'checked':''} onchange="window._upsellIds[this.checked?'add':'delete'](Number(this.value))" style="width:15px;height:15px;accent-color:var(--green);flex-shrink:0">
       <span style="flex:1;font-size:.85rem;font-weight:600">${p.name}</span>
-      <span style="font-size:.75rem;color:var(--text2)">${p.unit||''}</span>
       <span style="font-size:.78rem;font-weight:700;color:var(--green)">₹${p.priceTiers?.[0]?.price||0}</span>
-    </label>`).join('') 
-    : '<div style="color:var(--text2);font-size:.85rem;padding:10px 0">No products yet. Add products first.</div>';
+    </label>`).join('')
+    : '<div style="color:var(--text2);font-size:.85rem;padding:10px 0">No products yet.</div>';
 
   document.getElementById('content').innerHTML=`
     <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.2rem;max-width:1000px;align-items:start">
-
-      <!-- LEFT COL: store basics -->
       <div style="display:flex;flex-direction:column;gap:1.2rem">
         <div class="card">
           <div class="card-header"><h2>⚙️ Store Settings</h2></div>
           <div class="card-body">
             <div class="form-group"><label>Store Name</label><input type="text" id="sName" value="${s.storeName||''}"></div>
-            <div class="form-group">
-              <label>WhatsApp Number</label>
-              <input type="text" id="sWA" value="${s.whatsapp||''}" placeholder="e.g. 919876543210">
-              <div class="form-hint">Country code, no + sign</div>
-            </div>
+            <div class="form-group"><label>WhatsApp Number</label><input type="text" id="sWA" value="${s.whatsapp||''}" placeholder="e.g. 919876543210"><div class="form-hint">Country code, no + sign</div></div>
             <div class="form-group"><label>UPI ID</label><input type="text" id="sUPI" value="${s.upiId||''}" placeholder="e.g. yourname@okaxis"></div>
-            <div class="form-group">
-              <label>Minimum Order (₹) — enables Checkout button</label>
-              <input type="number" id="sMin" value="${s.minOrder||99}" min="0">
-            </div>
-            <div class="form-group">
-              <label>Free Delivery Threshold (₹)</label>
-              <input type="number" id="sFD" value="${s.freeDeliveryMin||s.minOrder||99}" min="0">
-              <div class="form-hint">Progress bar fills towards this. Same as min order is fine.</div>
-            </div>
+            <div class="form-group"><label>Minimum Order (₹)</label><input type="number" id="sMin" value="${s.minOrder||99}" min="0"></div>
+            <div class="form-group"><label>Free Delivery Threshold (₹)</label><input type="number" id="sFD" value="${s.freeDeliveryMin||s.minOrder||99}" min="0"></div>
             <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0">
             <div class="form-group"><label>New Admin Password</label><input type="password" id="sPass" placeholder="Leave blank to keep current"></div>
             <button class="btn btn-green" style="width:100%;justify-content:center;padding:.72rem" onclick="saveSettings()">💾 Save Settings</button>
           </div>
         </div>
-
-        <!-- FREE GIFT -->
         <div class="card">
-          <div class="card-header">
-            <h2>🎁 Offer / Free Gift</h2>
-            <span class="badge" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a">Conversion Booster</span>
-          </div>
+          <div class="card-header"><h2>🎁 Offer / Free Gift</h2></div>
           <div class="card-body">
-            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:.8rem;color:#92400e;line-height:1.5">
-              💡 When cart total reaches the threshold, the offer product is locked into the cart at the <strong>Offer Price</strong> you set. Set ₹0 for a completely free gift, or ₹5/₹10 for a flash-sale style deal (e.g. "Get 1kg Potatoes at just ₹5 on orders above ₹299").
-            </div>
-
-            <div class="form-group">
-              <label>Cart Total Threshold (₹) <span style="color:var(--text2);font-weight:400">(0 = off)</span></label>
-              <input type="number" id="sGiftThreshold" value="${(s.freeGift&&s.freeGift.threshold)||s.freeGiftMin||0}" min="0" placeholder="e.g. 299">
-            </div>
-
-            <div class="form-group">
-              <label>Offer Product</label>
-              <select id="sGiftProductId" style="width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;padding:.58rem .8rem;font-size:.88rem;color:var(--text);outline:none;-webkit-appearance:none">
-                <option value="">— No product selected —</option>
-                ${allProds.map(p => {
-                  const selected = (s.freeGift?.productId == p.id) ? 'selected' : '';
-                  return `<option value="${p.id}" ${selected}>${p.name}${p.unit ? ' ('+p.unit+')' : ''} · Regular ₹${p.priceTiers?.[0]?.price||0}</option>`;
-                }).join('')}
+            <div class="form-group"><label>Cart Total Threshold (₹)</label><input type="number" id="sGiftThreshold" value="${(s.freeGift&&s.freeGift.threshold)||0}" min="0" placeholder="0 = off"></div>
+            <div class="form-group"><label>Offer Product</label>
+              <select id="sGiftProductId" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:.58rem .8rem;font-size:.88rem">
+                <option value="">— No product —</option>
+                ${allProds.map(p=>`<option value="${p.id}" ${s.freeGift?.productId==p.id?'selected':''}>${p.name} · ₹${p.priceTiers?.[0]?.price||0}</option>`).join('')}
               </select>
-              <div class="form-hint">This product gets added to the cart at the Offer Price below</div>
             </div>
-
-            <div class="form-group">
-              <label>Gift Label / Display Name</label>
-              <input type="text" id="sGiftLabel" value="${(s.freeGift&&s.freeGift.label)||s.freeGiftLabel||''}" placeholder="e.g. 1kg Potatoes · Free Tomatoes 🍅">
-              <div class="form-hint">Shown on the unlock banner and in WhatsApp order</div>
-            </div>
-
-            <div class="form-group">
-              <label>Quantity</label>
-              <input type="number" id="sGiftQty" value="${(s.freeGift&&s.freeGift.qty)||1}" min="1" max="10" placeholder="1">
-            </div>
-
-            <div class="form-group">
-              <label>Offer Price (₹) <span style="color:var(--text2);font-weight:400">— 0 = completely free</span></label>
-              <input type="number" id="sGiftPrice" value="${(s.freeGift&&s.freeGift.discountPrice!=null)?s.freeGift.discountPrice:0}" min="0" step="1" placeholder="0 = free, 5 = ₹5 offer price">
-              <div class="form-hint">₹0 = completely free. ₹5 = customer pays ₹5 for it. Works like a flash deal — "Get 1kg Potatoes at just ₹5 on orders above ₹299".</div>
-            </div>
-
-            <!-- standalone toggle — NOT inside .form-group to avoid display:block label override -->
-            <div style="margin-bottom:0">
-              <div style="font-size:.67rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Add to Cart Mode</div>
-              <label for="sGiftAutoAdd" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:11px 13px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;transition:border-color .18s;user-select:none">
-                <input type="checkbox" id="sGiftAutoAdd" ${(s.freeGift?.autoAdd!==false) ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
-                <div>
-                  <div style="font-size:.84rem;font-weight:700;color:var(--text);line-height:1.3">Auto-add to cart</div>
-                  <div style="font-size:.71rem;color:var(--text2);margin-top:3px">Unchecked → customer sees a "Claim" button instead of auto-inject</div>
-                </div>
-              </label>
-            </div>
-
-            <button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" onclick="saveSettings()">💾 Save Gift Settings</button>
+            <div class="form-group"><label>Gift Label</label><input type="text" id="sGiftLabel" value="${(s.freeGift&&s.freeGift.label)||''}" placeholder="e.g. 1kg Potatoes 🥔"></div>
+            <div class="form-group"><label>Quantity</label><input type="number" id="sGiftQty" value="${(s.freeGift&&s.freeGift.qty)||1}" min="1"></div>
+            <div class="form-group"><label>Offer Price (₹) — 0 = free</label><input type="number" id="sGiftPrice" value="${(s.freeGift&&s.freeGift.discountPrice!=null)?s.freeGift.discountPrice:0}" min="0"></div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;margin-bottom:14px">
+              <input type="checkbox" id="sGiftAutoAdd" ${s.freeGift?.autoAdd!==false?'checked':''} style="width:16px;height:16px;accent-color:var(--green)">
+              <span style="font-size:.85rem;font-weight:600">Auto-add to cart</span>
+            </label>
+            <button class="btn btn-green" style="width:100%;justify-content:center" onclick="saveSettings()">💾 Save Gift Settings</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>🔧 Migration Tools</h2></div>
+          <div class="card-body">
+            <p style="font-size:.85rem;color:var(--text2);margin-bottom:1rem">Migrate old udhar entries to the new unified ledger system.</p>
+            <button class="btn btn-blue" onclick="runMigration()">Run Migration</button>
           </div>
         </div>
       </div>
-
-      <!-- RIGHT COL: upsell -->
       <div class="card" style="align-self:start">
-        <div class="card-header">
-          <h2>⚡ Upsell Strip</h2>
-          <span class="badge" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe">In-Cart Widget</span>
-        </div>
+        <div class="card-header"><h2>⚡ Upsell Strip</h2></div>
         <div class="card-body">
-          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:.8rem;color:#1e3a8a;line-height:1.5">
-            💡 Checked products appear as <strong>"You may also need"</strong> cards inside the cart. Only shows products <em>not already in cart</em>.
-          </div>
-          <div id="upsellList" style="max-height:420px;overflow-y:auto">
-            ${prodCheckboxes}
-          </div>
+          <div style="font-size:.8rem;color:var(--text2);margin-bottom:12px">Products shown as "You may also need" inside the cart.</div>
+          <div id="upsellList" style="max-height:420px;overflow-y:auto">${prodCheckboxes}</div>
           <button class="btn btn-green" style="width:100%;justify-content:center;margin-top:12px" onclick="saveSettings()">💾 Save Upsell</button>
         </div>
       </div>
-
     </div>`;
 }
 
 async function saveSettings() {
-  const giftThreshold    = parseInt(document.getElementById('sGiftThreshold')?.value) || 0;
-  const giftProductId    = document.getElementById('sGiftProductId')?.value;
-  const giftLabel        = (document.getElementById('sGiftLabel')?.value || '').trim();
-  const giftQty          = parseInt(document.getElementById('sGiftQty')?.value) || 1;
-  const giftAutoAdd      = document.getElementById('sGiftAutoAdd')?.checked === true;
-  const giftDiscountPrice= parseFloat(document.getElementById('sGiftPrice')?.value) || 0;
-
   const body = {
-    storeName:  (document.getElementById('sName')?.value||'').trim(),
-    whatsapp:   (document.getElementById('sWA')?.value||'').trim(),
-    upiId:      (document.getElementById('sUPI')?.value||'').trim(),
-    minOrder:   parseInt(document.getElementById('sMin')?.value)||99,
-    freeDeliveryMin: parseInt(document.getElementById('sFD')?.value)||0,
-    // legacy flat fields (kept for compat)
-    freeGiftMin:   giftThreshold,
-    freeGiftLabel: giftLabel,
-    // new structured object
-    freeGift: {
-      threshold:     giftThreshold,
-      productId:     giftProductId ? parseInt(giftProductId) : null,
-      qty:           giftQty,
-      autoAdd:       giftAutoAdd,
-      label:         giftLabel,
-      discountPrice: giftDiscountPrice,  // 0 = free, >0 = offer price
+    storeName:(document.getElementById('sName')?.value||'').trim(),
+    whatsapp:(document.getElementById('sWA')?.value||'').trim(),
+    upiId:(document.getElementById('sUPI')?.value||'').trim(),
+    minOrder:parseInt(document.getElementById('sMin')?.value)||99,
+    freeDeliveryMin:parseInt(document.getElementById('sFD')?.value)||0,
+    freeGift:{
+      threshold:parseInt(document.getElementById('sGiftThreshold')?.value)||0,
+      productId:document.getElementById('sGiftProductId')?.value?parseInt(document.getElementById('sGiftProductId').value):null,
+      qty:parseInt(document.getElementById('sGiftQty')?.value)||1,
+      autoAdd:document.getElementById('sGiftAutoAdd')?.checked===true,
+      label:(document.getElementById('sGiftLabel')?.value||'').trim(),
+      discountPrice:parseFloat(document.getElementById('sGiftPrice')?.value)||0,
     },
-    upsellProductIds: window._upsellIds ? [...window._upsellIds] : [],
+    upsellProductIds:window._upsellIds?[...window._upsellIds]:[],
   };
   const pass = document.getElementById('sPass')?.value;
   if (pass) body.newPassword = pass;
@@ -1360,804 +1781,54 @@ async function saveSettings() {
   toast('✅ Settings saved!');
 }
 
-async function handleImgUpload(type,input) {
-  const file=input.files[0]; if(!file) return;
-  const prefix=type==='product'?'p':type==='category'?'c':'b';
-  document.getElementById(prefix+'ImgText').textContent='Uploading...';
-  const form=new FormData(); form.append('image',file);
-  const r=await fetch('/api/admin/upload',{method:'POST',headers:{Authorization:'Bearer '+token},body:form});
-  if(r.ok){const d=await r.json();document.getElementById(prefix+'ImgUrl').value=d.url;setImgPreview(prefix,d.url);toast('Image uploaded!');}
-  else{document.getElementById(prefix+'ImgText').textContent='Upload failed';toast('Upload failed');}
+async function runMigration() {
+  if (!confirm('Migrate old udhar data to new ledger system? This is safe and does not delete anything.')) return;
+  const r = await fetch('/api/admin/migrate-to-ledger',{method:'POST',headers:ah()});
+  const d = await r.json();
+  if (r.ok) toast(`✅ Migrated: ${d.migratedCredits} credits + ${d.migratedPayments} payments`);
+  else toast('Migration failed');
 }
 
-function setImgPreview(prefix,url) {
-  const area=document.getElementById(prefix+'ImgArea');
-  const preview=document.getElementById(prefix+'ImgPreview');
-  const text=document.getElementById(prefix+'ImgText');
-  if(url){preview.src=url;preview.style.display='block';area.classList.add('has-image');text.textContent='Click to replace';}
-  else{preview.style.display='none';area.classList.remove('has-image');text.textContent=prefix==='b'?'Click to upload banner':'Click to upload image';}
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'}); }
+  catch { return d; }
 }
 
-function closeModal(id){document.getElementById(id).classList.remove('open');}
-document.querySelectorAll('.modal-overlay').forEach(m=>{
-  m.addEventListener('click',e=>{if(e.target===m) m.classList.remove('open');});
+function fmtDateTime(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }
+  catch { return d; }
+}
+
+async function handleImgUpload(type, input) {
+  const file = input.files[0]; if (!file) return;
+  const prefix = type==='product'?'p':type==='category'?'c':'b';
+  document.getElementById(prefix+'ImgText').textContent = 'Uploading...';
+  const form = new FormData(); form.append('image',file);
+  const r = await fetch('/api/admin/upload',{method:'POST',headers:{Authorization:'Bearer '+token},body:form});
+  if (r.ok) { const d=await r.json(); document.getElementById(prefix+'ImgUrl').value=d.url; setImgPreview(prefix,d.url); toast('Image uploaded!'); }
+  else { document.getElementById(prefix+'ImgText').textContent='Upload failed'; toast('Upload failed'); }
+}
+
+function setImgPreview(prefix, url) {
+  const area = document.getElementById(prefix+'ImgArea');
+  const preview = document.getElementById(prefix+'ImgPreview');
+  const text = document.getElementById(prefix+'ImgText');
+  if (url) { preview.src=url; preview.style.display='block'; area.classList.add('has-image'); text.textContent='Click to replace'; }
+  else { preview.style.display='none'; area.classList.remove('has-image'); text.textContent=prefix==='b'?'Click to upload banner':'Click to upload image'; }
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ACCOUNTS — Complete customer management system
-// ══════════════════════════════════════════════════════════════════════════════
-
-let allCustomers=[], udharSummaries=[], accountSelectedId=null;
-let udharEntries=[], udharPayments=[], udharMilkLogs=[];
-let udharCustomers=[]; // legacy alias
-
-async function renderAccounts() {
-  await loadAccountsData();
-  renderAccountsOverview();
-}
-
-async function loadAccountsData() {
-  const [cR, sR] = await Promise.all([
-    fetch('/api/admin/customers',{headers:ah()}),
-    fetch('/api/admin/udhar-summary',{headers:ah()}),
-  ]);
-  allCustomers = cR.ok ? await cR.json() : [];
-  udharSummaries = sR.ok ? await sR.json() : [];
-  udharCustomers = allCustomers.map(c=>({...c,id:c.customerId}));
-}
-
-async function loadUdharData() { await loadAccountsData(); }
-
-function renderAccountsOverview() {
-  const udharMap={};
-  udharSummaries.forEach(s=>{udharMap[s.customer.id]=s;});
-  const totalOut = udharSummaries.reduce((s,x)=>s+(x.balance>0?x.balance:0),0);
-  const totalRec = udharSummaries.reduce((s,x)=>s+x.totalPaid,0);
-  const milkCount = allCustomers.filter(c=>c.milkSubscription).length;
-
-  const rows = allCustomers.length===0
-    ? `<div class="empty-state"><div class="ei">👥</div><p>No customers yet.</p></div>`
-    : allCustomers.map(c=>{
-        const s=udharMap[c.customerId]||{totalUdhar:0,totalPaid:0,balance:0};
-        const bal=s.balance;
-        const hasMilk=!!c.milkSubscription;
-        const milkBadge=hasMilk
-          ?`<span style="font-size:.65rem;background:${c.milkSubscription.status==='active'?'#f0fdf4':'#fffbeb'};color:${c.milkSubscription.status==='active'?'#16a34a':'#d97706'};border-radius:20px;padding:1px 7px;font-weight:600;display:inline-block;margin-top:2px">${c.milkSubscription.status==='active'?'🥛 Milk Active':'⏸️ Milk Paused'}</span>`
-          :'';
-        const balCol=bal>0?'var(--red)':bal<0?'var(--blue)':'var(--green)';
-        const balTxt=bal>0?'Rs.'+bal.toFixed(0)+' due':bal<0?'Advance Rs.'+Math.abs(bal).toFixed(0):'Settled';
-        const n=c.name.replace(/'/g,"\\'");
-        return `<tr onclick="openCustomerProfile(${c.customerId})" style="cursor:pointer">
-          <td>
-            <div style="font-weight:700">${c.name}</div>
-            <div style="font-size:.73rem;color:var(--text2)">${c.phone}</div>
-            ${milkBadge}
-          </td>
-          <td style="font-size:.82rem;color:var(--text2)">${c.address||'—'}</td>
-          <td style="font-weight:700;color:var(--red)">${s.totalUdhar>0?'Rs.'+s.totalUdhar.toFixed(0):'—'}</td>
-          <td style="font-weight:600;color:var(--green)">${s.totalPaid>0?'Rs.'+s.totalPaid.toFixed(0):'—'}</td>
-          <td style="font-weight:700;color:${balCol}">${balTxt}</td>
-          <td onclick="event.stopPropagation()"><div class="actions">
-            <button class="btn btn-blue" onclick="openCustomerProfile(${c.customerId})">👤 Open</button>
-            <button class="btn btn-green" onclick="quickAddUdhar(${c.customerId},'${n}')">+ Udhar</button>
-            ${bal>0?`<button class="btn btn-gray" onclick="quickPayment(${c.customerId},'${n}',${bal.toFixed(0)})">Paid</button>`:''}
-          </div></td>
-        </tr>`;
-      }).join('');
-
-  document.getElementById('content').innerHTML=`
-    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.2rem">
-      <div class="stat-card"><div class="stat-val">${allCustomers.length}</div><div class="stat-lbl">All Customers</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--red)">Rs.${totalOut.toFixed(0)}</div><div class="stat-lbl">Total Outstanding</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--green)">Rs.${totalRec.toFixed(0)}</div><div class="stat-lbl">Total Received</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${milkCount}</div><div class="stat-lbl">Milk Subscribers</div></div>
-    </div>
-    <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
-      <input type="text" id="custSearch" placeholder="🔍 Search name or phone..." class="search-input" style="flex:1;min-width:180px" oninput="filterCustTable(this.value)">
-      <button class="btn btn-green" onclick="openAddCustomerModal()">+ Add Customer</button>
-    </div>
-    <div class="card">
-      <div class="card-header"><h2>👥 All Customers (${allCustomers.length})</h2></div>
-      <div class="table-scroll"><table id="custTable">
-        <thead><tr><th>Customer</th><th>Address</th><th>Udhar</th><th>Paid</th><th>Balance</th><th>Actions</th></tr></thead>
-        <tbody>${typeof rows==='string'&&rows.startsWith('<div')?`<tr><td colspan="6">${rows}</td></tr>`:rows}</tbody>
-      </table></div>
-    </div>
-    <div id="customerProfile"></div>`;
-}
-
-// legacy alias
-function renderUdharOverview(){renderAccountsOverview();}
-
-function filterCustTable(q){
-  q=q.toLowerCase();
-  document.querySelectorAll('#custTable tbody tr').forEach(r=>{
-    r.style.display=r.textContent.toLowerCase().includes(q)?'':'none';
-  });
-}
-
-// ── CUSTOMER PROFILE (full page drawer) ──────────────────────────────────────
-async function openCustomerProfile(customerId) {
-  accountSelectedId=customerId;
-  const profDiv=document.getElementById('customerProfile');
-  profDiv.innerHTML=`<div class="card" style="margin-top:1.2rem"><div class="card-body" style="text-align:center;padding:2rem;color:var(--text2)">Loading profile...</div></div>`;
-  profDiv.scrollIntoView({behavior:'smooth'});
-
-  const r=await fetch('/api/admin/customers/'+customerId,{headers:ah()});
-  if(!r.ok){toast('Could not load customer');return;}
-  const data=await r.json();
-  const c=data.customer;
-  const sub=data.milkSubscription;
-  udharEntries=data.udharEntries||[];
-  udharPayments=data.udharPayments||[];
-  udharMilkLogs=data.milkLogs||[];
-
-  const totalUdhar=udharEntries.reduce((s,e)=>s+(e.amount||0),0);
-  const totalPaid=udharPayments.reduce((s,p)=>s+(p.amount||0),0);
-  const balance=totalUdhar-totalPaid;
-  const milkAmt=udharMilkLogs.reduce((s,l)=>s+l.qty*(l.price||60),0);
-  const totalL=udharMilkLogs.reduce((s,l)=>s+l.qty,0);
-
-  // Build ledger (combined, sorted desc)
-  const ledger=[
-    ...udharEntries.map(e=>({...e,_t:'debit',_d:e.date})),
-    ...udharPayments.map(p=>({...p,_t:'credit',_d:p.date||p.paidAt?.slice(0,10)||''}))
-  ].sort((a,b)=>b._d.localeCompare(a._d));
-
-  const ledgerRows=ledger.length===0
-    ?`<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:1.5rem">No transactions yet</td></tr>`
-    :ledger.map(r=>{
-      if(r._t==='debit'){
-        const desc=(r.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')||r.note||'Purchase';
-        return `<tr>
-          <td style="white-space:nowrap">${fmtDate(r._d)}</td>
-          <td><div style="font-weight:600">${desc}</div>${r.note&&(r.items||[]).length?`<div style="font-size:.72rem;color:var(--text2)">${r.note}</div>`:''}</td>
-          <td style="color:var(--red);font-weight:700;white-space:nowrap">+Rs.${(r.amount||0).toFixed(0)}</td>
-          <td><div class="actions">
-            <button class="btn btn-blue" style="font-size:.7rem;padding:.22rem .55rem" onclick="editUdharEntry(${r.id})">Edit</button>
-            <button class="btn btn-red" style="font-size:.7rem;padding:.22rem .55rem" onclick="delUdharEntry(${r.id})">Del</button>
-          </div></td></tr>`;
-      } else {
-        return `<tr style="background:#f0fdf4">
-          <td style="white-space:nowrap">${fmtDate(r._d)}</td>
-          <td><div style="font-weight:600;color:var(--green)">✓ Payment — ${r.method||'Cash'}</div>${r.note?`<div style="font-size:.72rem;color:var(--text2)">${r.note}</div>`:''}</td>
-          <td style="color:var(--green);font-weight:700;white-space:nowrap">-Rs.${(r.amount||0).toFixed(0)}</td>
-          <td><button class="btn btn-red" style="font-size:.7rem;padding:.22rem .55rem" onclick="delUdharPayment(${r.id})">Del</button></td></tr>`;
-      }
-    }).join('');
-
-  const milkRows=(udharMilkLogs.length===0)
-    ?`<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:1rem">No milk deliveries recorded</td></tr>`
-    :[...udharMilkLogs].sort((a,b)=>b.date.localeCompare(a.date)).map(l=>`
-      <tr>
-        <td>${fmtDate(l.date)}</td>
-        <td>${l.qty}L</td>
-        <td>Rs.${(l.qty*(l.price||60)).toFixed(0)}</td>
-        <td><button class="btn btn-gray" style="font-size:.7rem;padding:.2rem .5rem" onclick="editMilkLogFromProfile(${customerId},'${l.date}',${l.qty})">Edit</button></td>
-      </tr>`).join('');
-
-  const orderRows=(data.orders||[]).length===0
-    ?`<div style="color:var(--text2);font-size:.85rem;padding:.5rem 0">No app orders.</div>`
-    :(data.orders||[]).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(o=>`
-      <div style="display:flex;justify-content:space-between;align-items:start;padding:.6rem 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-weight:600;font-size:.85rem">Order #${o.id}</div>
-          <div style="font-size:.73rem;color:var(--text2)">${fmtDate(o.createdAt?.slice(0,10))} · ${(o.items||[]).slice(0,3).map(i=>i.name+'×'+i.qty).join(', ')}${(o.items||[]).length>3?'...':''}</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0;margin-left:.5rem">
-          <div style="font-weight:700;color:var(--green)">Rs.${o.total}</div>
-          <span class="badge ${o.status==='delivered'?'badge-green':o.status==='cancelled'?'badge-red':'badge-yellow'}">${o.status}</span>
-        </div>
-      </div>`).join('');
-
-  const milkSectionHtml = sub ? `
-    <!-- MILK SUBSCRIPTION -->
-    <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem">
-        <div style="font-size:.85rem;font-weight:700">🥛 Milk Subscription</div>
-        <div class="actions">
-          <span class="badge ${sub.status==='active'?'badge-green':'badge-yellow'}">${sub.status}</span>
-          ${sub.status==='active'
-            ?`<button class="btn btn-gray" style="font-size:.72rem" onclick="pauseMilkSub(${customerId})">Pause</button>`
-            :`<button class="btn btn-green" style="font-size:.72rem" onclick="resumeMilkSub(${customerId})">Resume</button>`}
-          <button class="btn btn-blue" style="font-size:.72rem" onclick="editMilkSub(${customerId},${sub.defaultQty},${sub.pricePerLitre||60})">Edit</button>
-          <button class="btn btn-red" style="font-size:.72rem" onclick="deleteMilkSub(${customerId})">Remove</button>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem">
-        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">${(sub.defaultQty||0)}L</div><div class="stat-lbl">Daily</div></div>
-        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">Rs.${sub.pricePerLitre||60}</div><div class="stat-lbl">Per Litre</div></div>
-        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">${totalL.toFixed(1)}L</div><div class="stat-lbl">This Month</div></div>
-        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">Rs.${milkAmt.toFixed(0)}</div><div class="stat-lbl">Milk Bill</div></div>
-      </div>
-      <div style="font-size:.8rem;font-weight:700;margin-bottom:.5rem;color:var(--text2)">DELIVERY LOG (recent)</div>
-      <table><thead><tr><th>Date</th><th>Qty</th><th>Amount</th><th></th></tr></thead><tbody>${milkRows}</tbody></table>
-      <button class="btn btn-green" style="margin-top:.7rem;font-size:.78rem" onclick="editMilkLogFromProfile(${customerId},'${new Date().toISOString().slice(0,10)}',${sub.defaultQty||0.5})">+ Mark Today</button>
-    </div>` : `
-    <!-- NO MILK SUB -->
-    <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:.85rem;color:var(--text2)">🥛 No milk subscription</div>
-        <button class="btn btn-blue" style="font-size:.78rem" onclick="addMilkSubForCustomer(${customerId})">+ Add Milk Subscription</button>
-      </div>
-    </div>`;
-
-  const n=c.name.replace(/'/g,"\\'");
-  profDiv.innerHTML=`
-    <div class="card" style="margin-top:1.2rem">
-
-      <!-- HEADER -->
-      <div class="card-header" style="background:linear-gradient(135deg,#f0fdf4,#fff)">
-        <div>
-          <div style="font-size:1.05rem;font-weight:800">${c.name}</div>
-          <div style="font-size:.8rem;color:var(--text2)">${c.phone}${c.address?' · '+c.address:''}</div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-green" onclick="quickAddUdhar(${customerId},'${n}')">+ Udhar</button>
-          <button class="btn btn-blue" onclick="quickPayment(${customerId},'${n}',${balance.toFixed(0)})">Record Payment</button>
-          <button class="btn btn-gray" onclick="openBillPreview(${customerId})">📄 Bill</button>
-          <button class="btn btn-gray" onclick="openEditCustomerModal(${customerId})">✏️ Edit</button>
-          <button class="btn btn-gray" onclick="document.getElementById('customerProfile').innerHTML=''">✕ Close</button>
-        </div>
-      </div>
-
-      <!-- SUMMARY STATS -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.8rem;padding:1rem 1.4rem;background:var(--bg);border-bottom:1px solid var(--border)">
-        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem;color:var(--red)">Rs.${totalUdhar.toFixed(0)}</div><div class="stat-lbl">Total Udhar</div></div>
-        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem;color:var(--green)">Rs.${totalPaid.toFixed(0)}</div><div class="stat-lbl">Paid</div></div>
-        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem;color:${balance>0?'var(--red)':'var(--green)'}">${balance>0?'Rs.'+balance.toFixed(0)+' due':'Settled'}</div><div class="stat-lbl">Balance</div></div>
-        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">${totalL.toFixed(1)}L</div><div class="stat-lbl">Milk Month</div></div>
-        <div class="stat-card" style="margin:0;padding:.7rem 1rem"><div class="stat-val" style="font-size:1.1rem">Rs.${milkAmt.toFixed(0)}</div><div class="stat-lbl">Milk Bill</div></div>
-      </div>
-
-      <!-- TABS -->
-      <div style="display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg)">
-        ${['udhar','milk','orders','info'].map(tab=>`
-          <button id="ptab_${tab}" onclick="switchProfileTab('${tab}',${customerId})"
-            style="padding:.65rem 1.2rem;font-size:.82rem;font-weight:600;border:none;cursor:pointer;background:none;border-bottom:2px solid ${tab==='udhar'?'var(--green)':'transparent'};color:${tab==='udhar'?'var(--green)':'var(--text2)'};transition:all .15s">
-            ${tab==='udhar'?'📒 Udhar':tab==='milk'?'🥛 Milk':tab==='orders'?'🛒 Orders':'👤 Info'}
-          </button>`).join('')}
-      </div>
-
-      <!-- TAB CONTENT -->
-      <div id="profileTabContent">
-
-        <!-- UDHAR TAB (default) -->
-        <div id="ptabBody_udhar">
-          <!-- ADD UDHAR INLINE -->
-          <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border);background:#fffbeb">
-            <div style="font-size:.82rem;font-weight:700;margin-bottom:.6rem">+ Add Udhar Entry</div>
-            <div id="udharItemsContainer">
-              <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem">
-                <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.84rem;font-family:inherit">
-                <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
-                <input type="number" placeholder="Rs." class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
-                <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:.4rem .6rem;cursor:pointer">✕</button>
-              </div>
-            </div>
-            <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.4rem">
-              <button class="btn btn-gray" style="font-size:.78rem" onclick="addUdharItemRow()">+ More items</button>
-              <input type="date" id="ud_date" value="${new Date().toISOString().slice(0,10)}" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.82rem;font-family:inherit">
-              <input type="text" id="ud_note" placeholder="Note (optional)" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.82rem;font-family:inherit;flex:1;min-width:100px">
-              <input type="number" id="ud_manual_total" placeholder="Or total Rs." style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.82rem;font-family:inherit;width:120px">
-              <button class="btn btn-red" style="font-weight:700;font-size:.82rem" onclick="saveUdharEntry(${customerId})">Save Udhar</button>
-            </div>
-          </div>
-          <!-- LEDGER -->
-          <div style="padding:1rem 1.4rem">
-            <div style="font-size:.82rem;font-weight:700;margin-bottom:.6rem">📒 Transaction Ledger</div>
-            <table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th></th></tr></thead><tbody>${ledgerRows}</tbody></table>
-          </div>
-        </div>
-
-        <!-- MILK TAB (hidden) -->
-        <div id="ptabBody_milk" style="display:none">
-          ${milkSectionHtml}
-        </div>
-
-        <!-- ORDERS TAB (hidden) -->
-        <div id="ptabBody_orders" style="display:none">
-          <div style="padding:1rem 1.4rem">
-            <div style="font-size:.82rem;font-weight:700;margin-bottom:.6rem">🛒 App Orders</div>
-            ${orderRows}
-          </div>
-        </div>
-
-        <!-- INFO TAB (hidden) -->
-        <div id="ptabBody_info" style="display:none">
-          <div style="padding:1.2rem 1.4rem">
-            <div style="font-size:.82rem;font-weight:700;margin-bottom:.8rem">👤 Customer Info</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1rem">
-              <div class="form-group" style="margin:0"><label>Name</label><input type="text" id="ei_name" value="${c.name}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-              <div class="form-group" style="margin:0"><label>Phone</label><input type="text" id="ei_phone" value="${c.phone}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-            </div>
-            <div class="form-group" style="margin-bottom:.8rem"><label>Address</label><input type="text" id="ei_address" value="${c.address||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem">
-              <div class="form-group" style="margin:0"><label>Block</label><input type="text" id="ei_block" value="${c.block||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-              <div class="form-group" style="margin:0"><label>Villa / Flat</label><input type="text" id="ei_villa" value="${c.villa||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-            </div>
-            <div class="form-group" style="margin-bottom:.8rem"><label>Notes</label><textarea id="ei_notes" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;resize:vertical">${c.notes||''}</textarea></div>
-            <div class="form-group" style="margin-bottom:.8rem"><label>New PIN (leave blank to keep current)</label><input type="number" id="ei_pin" placeholder="4-digit PIN" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-            <div style="display:flex;gap:.5rem">
-              <button class="btn btn-green" onclick="saveCustomerInfo(${customerId})">💾 Save Info</button>
-              <button class="btn btn-red" onclick="deleteCustomer(${customerId})">🗑️ Delete Customer</button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>`;
-
-  profDiv.scrollIntoView({behavior:'smooth'});
-}
-
-function switchProfileTab(tab, customerId) {
-  ['udhar','milk','orders','info'].forEach(t=>{
-    const body=document.getElementById('ptabBody_'+t);
-    const btn=document.getElementById('ptab_'+t);
-    if(body) body.style.display=t===tab?'':'none';
-    if(btn){
-      btn.style.borderBottomColor=t===tab?'var(--green)':'transparent';
-      btn.style.color=t===tab?'var(--green)':'var(--text2)';
-    }
-  });
-}
-
-function fmtDate(d) {
-  if(!d) return '—';
-  try{ return new Date(d+'T12:00:00').toLocaleDateString('default',{day:'numeric',month:'short'}); }
-  catch{ return d; }
-}
-
-// ── CUSTOMER CRUD ─────────────────────────────────────────────────────────────
-function openAddCustomerModal() {
-  document.body.insertAdjacentHTML('beforeend',`
-    <div id="addCustModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
-      <div style="background:#fff;border-radius:18px;width:min(500px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.25)">
-        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
-          <div><div style="font-weight:700;font-size:1rem">Add Customer</div><div style="font-size:.74rem;color:var(--text2)">Creates account only. Add milk subscription separately.</div></div>
-          <button onclick="document.getElementById('addCustModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
-        </div>
-        <div style="padding:1.4rem">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
-            <div class="form-group" style="margin:0"><label>Full Name *</label><input type="text" id="nc_name" placeholder="e.g. Raj Kumar" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-            <div class="form-group" style="margin:0"><label>Phone *</label><input type="tel" id="nc_phone" placeholder="10-digit" maxlength="10" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-          </div>
-          <div class="form-group" style="margin-top:.7rem;margin-bottom:.7rem"><label>Address</label><input type="text" id="nc_address" placeholder="Villa / Block" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem">
-            <div class="form-group" style="margin:0"><label>Block</label><input type="text" id="nc_block" placeholder="A / B / C..." style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-            <div class="form-group" style="margin:0"><label>Villa / Flat</label><input type="text" id="nc_villa" placeholder="14" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-          </div>
-          <div class="form-group" style="margin-bottom:.7rem"><label>4-digit PIN (for customer portal)</label><input type="number" id="nc_pin" placeholder="e.g. 1234" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-          <hr style="border:none;border-top:1px solid var(--border);margin:.8rem 0">
-          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
-            <input type="checkbox" id="nc_addMilk" onchange="toggleMilkSection()" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer">
-            <label for="nc_addMilk" style="font-size:.88rem;font-weight:600;cursor:pointer">🥛 Also add milk subscription</label>
-          </div>
-          <div id="nc_milkSection" style="display:none;background:var(--bg);border-radius:10px;padding:1rem;border:1px solid var(--border)">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
-              <div class="form-group" style="margin:0"><label>Daily Quantity (L)</label><input type="number" id="nc_milkQty" value="0.5" min="0.5" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-              <div class="form-group" style="margin:0"><label>Price per Litre (Rs.)</label><input type="number" id="nc_milkPrice" value="60" min="1" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-            </div>
-            <div class="form-group" style="margin-top:.7rem;margin-bottom:0"><label>Start Date</label><input type="date" id="nc_milkStart" value="${new Date().toISOString().slice(0,10)}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-          </div>
-        </div>
-        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
-          <button class="btn btn-gray" onclick="document.getElementById('addCustModal').remove()">Cancel</button>
-          <button class="btn btn-green" onclick="saveNewCustomer()">Add Customer</button>
-        </div>
-      </div>
-    </div>`);
-}
-
-function toggleMilkSection(){
-  const show=document.getElementById('nc_addMilk').checked;
-  document.getElementById('nc_milkSection').style.display=show?'block':'none';
-}
-
-async function saveNewCustomer(){
-  const name=document.getElementById('nc_name')?.value.trim();
-  const phone=document.getElementById('nc_phone')?.value.trim();
-  const address=document.getElementById('nc_address')?.value.trim()||'';
-  const block=document.getElementById('nc_block')?.value.trim()||'';
-  const villa=document.getElementById('nc_villa')?.value.trim()||'';
-  const pin=document.getElementById('nc_pin')?.value.trim();
-  if(!name) return toast('Name is required');
-  if(!phone||phone.length<10) return toast('Valid 10-digit phone required');
-  const r=await fetch('/api/admin/customers',{method:'POST',headers:ah(),body:JSON.stringify({name,phone,address,block,villa,pin:pin||null})});
-  const d=await r.json();
-  if(!r.ok) return toast(d.error||'Failed to add customer');
-  const cid=d.customer.customerId;
-  // optionally add milk subscription
-  if(document.getElementById('nc_addMilk')?.checked){
-    const qty=parseFloat(document.getElementById('nc_milkQty')?.value)||0.5;
-    const price=parseFloat(document.getElementById('nc_milkPrice')?.value)||60;
-    const start=document.getElementById('nc_milkStart')?.value||new Date().toISOString().slice(0,10);
-    await fetch('/api/admin/milk/subscriptions',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,defaultQty:qty,pricePerLitre:price,startDate:start})});
-  }
-  document.getElementById('addCustModal')?.remove();
-  toast('Customer added!');
-  await loadAccountsData();
-  renderAccountsOverview();
-}
-
-async function saveCustomerInfo(customerId){
-  const body={
-    name:document.getElementById('ei_name')?.value.trim(),
-    phone:document.getElementById('ei_phone')?.value.trim(),
-    address:document.getElementById('ei_address')?.value.trim(),
-    block:document.getElementById('ei_block')?.value.trim(),
-    villa:document.getElementById('ei_villa')?.value.trim(),
-    notes:document.getElementById('ei_notes')?.value.trim(),
-  };
-  const pin=document.getElementById('ei_pin')?.value.trim();
-  if(pin) body.pin=pin;
-  const r=await fetch('/api/admin/customers/'+customerId,{method:'PUT',headers:ah(),body:JSON.stringify(body)});
-  if(!r.ok) return toast('Failed to save');
-  toast('Customer info saved!');
-  await loadAccountsData();
-  openCustomerProfile(customerId);
-}
-
-async function deleteCustomer(customerId){
-  if(!confirm('Delete this customer? All their data will remain but the account will be removed.')) return;
-  await fetch('/api/admin/customers/'+customerId,{method:'DELETE',headers:ah()});
-  toast('Customer deleted');
-  document.getElementById('customerProfile').innerHTML='';
-  await loadAccountsData();
-  renderAccountsOverview();
-}
-
-function openEditCustomerModal(customerId){ switchProfileTab('info',customerId); }
-
-// ── MILK SUBSCRIPTION MANAGEMENT FROM PROFILE ─────────────────────────────────
-async function addMilkSubForCustomer(customerId){
-  const settings=await fetch('/api/admin/settings',{headers:ah()}).then(r=>r.json()).catch(()=>({milkPrice:60}));
-  document.body.insertAdjacentHTML('beforeend',`
-    <div id="addMilkSubModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
-      <div style="background:#fff;border-radius:18px;width:min(440px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
-        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-          <div style="font-weight:700">🥛 Add Milk Subscription</div>
-          <button onclick="document.getElementById('addMilkSubModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
-        </div>
-        <div style="padding:1.4rem">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
-            <div class="form-group" style="margin:0"><label>Daily Quantity (L)</label><input type="number" id="ms_qty" value="0.5" min="0.5" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-            <div class="form-group" style="margin:0"><label>Price per Litre (Rs.)</label><input type="number" id="ms_price" value="${settings.milkPrice||60}" min="1" step="0.5" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-          </div>
-          <div class="form-group" style="margin-top:.7rem;margin-bottom:0"><label>Start Date</label><input type="date" id="ms_start" value="${new Date().toISOString().slice(0,10)}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
-        </div>
-        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
-          <button class="btn btn-gray" onclick="document.getElementById('addMilkSubModal').remove()">Cancel</button>
-          <button class="btn btn-green" onclick="saveMilkSubForCustomer(${customerId})">Add Subscription</button>
-        </div>
-      </div>
-    </div>`);
-}
-
-async function saveMilkSubForCustomer(customerId){
-  const qty=parseFloat(document.getElementById('ms_qty')?.value)||0.5;
-  const price=parseFloat(document.getElementById('ms_price')?.value)||60;
-  const start=document.getElementById('ms_start')?.value||new Date().toISOString().slice(0,10);
-  const r=await fetch('/api/admin/milk/subscriptions',{method:'POST',headers:ah(),body:JSON.stringify({customerId,defaultQty:qty,pricePerLitre:price,startDate:start})});
-  const d=await r.json();
-  if(!r.ok) return toast(d.error||'Failed');
-  document.getElementById('addMilkSubModal')?.remove();
-  toast('Milk subscription added!');
-  await loadAccountsData();
-  openCustomerProfile(customerId);
-}
-
-async function editMilkSub(customerId,currentQty,currentPrice){
-  const qty=prompt('Daily quantity (litres):',currentQty);
-  if(qty===null) return;
-  const price=prompt('Price per litre (Rs.):',currentPrice);
-  if(price===null) return;
-  await fetch('/api/admin/milk/subscriptions/'+customerId,{method:'PUT',headers:ah(),body:JSON.stringify({defaultQty:parseFloat(qty)||0.5,pricePerLitre:parseFloat(price)||60})});
-  toast('Subscription updated!');
-  await loadAccountsData();
-  openCustomerProfile(customerId);
-}
-
-async function pauseMilkSub(customerId){
-  await fetch('/api/admin/milk/subscriptions/'+customerId+'/pause',{method:'POST',headers:ah(),body:JSON.stringify({})});
-  toast('Subscription paused');
-  await loadAccountsData();
-  openCustomerProfile(customerId);
-}
-
-async function resumeMilkSub(customerId){
-  await fetch('/api/admin/milk/subscriptions/'+customerId+'/resume',{method:'POST',headers:ah(),body:JSON.stringify({})});
-  toast('Subscription resumed!');
-  await loadAccountsData();
-  openCustomerProfile(customerId);
-}
-
-async function deleteMilkSub(customerId){
-  if(!confirm('Remove milk subscription? Delivery logs will be kept.')) return;
-  await fetch('/api/admin/milk/subscriptions/'+customerId,{method:'DELETE',headers:ah()});
-  toast('Subscription removed');
-  await loadAccountsData();
-  openCustomerProfile(customerId);
-}
-
-async function editMilkLogFromProfile(customerId,date,defaultQty){
-  const newQty=prompt('Litres delivered on '+date+':',defaultQty);
-  if(newQty===null) return;
-  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(newQty)||0,price:60})});
-  toast('Milk log updated!');
-  openCustomerProfile(customerId);
-}
-
-// ── UDHAR HELPERS (used both from profile and quickAdd) ───────────────────────
-function openAddUdharCustomer(){ openAddCustomerModal(); }
-
-function addUdharItemRow() {
-  document.getElementById('udharItemsContainer').insertAdjacentHTML('beforeend',`
-    <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem">
-      <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.84rem;font-family:inherit">
-      <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
-      <input type="number" placeholder="Rs." class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
-      <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:.4rem .6rem;cursor:pointer">✕</button>
-    </div>`);
-}
-
-async function saveUdharEntry(customerId) {
-  const rows=document.querySelectorAll('.udhar-item-row');
-  const items=[]; let total=0;
-  rows.forEach(row=>{
-    const name=row.querySelector('.ui_name')?.value.trim();
-    const qty=parseFloat(row.querySelector('.ui_qty')?.value)||1;
-    const price=parseFloat(row.querySelector('.ui_price')?.value)||0;
-    if(name){items.push({name,qty,price});total+=qty*price;}
-  });
-  const manual=parseFloat(document.getElementById('ud_manual_total')?.value)||0;
-  const amount=manual||total;
-  const date=document.getElementById('ud_date')?.value;
-  const note=document.getElementById('ud_note')?.value.trim();
-  if(!amount) return toast('Enter items with prices or a manual total');
-  const r=await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId,items,amount,date,note})});
-  if(!r.ok) return toast('Failed to save');
-  toast('Udhar Rs.'+amount+' saved!');
-  await loadAccountsData();
-  openCustomerProfile(customerId);
-}
-
-async function editUdharEntry(id){
-  const e=udharEntries.find(x=>x.id===id);
-  if(!e) return;
-  const newAmt=prompt('Edit amount (Rs.):',e.amount);
-  if(newAmt===null) return;
-  const newNote=prompt('Note:',e.note||'');
-  await fetch('/api/admin/udhar/'+id,{method:'PUT',headers:ah(),body:JSON.stringify({amount:parseFloat(newAmt)||e.amount,note:newNote||''})});
-  toast('Updated!');
-  await loadAccountsData();
-  openCustomerProfile(accountSelectedId);
-}
-
-async function delUdharEntry(id){
-  if(!confirm('Delete this udhar entry?')) return;
-  await fetch('/api/admin/udhar/'+id,{method:'DELETE',headers:ah()});
-  toast('Entry deleted');
-  await loadAccountsData();
-  openCustomerProfile(accountSelectedId);
-}
-
-async function delUdharPayment(id){
-  if(!confirm('Delete this payment record?')) return;
-  await fetch('/api/admin/udhar-payments/'+id,{method:'DELETE',headers:ah()});
-  toast('Payment deleted');
-  await loadAccountsData();
-  openCustomerProfile(accountSelectedId);
-}
-
-// ── QUICK MODALS (from table row buttons) ─────────────────────────────────────
-
-function quickAddUdhar(customerId, name) {
-  document.body.insertAdjacentHTML('beforeend',`
-    <div id="quickUdharModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
-      <div style="background:#fff;border-radius:18px;width:min(480px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.25)">
-        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
-          <div><div style="font-weight:700">📒 Add Udhar</div><div style="font-size:.75rem;color:var(--text2)">${name}</div></div>
-          <button onclick="document.getElementById('quickUdharModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
-        </div>
-        <div style="padding:1.4rem">
-          <div id="quickUdharItems">
-            <div class="udhar-item-row" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem">
-              <input type="text" placeholder="Item name" class="ui_name" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.84rem;font-family:inherit">
-              <input type="number" placeholder="Qty" class="ui_qty" value="1" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
-              <input type="number" placeholder="₹" class="ui_price" style="border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit">
-              <button onclick="this.parentElement.remove()" style="background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:.4rem .6rem;cursor:pointer">✕</button>
-            </div>
-          </div>
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.4rem">
-            <button class="btn btn-gray" style="font-size:.78rem" onclick="document.getElementById('quickUdharItems').insertAdjacentHTML('beforeend',\`<div class='udhar-item-row' style='display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem'><input type='text' placeholder='Item name' class='ui_name' style='border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.84rem;font-family:inherit'><input type='number' placeholder='Qty' class='ui_qty' value='1' style='border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit'><input type='number' placeholder='₹' class='ui_price' style='border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-size:.84rem;font-family:inherit'><button onclick='this.parentElement.remove()' style='background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:.4rem .6rem;cursor:pointer'>✕</button></div>\`)">+ Item</button>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.8rem">
-            <div class="form-group" style="margin:0"><label>Date</label><input type="date" id="qu_date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.45rem .7rem;font-size:.85rem"></div>
-            <div class="form-group" style="margin:0"><label>Manual Total ₹ (optional)</label><input type="number" id="qu_manual" placeholder="Override total" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.45rem .7rem;font-size:.85rem"></div>
-          </div>
-          <div class="form-group" style="margin-top:.6rem;margin-bottom:0"><label>Note</label><input type="text" id="qu_note" placeholder="Optional note" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.45rem .7rem;font-size:.85rem"></div>
-        </div>
-        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
-          <button class="btn btn-gray" onclick="document.getElementById('quickUdharModal').remove()">Cancel</button>
-          <button class="btn btn-red" onclick="saveQuickUdhar(${customerId})">💾 Save Udhar</button>
-        </div>
-      </div>
-    </div>`);
-}
-
-async function saveQuickUdhar(customerId) {
-  const rows = document.querySelectorAll('#quickUdharModal .udhar-item-row');
-  const items = []; let total = 0;
-  rows.forEach(row => {
-    const name = row.querySelector('.ui_name')?.value.trim();
-    const qty = parseFloat(row.querySelector('.ui_qty')?.value)||1;
-    const price = parseFloat(row.querySelector('.ui_price')?.value)||0;
-    if(name){items.push({name,qty,price});total+=qty*price;}
-  });
-  const manual = parseFloat(document.getElementById('qu_manual')?.value)||0;
-  const amount = manual||total;
-  const date = document.getElementById('qu_date')?.value;
-  const note = document.getElementById('qu_note')?.value.trim();
-  if(!amount) return toast('Enter items with prices or a manual total');
-  const r = await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId,items,amount,date,note})});
-  if(!r.ok) return toast('Failed to save');
-  document.getElementById('quickUdharModal')?.remove();
-  toast('Udhar ₹'+amount+' saved!');
-  await loadAccountsData();
-  if(accountSelectedId === customerId) openCustomerProfile(customerId);
-  else if(currentPage==='customers') renderAccountsOverview();
-  else if(currentPage==='udhar') renderUdharPage();
-}
-
-function quickPayment(customerId, name, suggestedAmount) {
-  document.body.insertAdjacentHTML('beforeend',`
-    <div id="quickPayModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
-      <div style="background:#fff;border-radius:18px;width:min(400px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
-        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-          <div><div style="font-weight:700">💰 Record Payment</div><div style="font-size:.75rem;color:var(--text2)">${name}</div></div>
-          <button onclick="document.getElementById('quickPayModal').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
-        </div>
-        <div style="padding:1.4rem;display:flex;flex-direction:column;gap:.7rem">
-          <div class="form-group" style="margin:0"><label>Amount Received (₹)</label><input type="number" id="qp_amount" value="${suggestedAmount||''}" placeholder="e.g. 500" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.9rem" autofocus></div>
-          <div class="form-group" style="margin:0"><label>Payment Method</label>
-            <select id="qp_method" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.9rem">
-              <option value="cash">Cash</option>
-              <option value="upi">UPI</option>
-              <option value="bank">Bank Transfer</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin:0"><label>Note (optional)</label><input type="text" id="qp_note" placeholder="e.g. Received in hand" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.9rem"></div>
-        </div>
-        <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end">
-          <button class="btn btn-gray" onclick="document.getElementById('quickPayModal').remove()">Cancel</button>
-          <button class="btn btn-green" onclick="saveQuickPayment(${customerId})">✓ Save Payment</button>
-        </div>
-      </div>
-    </div>`);
-}
-
-async function saveQuickPayment(customerId) {
-  const amount = parseFloat(document.getElementById('qp_amount')?.value);
-  if(!amount||amount<=0) return toast('Enter a valid amount');
-  const method = document.getElementById('qp_method')?.value||'cash';
-  const note = document.getElementById('qp_note')?.value.trim()||'';
-  const r = await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId,amount,method,note})});
-  if(!r.ok) return toast('Failed to record payment');
-  document.getElementById('quickPayModal')?.remove();
-  toast('Payment ₹'+amount+' recorded!');
-  await loadAccountsData();
-  if(accountSelectedId===customerId) openCustomerProfile(customerId);
-  else if(currentPage==='customers') renderAccountsOverview();
-  else if(currentPage==='udhar') renderUdharPage();
-}
-
-async function openBillPreview(customerId) {
-  const r = await fetch('/api/admin/customers/'+customerId, {headers:ah()});
-  if(!r.ok) return toast('Could not load customer');
-  const data = await r.json();
-  const c = data.customer;
-  const milkPrice = 60;
-  const totalUdhar = (data.udharEntries||[]).reduce((s,e)=>s+(e.amount||0),0);
-  const totalPaid = (data.udharPayments||[]).reduce((s,p)=>s+(p.amount||0),0);
-  const milkAmt = (data.milkLogs||[]).reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
-  const balance = totalUdhar - totalPaid;
-  const today = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
-
-  const win = window.open('','_blank','width=600,height=700');
-  win.document.write(`<!DOCTYPE html><html><head><title>Bill — ${c.name}</title>
-  <style>body{font-family:Arial,sans-serif;padding:24px;color:#111;max-width:520px;margin:0 auto}
-  h2{margin:0 0 4px}h3{margin:16px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px}
-  table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{padding:5px 8px;text-align:left;border-bottom:1px solid #eee;font-size:13px}
-  th{background:#f5f5f5;font-weight:600}.total-row td{font-weight:700;border-top:2px solid #333}
-  .red{color:#dc2626}.green{color:#16a34a}.footer{margin-top:20px;font-size:11px;color:#888;text-align:center}
-  @media print{button{display:none}}</style>
-  </head><body>
-  <h2>BSC Store</h2><div style="font-size:13px;color:#666">Bill — ${today}</div>
-  <h3>Customer</h3>
-  <div><strong>${c.name}</strong> · ${c.phone}</div>
-  <div style="font-size:13px;color:#666">${c.address||''} ${c.block||''} ${c.villa||''}</div>
-  ${milkAmt>0?`<h3>Milk (Current Month)</h3>
-  <table><thead><tr><th>Date</th><th>Qty</th><th>Amount</th></tr></thead><tbody>
-  ${[...(data.milkLogs||[])].sort((a,b)=>a.date.localeCompare(b.date)).map(l=>`<tr><td>${l.date}</td><td>${l.qty}L</td><td>₹${(l.qty*(l.price||milkPrice)).toFixed(0)}</td></tr>`).join('')}
-  <tr class="total-row"><td colspan="2">Milk Total</td><td>₹${milkAmt.toFixed(0)}</td></tr>
-  </tbody></table>`:''}
-  ${data.udharEntries&&data.udharEntries.length?`<h3>Udhar Entries</h3>
-  <table><thead><tr><th>Date</th><th>Items</th><th>Amount</th></tr></thead><tbody>
-  ${data.udharEntries.map(e=>`<tr><td>${e.date||''}</td><td>${(e.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')||e.note||'Purchase'}</td><td>₹${(e.amount||0).toFixed(0)}</td></tr>`).join('')}
-  <tr class="total-row"><td colspan="2">Total Udhar</td><td class="red">₹${totalUdhar.toFixed(0)}</td></tr>
-  </tbody></table>`:''}
-  ${data.udharPayments&&data.udharPayments.length?`<h3>Payments</h3>
-  <table><thead><tr><th>Date</th><th>Method</th><th>Amount</th></tr></thead><tbody>
-  ${data.udharPayments.map(p=>`<tr><td>${p.date||p.paidAt?.slice(0,10)||''}</td><td>${p.method||'Cash'}</td><td class="green">-₹${(p.amount||0).toFixed(0)}</td></tr>`).join('')}
-  </tbody></table>`:''}
-  <div style="background:#f5f5f5;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center">
-    <span style="font-weight:700;font-size:15px">Outstanding Balance</span>
-    <span style="font-weight:900;font-size:18px;color:${balance>0?'#dc2626':'#16a34a'}">${balance>0?'₹'+balance.toFixed(0)+' due':'Settled ✓'}</span>
-  </div>
-  <div class="footer">Generated by BSC Store Admin</div>
-  <br><button onclick="window.print()" style="background:#16a34a;color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px">🖨️ Print</button>
-  </body></html>`);
-  win.document.close();
-}
-
-// ── UDHAR STANDALONE PAGE ─────────────────────────────────────────────────────
-async function renderUdharPage() {
-  document.getElementById('content').innerHTML = `<div class="empty-state"><div class="ei">⏳</div><p>Loading...</p></div>`;
-  const [cR, sR] = await Promise.all([
-    fetch('/api/admin/customers',{headers:ah()}),
-    fetch('/api/admin/udhar-summary',{headers:ah()}),
-  ]);
-  const customers = cR.ok ? await cR.json() : [];
-  const summaries = sR.ok ? await sR.json() : [];
-  const totalOut = summaries.reduce((s,x)=>s+(x.balance>0?x.balance:0),0);
-
-  const rows = summaries.length===0
-    ? `<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:2rem">No udhar yet</td></tr>`
-    : summaries.map(s => {
-        const n = (s.customer?.name||'').replace(/'/g,"\\'");
-        const cid = s.customer?.id;
-        return `<tr>
-          <td><div style="font-weight:700">${s.customer?.name||'?'}</div><div style="font-size:.73rem;color:var(--text2)">${s.customer?.phone||''}</div></td>
-          <td style="color:var(--red);font-weight:700">₹${(s.totalUdhar||0).toFixed(0)}</td>
-          <td style="color:var(--green);font-weight:600">₹${(s.totalPaid||0).toFixed(0)}</td>
-          <td style="font-weight:800;color:${s.balance>0?'var(--red)':s.balance<0?'var(--blue)':'var(--green)'}">${s.balance>0?'₹'+s.balance.toFixed(0)+' due':s.balance<0?'Advance ₹'+Math.abs(s.balance).toFixed(0):'Settled'}</td>
-          <td><div class="actions">
-            <button class="btn btn-blue" onclick="goTo('customers');setTimeout(()=>openCustomerProfile(${cid}),200)">View</button>
-            <button class="btn btn-green" onclick="quickAddUdhar(${cid},'${n}')">+ Udhar</button>
-            ${s.balance>0?`<button class="btn btn-gray" onclick="quickPayment(${cid},'${n}',${s.balance.toFixed(0)})">Paid</button>`:''}
-          </div></td>
-        </tr>`;
-      }).join('');
-
-  document.getElementById('content').innerHTML = `
-    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
-      <div class="stat-card"><div class="stat-val" style="color:var(--red)">₹${totalOut.toFixed(0)}</div><div class="stat-lbl">Total Outstanding</div></div>
-      <div class="stat-card"><div class="stat-val">${summaries.filter(s=>s.balance>0).length}</div><div class="stat-lbl">Customers with Due</div></div>
-      <div class="stat-card"><div class="stat-val">${customers.length}</div><div class="stat-lbl">Total Customers</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h2>📒 Udhar / Ledger</h2></div>
-      <div class="table-scroll"><table>
-        <thead><tr><th>Customer</th><th>Total Udhar</th><th>Paid</th><th>Balance</th><th>Actions</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div>
-    </div>`;
-}
-
-
-
-async function editMilkEntry(customerId, date, defaultQty) {
-  const newQty=prompt('Litres delivered on '+date+':',defaultQty);
-  if(newQty===null) return;
-  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(newQty)||0,price:milkPrice||60})});
-  toast('Milk log updated!');
-  if(accountSelectedId===customerId) openCustomerProfile(customerId);
-}
-
 let toastTimer;
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
+function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800); }
 </script>
 </body>
 </html>
