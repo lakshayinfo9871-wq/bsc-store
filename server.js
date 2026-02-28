@@ -672,7 +672,7 @@ app.post('/api/admin/customers', adminAuth, async (req, res) => {
     const customerId = await getNextId('customerId');
     const customer = {
       customerId, name, phone, address: address || '', block: block || '', villa: villa || '',
-      pin: pin ? sha256(String(pin)) : null,
+      pin: pin ? sha256(String(pin)) : null, pinPlain: pin ? String(pin) : null,
       active: true, tags: [], creditLimit: creditLimit || 0,
       notes: notes || '', joinedAt: new Date().toISOString()
     };
@@ -686,7 +686,7 @@ app.put('/api/admin/customers/:id', adminAuth, async (req, res) => {
     const customerId = parseInt(req.params.id);
     const { pin, ...rest } = req.body;
     const update = { ...rest };
-    if (pin) update.pin = sha256(String(pin));
+    // Admin cannot change PIN via this endpoint (customer sets their own PIN)
     const result = await db.collection('customers').findOneAndUpdate(
       { customerId }, { $set: update }, { returnDocument: 'after' }
     );
@@ -1181,26 +1181,35 @@ app.get('/api/admin/milk/logs', adminAuth, async (req, res) => {
 
 app.post('/api/admin/milk/logs', adminAuth, async (req, res) => {
   try {
-    const { customerId, date, qty, price } = req.body;
+    const { customerId, date, qty, price, items } = req.body;
     const month = date.slice(0, 7);
     const cid = parseInt(customerId);
     const settings = await db.collection('settings').findOne({ _id: 'main' });
     const existing = await db.collection('milkLogs').findOne({ customerId: cid, date });
+
+    // Support items array (multiple milk types per day)
+    // items: [{type: 'Full Cream', qty: 1, price: 60}, {type: 'Toned', qty: 0.5, price: 58}]
+    let logItems = items && items.length ? items : null;
+    let totalQty = logItems
+      ? logItems.reduce((s, i) => s + parseFloat(i.qty || 0), 0)
+      : parseFloat(qty) || 0;
+
     if (existing) {
-      if (!qty || parseFloat(qty) === 0) {
+      if (totalQty === 0) {
         await db.collection('milkLogs').deleteOne({ customerId: cid, date });
       } else {
-        await db.collection('milkLogs').updateOne(
-          { customerId: cid, date },
-          { $set: { qty: parseFloat(qty), price: parseFloat(price) || settings.milkPrice || 60, markedAt: new Date().toISOString() } }
-        );
+        const upd = { qty: totalQty, price: parseFloat(price) || settings.milkPrice || 60, markedAt: new Date().toISOString() };
+        if (logItems) upd.items = logItems;
+        await db.collection('milkLogs').updateOne({ customerId: cid, date }, { $set: upd });
       }
-    } else if (qty && parseFloat(qty) > 0) {
-      await db.collection('milkLogs').insertOne({
+    } else if (totalQty > 0) {
+      const doc = {
         id: await getNextId('milkLogId'), customerId: cid, date, month,
-        qty: parseFloat(qty), price: parseFloat(price) || settings.milkPrice || 60,
+        qty: totalQty, price: parseFloat(price) || settings.milkPrice || 60,
         markedAt: new Date().toISOString()
-      });
+      };
+      if (logItems) doc.items = logItems;
+      await db.collection('milkLogs').insertOne(doc);
     }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1253,7 +1262,13 @@ app.get('/api/admin/milk/billing/:month', adminAuth, async (req, res) => {
       const sub = subMap[cid];
       const custLogs = logs.filter(l => l.customerId === cid);
       const totalLitres = custLogs.reduce((s, l) => s + l.qty, 0);
-      const totalBilled = custLogs.reduce((s, l) => s + l.qty * (l.price || sub?.pricePerLitre || settings.milkPrice || 60), 0);
+      // If log has items array, sum each item's qty*price; otherwise use log.qty * log.price
+      const totalBilled = custLogs.reduce((s, l) => {
+        if (l.items && l.items.length) {
+          return s + l.items.reduce((is, i) => is + parseFloat(i.qty||0) * parseFloat(i.price||0), 0);
+        }
+        return s + l.qty * (l.price || sub?.pricePerLitre || settings.milkPrice || 60);
+      }, 0);
       const totalPaid = payments.filter(p => p.customerId === cid).reduce((s, p) => s + p.amount, 0);
       return {
         customerId: cid,
@@ -1367,7 +1382,7 @@ app.post('/api/milk/register', async (req, res) => {
     const customerId = await getNextId('customerId');
     await db.collection('customers').insertOne({
       customerId, name, phone, address: address || '',
-      block: '', villa: '', pin: sha256(String(pin)),
+      block: '', villa: '', pin: sha256(String(pin)), pinPlain: String(pin),
       active: true, tags: [], creditLimit: 0, notes: '',
       joinedAt: new Date().toISOString()
     });
@@ -1406,7 +1421,10 @@ app.get('/api/customer/dashboard', customerAuth, async (req, res) => {
     ]);
     const pricePerLitre = milkSub?.pricePerLitre || settings.milkPrice || 60;
     const totalLitres = log.reduce((s, l) => s + l.qty, 0);
-    const milkAmt = log.reduce((s, l) => s + l.qty * (l.price || pricePerLitre), 0);
+    const milkAmt = log.reduce((s, l) => {
+      if (l.items && l.items.length) return s + l.items.reduce((is, i) => is + parseFloat(i.qty||0)*parseFloat(i.price||0), 0);
+      return s + l.qty * (l.price || pricePerLitre);
+    }, 0);
     const milkPaid = milkPayments.reduce((s, p) => s + p.amount, 0);
     const ledgerBalance = ledgerEntries.reduce((s, e) => e.type === 'credit' ? s + e.amount : s - e.amount, 0);
     const oldUdharBalance = udharEntries.reduce((s, e) => s + (e.amount || 0), 0) - udharPayments.reduce((s, p) => s + (p.amount || 0), 0);
@@ -1437,7 +1455,15 @@ app.get('/api/customer/ledger', customerAuth, async (req, res) => {
       db.collection('udharPayments').find({ customerId: cid }).toArray(),
       db.collection('ledger').find({ customerId: cid }).toArray(),
     ]);
-    milkLogs.forEach(l => entries.push({ id: 'milk_' + l.id, date: l.date, type: 'milk', source: 'SUBSCRIPTION', description: `Milk delivery — ${l.qty}L`, amount: parseFloat((l.qty * (l.price || settings.milkPrice || 60)).toFixed(2)), debit: true, time: l.markedAt, note: '' }));
+    milkLogs.forEach(l => {
+      const amount = l.items && l.items.length
+        ? parseFloat(l.items.reduce((s,i) => s + parseFloat(i.qty||0)*parseFloat(i.price||0), 0).toFixed(2))
+        : parseFloat((l.qty * (l.price || settings.milkPrice || 60)).toFixed(2));
+      const desc = l.items && l.items.length
+        ? `Milk delivery — ${l.items.map(i=>`${i.qty}L ${i.type}`).join(', ')}`
+        : `Milk delivery — ${l.qty}L`;
+      entries.push({ id: 'milk_' + l.id, date: l.date, type: 'milk', source: 'SUBSCRIPTION', description: desc, amount, debit: true, time: l.markedAt, note: '' });
+    });
     milkPayments.forEach(p => entries.push({ id: 'milkpay_' + p.paidAt?.slice(0,10) + '_' + p.amount, date: p.paidAt ? p.paidAt.slice(0, 10) : month + '-01', type: 'payment', source: 'PAYMENT', description: `Milk payment — ${p.note || 'Cash'}`, amount: parseFloat(p.amount), debit: false, time: p.paidAt, note: p.note || '' }));
     orders.filter(o => o.createdAt && o.createdAt.slice(0, 7) === month).forEach(o => entries.push({ id: 'order_' + o.id, date: o.createdAt.slice(0, 10), type: 'order', source: 'APP', description: `App order #${o.id} — ${(o.items || []).slice(0, 2).map(i => i.name).join(', ')}${(o.items || []).length > 2 ? ` +${o.items.length - 2} more` : ''}`, amount: parseFloat(o.total), debit: true, time: o.createdAt, note: o.note || '', orderId: o.id, orderStatus: o.status }));
     // New ledger entries

@@ -887,12 +887,15 @@ function renderMilkTab(data, customerId) {
         </div>
         <table>
           <thead><tr><th>Date</th><th>Qty</th><th>Amount</th><th></th></tr></thead>
-          <tbody>${logs.slice(0,30).map(l=>`<tr>
+          <tbody>${logs.slice(0,30).map(l=>{
+            const amt = l.items&&l.items.length ? l.items.reduce((s,i)=>s+parseFloat(i.qty||0)*parseFloat(i.price||0),0) : l.qty*(l.price||60);
+            const desc = l.items&&l.items.length ? l.items.map(i=>`${i.qty}L ${i.type}@₹${i.price}`).join('<br>') : `${l.qty}L`;
+            return `<tr>
             <td>${fmtDate(l.date)}</td>
-            <td>${l.qty}L</td>
-            <td>₹${(l.qty*(l.price||60)).toFixed(0)}</td>
+            <td style="font-size:.8rem">${desc}</td>
+            <td>₹${amt.toFixed(0)}</td>
             <td><button class="btn btn-gray" style="font-size:.7rem;padding:.2rem .5rem" onclick="editMilkLogFromProfile(${customerId},'${l.date}',${l.qty})">Edit</button></td>
-          </tr>`).join('')}</tbody>
+          </tr>`;}).join('')}</tbody>
         </table>
       ` : `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0">
@@ -917,7 +920,12 @@ function renderInfoTab(data, customerId) {
         <div class="form-group" style="margin:0"><label>Villa / Flat</label><input type="text" id="ei_villa" value="${c.villa||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
       </div>
       <div class="form-group" style="margin-top:.7rem"><label>Notes</label><textarea id="ei_notes" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;resize:vertical">${c.notes||''}</textarea></div>
-      <div class="form-group"><label>New PIN (leave blank to keep)</label><input type="number" id="ei_pin" placeholder="4-digit PIN" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+      <div class="form-group"><label>Customer PIN (set by customer)</label>
+        <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;font-family:monospace;letter-spacing:.1em">
+          ${c.pinPlain ? `<span style="font-weight:700;color:var(--text1)">${c.pinPlain}</span>` : '<span style="color:var(--text2);font-style:italic">Not set yet (customer hasn\'t registered)</span>'}
+        </div>
+        <div style="font-size:.75rem;color:var(--text2);margin-top:.3rem">🔒 This is the customer's login PIN. Share it only if they forget.</div>
+      </div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap">
         <button class="btn btn-green" onclick="saveCustomerInfo(${customerId})">💾 Save Info</button>
         <button class="btn btn-red" onclick="deleteCustomer(${customerId})">🗑️ Delete Customer</button>
@@ -944,7 +952,11 @@ function openAddCustomerModal() {
             <div class="form-group" style="margin:0"><label>Block</label><input type="text" id="nc_block" placeholder="A / B / C..." style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
             <div class="form-group" style="margin:0"><label>Villa / Flat</label><input type="text" id="nc_villa" placeholder="14" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
           </div>
-          <div class="form-group" style="margin-top:.7rem"><label>4-digit PIN (customer portal login)</label><input type="number" id="nc_pin" placeholder="e.g. 1234" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
+          <div class="form-group" style="margin-top:.7rem"><label>4-digit PIN (customer portal login)</label>
+            <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.84rem;color:var(--text2);font-style:italic">
+              Customer sets their own PIN when registering via the app
+            </div>
+          </div>
           <hr style="border:none;border-top:1px solid var(--border);margin:.8rem 0">
           <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
             <input type="checkbox" id="nc_addMilk" onchange="toggleMilkSection()" style="width:16px;height:16px;accent-color:var(--green)">
@@ -975,7 +987,7 @@ async function saveNewCustomer() {
   const phone = document.getElementById('nc_phone')?.value.trim();
   if (!name) return toast('Name is required');
   if (!phone || phone.length < 10) return toast('Valid 10-digit phone required');
-  const body = {name, phone, address: document.getElementById('nc_address')?.value.trim()||'', block: document.getElementById('nc_block')?.value.trim()||'', villa: document.getElementById('nc_villa')?.value.trim()||'', pin: document.getElementById('nc_pin')?.value.trim()||null};
+  const body = {name, phone, address: document.getElementById('nc_address')?.value.trim()||'', block: document.getElementById('nc_block')?.value.trim()||'', villa: document.getElementById('nc_villa')?.value.trim()||''};
   const r = await fetch('/api/admin/customers',{method:'POST',headers:ah(),body:JSON.stringify(body)});
   const d = await r.json();
   if (!r.ok) return toast(d.error||'Failed to add customer');
@@ -991,8 +1003,6 @@ async function saveNewCustomer() {
 
 async function saveCustomerInfo(customerId) {
   const body = {name:document.getElementById('ei_name')?.value.trim(),phone:document.getElementById('ei_phone')?.value.trim(),address:document.getElementById('ei_address')?.value.trim(),block:document.getElementById('ei_block')?.value.trim(),villa:document.getElementById('ei_villa')?.value.trim(),notes:document.getElementById('ei_notes')?.value.trim()};
-  const pin = document.getElementById('ei_pin')?.value.trim();
-  if (pin) body.pin = pin;
   const r = await fetch('/api/admin/customers/'+customerId,{method:'PUT',headers:ah(),body:JSON.stringify(body)});
   if (!r.ok) return toast('Failed to save');
   toast('Customer info saved!');
@@ -1165,11 +1175,16 @@ async function deleteMilkSub(customerId) {
 }
 
 async function editMilkLogFromProfile(customerId, date, defaultQty) {
-  const newQty = prompt('Litres delivered on '+date+':',defaultQty);
-  if (newQty===null) return;
-  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(newQty)||0,price:60})});
-  toast('Milk log updated!');
-  await refreshProfile(customerId);
+  // Load customer's milk logs from profile data if available, else fetch
+  const profileLogs = _profileData?.milkLogs || [];
+  // Temporarily inject into milkLogs for openMultiMilkEntry to find the entry
+  const origMilkLogs = milkLogs;
+  milkLogs = profileLogs.map(l=>({...l, customerId}));
+  openMultiMilkEntry(customerId, date);
+  milkLogs = origMilkLogs;
+  // Override save to refresh profile instead of milk page
+  const origSave = window._multiMilkProfileCid;
+  window._multiMilkProfileCustomerId = customerId;
 }
 
 // ── QUICK MODALS ──────────────────────────────────────────────────────────────
@@ -1400,14 +1415,25 @@ function renderMilkDeliveries() {
   const rows = active.map(c=>{
     const cl = milkLogs.filter(l=>l.customerId===c.id);
     const totalL = cl.reduce((s,l)=>s+l.qty,0);
-    const totalAmt = cl.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
+    const totalAmt = cl.reduce((s,l)=>{
+      if (l.items&&l.items.length) return s+l.items.reduce((is,i)=>is+parseFloat(i.qty||0)*parseFloat(i.price||0),0);
+      return s+l.qty*(l.price||milkPrice);
+    },0);
     const todayE = cl.find(l=>l.date===today);
+    let todayBadge = `<span class="badge badge-red">Not marked</span>`;
+    if (todayE) {
+      if (todayE.items&&todayE.items.length) {
+        todayBadge = `<span class="badge badge-green">✓ ${todayE.items.map(i=>`${i.qty}L ${i.type}`).join(', ')}</span>`;
+      } else {
+        todayBadge = `<span class="badge badge-green">✓ ${todayE.qty}L</span>`;
+      }
+    }
     return `<tr>
       <td><div style="font-weight:600">${c.name}</div><div style="font-size:.73rem;color:var(--text2)">${c.phone}</div></td>
       <td>${c.defaultQty}L/day</td>
       <td><span class="badge badge-blue">${totalL.toFixed(1)}L</span></td>
       <td style="font-weight:700;color:var(--green)">₹${totalAmt.toFixed(0)}</td>
-      <td>${todayE?`<span class="badge badge-green">✓ ${todayE.qty}L</span>`:`<span class="badge badge-red">Not marked</span>`}</td>
+      <td>${todayBadge}</td>
       <td><div class="actions">
         <button class="btn btn-green" style="font-size:.75rem" onclick="markOne(${c.id},'${today}',${c.defaultQty})">Mark Today</button>
         <button class="btn btn-gray" style="font-size:.75rem" onclick="openDayLog(${c.id})">Edit Log</button>
@@ -1456,7 +1482,10 @@ function renderMilkBilling() {
   const rows = milkCustomers.filter(c=>c.active).map(c=>{
     const cl = milkLogs.filter(l=>l.customerId===c.id);
     const totalL = cl.reduce((s,l)=>s+l.qty,0);
-    const billed = cl.reduce((s,l)=>s+l.qty*(l.price||milkPrice),0);
+    const billed = cl.reduce((s,l)=>{
+      if (l.items&&l.items.length) return s+l.items.reduce((is,i)=>is+parseFloat(i.qty||0)*parseFloat(i.price||0),0);
+      return s+l.qty*(l.price||milkPrice);
+    },0);
     const paid = milkPayments.filter(p=>p.customerId===c.id).reduce((s,p)=>s+p.amount,0);
     const due = billed-paid;
     return `<tr>
@@ -1487,8 +1516,8 @@ function renderMilkBilling() {
 }
 
 async function markOne(customerId, date, qty) {
-  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty,price:milkPrice})});
-  await loadMilkData(); renderMilkPage(); toast('Marked '+qty+'L delivered');
+  // Open multi-type milk entry modal instead of just marking default qty
+  openMultiMilkEntry(customerId, date);
 }
 
 async function bulkMark(date) {
@@ -1531,18 +1560,30 @@ function openDayLog(customerId) {
     const ds = milkMonth+'-'+String(d).padStart(2,'0');
     if (new Date(ds)>new Date()) continue;
     const entry = cl.find(l=>l.date===ds);
-    rows += `<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
-      <div style="width:32px;text-align:center;font-weight:700;font-size:.82rem;color:var(--text2)">${d}</div>
-      <input type="number" value="${entry?.qty||''}" min="0" max="10" step="0.5" placeholder="—"
-        style="width:80px;border:1.5px solid var(--border);border-radius:8px;padding:.3rem .5rem;font-size:.85rem"
-        onchange="saveLogEntry(${customerId},'${ds}',this.value)">
-      <span style="font-size:.75rem;color:var(--text2)">litres</span>
-      ${entry?`<span style="font-size:.72rem;color:var(--green)">✓</span>`:''}
+    // If entry has items array, show multi-type summary, otherwise show simple qty
+    let entryDisplay = '';
+    if (entry) {
+      if (entry.items && entry.items.length) {
+        entryDisplay = entry.items.map(i=>`${i.qty}L ${i.type} @₹${i.price}`).join(', ');
+      } else {
+        entryDisplay = entry.qty+'L';
+      }
+    }
+    rows += `<div style="padding:.5rem 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:.6rem">
+        <div style="width:28px;text-align:center;font-weight:700;font-size:.82rem;color:var(--text2)">${d}</div>
+        ${entry
+          ? `<span style="font-size:.8rem;color:var(--green);flex:1">✓ ${entryDisplay}</span>
+             <button class="btn btn-gray" style="font-size:.7rem;padding:.2rem .5rem" onclick="openMultiMilkEntry(${customerId},'${ds}')">Edit</button>
+             <button class="btn btn-red" style="font-size:.7rem;padding:.2rem .5rem" onclick="saveLogEntry(${customerId},'${ds}',0)">✕</button>`
+          : `<span style="font-size:.78rem;color:var(--text2);flex:1">Not delivered</span>
+             <button class="btn btn-green" style="font-size:.7rem;padding:.2rem .5rem" onclick="openMultiMilkEntry(${customerId},'${ds}')">+ Mark</button>`}
+      </div>
     </div>`;
   }
   document.body.insertAdjacentHTML('beforeend',`
     <div id="dlModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem">
-      <div style="background:#fff;border-radius:18px;width:min(360px,100%);max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)">
+      <div style="background:#fff;border-radius:18px;width:min(420px,100%);max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)">
         <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
           <div><div style="font-weight:700">${c?.name}</div><div style="font-size:.75rem;color:var(--text2)">Edit delivery log</div></div>
           <button onclick="document.getElementById('dlModal').remove();renderMilk()" style="background:none;font-size:1.3rem;color:var(--text2);cursor:pointer;border:none">✕</button>
@@ -1552,9 +1593,97 @@ function openDayLog(customerId) {
     </div>`);
 }
 
+// Open a modal to enter multiple milk types for a specific date
+function openMultiMilkEntry(customerId, date) {
+  const cl = milkLogs.filter(l=>l.customerId===customerId);
+  const entry = cl.find(l=>l.date===date);
+  // Pre-fill from existing entry
+  let existingItems = [];
+  if (entry) {
+    if (entry.items && entry.items.length) {
+      existingItems = entry.items;
+    } else {
+      existingItems = [{type:'Full Cream', qty:entry.qty, price:entry.price||milkPrice}];
+    }
+  } else {
+    existingItems = [{type:'Full Cream', qty:0.5, price:milkPrice}];
+  }
+
+  const modalId = 'multiMilkModal';
+  document.getElementById(modalId)?.remove();
+
+  const renderItems = (items) => items.map((item,i)=>`
+    <div class="milk-item-row" data-idx="${i}" style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+      <select style="flex:1.5;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;font-size:.83rem;font-family:inherit">
+        ${['Full Cream','Toned','Double Toned','Skimmed','Buffalo'].map(t=>`<option value="${t}" ${t===item.type?'selected':''}>${t}</option>`).join('')}
+      </select>
+      <input type="number" placeholder="Qty(L)" value="${item.qty}" min="0" max="10" step="0.5" style="width:72px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem">
+      <span style="font-size:.78rem;color:var(--text2)">L @₹</span>
+      <input type="number" placeholder="Price" value="${item.price}" min="1" step="0.5" style="width:68px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem">
+      <button onclick="this.closest('.milk-item-row').remove()" style="background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;padding:0">✕</button>
+    </div>`).join('');
+
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="${modalId}" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+      <div style="background:#fff;border-radius:18px;width:min(480px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
+        <div style="padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div><div style="font-weight:700">🥛 Milk Delivery</div><div style="font-size:.75rem;color:var(--text2)">${date}</div></div>
+          <button onclick="document.getElementById('${modalId}').remove()" style="background:none;font-size:1.3rem;cursor:pointer;border:none;color:var(--text2)">✕</button>
+        </div>
+        <div style="padding:1.2rem 1.4rem">
+          <div style="font-size:.8rem;font-weight:600;margin-bottom:.6rem;color:var(--text2)">MILK TYPES</div>
+          <div id="milkItemsList">${renderItems(existingItems)}</div>
+          <button class="btn btn-gray" style="font-size:.8rem;margin-top:.3rem" onclick="
+            const list=document.getElementById('milkItemsList');
+            list.insertAdjacentHTML('beforeend',\`<div class='milk-item-row' data-idx='${Date.now()}' style='display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem'>
+              <select style='flex:1.5;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;font-size:.83rem;font-family:inherit'><option>Full Cream</option><option>Toned</option><option>Double Toned</option><option>Skimmed</option><option>Buffalo</option></select>
+              <input type='number' placeholder='Qty(L)' value='0.5' min='0' max='10' step='0.5' style='width:72px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem'>
+              <span style='font-size:.78rem;color:var(--text2)'>L @₹</span>
+              <input type='number' placeholder='Price' value='${milkPrice}' min='1' step='0.5' style='width:68px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem'>
+              <button onclick='this.closest(&quot;.milk-item-row&quot;).remove()' style='background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;padding:0'>✕</button>
+            </div>\`)">+ Add Milk Type</button>
+          <div style="display:flex;gap:.6rem;margin-top:1rem">
+            <button class="btn btn-green" style="flex:1" onclick="saveMultiMilkEntry(${customerId},'${date}')">💾 Save</button>
+            <button class="btn btn-gray" onclick="document.getElementById('${modalId}').remove()">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function saveMultiMilkEntry(customerId, date) {
+  const rows = document.querySelectorAll('#milkItemsList .milk-item-row');
+  const items = [];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input[type=number]');
+    const select = row.querySelector('select');
+    const qty = parseFloat(inputs[0]?.value) || 0;
+    const price = parseFloat(inputs[1]?.value) || milkPrice;
+    const type = select?.value || 'Full Cream';
+    if (qty > 0) items.push({type, qty, price});
+  });
+  const totalQty = items.reduce((s,i)=>s+i.qty,0);
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:totalQty,items})});
+  document.getElementById('multiMilkModal')?.remove();
+  await loadMilkData();
+  // Refresh customer profile if it's open
+  if (window._multiMilkProfileCustomerId === customerId) {
+    window._multiMilkProfileCustomerId = null;
+    await refreshProfile(customerId);
+  }
+  // Refresh day log if open
+  const dlModal = document.getElementById('dlModal');
+  if (dlModal) { dlModal.remove(); openDayLog(customerId); }
+  else { renderMilkPage(); }
+  toast('Delivery saved!');
+}
+
 async function saveLogEntry(customerId, date, qty) {
   await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId,date,qty:parseFloat(qty)||0,price:milkPrice})});
   await loadMilkData();
+  // Refresh day log if open
+  const dlModal = document.getElementById('dlModal');
+  if (dlModal) { dlModal.remove(); if (parseFloat(qty)>=0) openDayLog(customerId); }
 }
 
 // ═══════════════════════════════════════
