@@ -1092,17 +1092,20 @@ app.get('/api/admin/milk/subscriptions', adminAuth, async (req, res) => {
 
 app.post('/api/admin/milk/subscriptions', adminAuth, async (req, res) => {
   try {
-    const { customerId, defaultQty, pricePerLitre, startDate, notes } = req.body;
-    if (!customerId || !defaultQty) return res.status(400).json({ error: 'customerId and defaultQty required' });
+    const { customerId, defaultQty, pricePerLitre, startDate, notes, defaultItems } = req.body;
+    if (!customerId) return res.status(400).json({ error: 'customerId required' });
     const customer = await db.collection('customers').findOne({ customerId: parseInt(customerId) });
     if (!customer) return res.status(404).json({ error: 'Customer not found' });
     const existing = await db.collection('milkSubscriptions').findOne({ customerId: parseInt(customerId) });
     if (existing) return res.status(409).json({ error: 'Subscription already exists for this customer' });
     const settings = await db.collection('settings').findOne({ _id: 'main' });
+    const items = Array.isArray(defaultItems) && defaultItems.length ? defaultItems : null;
+    const totalQty = items ? items.reduce((s,i) => s + parseFloat(i.qty||0), 0) : parseFloat(defaultQty)||0.5;
     const sub = {
       customerId: parseInt(customerId),
-      defaultQty: parseFloat(defaultQty),
+      defaultQty: totalQty,
       pricePerLitre: parseFloat(pricePerLitre) || settings.milkPrice || 60,
+      defaultItems: items || null,
       status: 'active',
       startDate: startDate || new Date().toISOString().slice(0, 10),
       pausedFrom: null, pausedUntil: null,
@@ -1163,6 +1166,8 @@ app.get('/api/admin/milk/customers', adminAuth, async (req, res) => {
       id: c.customerId, customerId: c.customerId,
       name: c.name, phone: c.phone, address: c.address,
       defaultQty: subMap[c.customerId]?.defaultQty || 0,
+      defaultItems: subMap[c.customerId]?.defaultItems || null,
+      pricePerLitre: subMap[c.customerId]?.pricePerLitre || 60,
       active: subMap[c.customerId]?.status === 'active',
       joinedAt: c.joinedAt
     })));
@@ -1227,13 +1232,15 @@ app.post('/api/admin/milk/bulk-mark', adminAuth, async (req, res) => {
     for (const sub of subs) {
       const existing = await db.collection('milkLogs').findOne({ customerId: sub.customerId, date });
       if (!existing) {
-        await db.collection('milkLogs').insertOne({
+        const doc = {
           id: await getNextId('milkLogId'),
           customerId: sub.customerId, date, month,
           qty: sub.defaultQty,
           price: sub.pricePerLitre || settings.milkPrice || 60,
           markedAt: new Date().toISOString()
-        });
+        };
+        if (sub.defaultItems && sub.defaultItems.length) doc.items = sub.defaultItems;
+        await db.collection('milkLogs').insertOne(doc);
         marked++;
       }
     }
