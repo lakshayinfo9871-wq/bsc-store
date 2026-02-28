@@ -41,6 +41,9 @@ async function connectDB() {
     { weights: { name: 10, brand: 5, keywords: 8, searchTokens: 3 }, name: 'product_text_search', default_language: 'none' }
   );
   await db.collection('products').createIndex({ catId: 1, subCatId: 1 });
+  // Barcode & SKU indexes for fast scanner lookups
+  await db.collection('products').createIndex({ barcode: 1 }, { unique: true, sparse: true });
+  await db.collection('products').createIndex({ sku: 1 }, { unique: true, sparse: true });
 
   const settings = await db.collection('settings').findOne({ _id: 'main' });
   if (!settings) {
@@ -83,12 +86,32 @@ async function getNextId(name) {
   return res.seq;
 }
 
+// ── STOCK HELPERS ─────────────────────────────────────────────────────────────
+function computeStockStatus(stockQuantity, lowStockThreshold) {
+  const qty = typeof stockQuantity === 'number' ? stockQuantity : null;
+  const threshold = typeof lowStockThreshold === 'number' ? lowStockThreshold : 5;
+  if (qty === null) return { stockStatus: 'In Stock', isLowStock: false }; // legacy
+  if (qty === 0) return { stockStatus: 'Out of Stock', isLowStock: false };
+  if (qty <= threshold) return { stockStatus: 'Low Stock', isLowStock: true };
+  return { stockStatus: 'In Stock', isLowStock: false };
+}
+
 function migrateProduct(p) {
-  if (p.variants) return p;
-  return {
+  const { stockStatus, isLowStock } = computeStockStatus(p.stockQuantity, p.lowStockThreshold);
+  const base = {
     id: p.id, name: p.name, catId: p.catId || 0,
     imageUrl: p.imageUrl || '', featured: p.featured || false, isNew: p.isNew || false,
     brand: p.brand || '', keywords: p.keywords || [], searchTokens: p.searchTokens || [],
+    sku: p.sku || '', barcode: p.barcode || '',
+    mrp: p.mrp || null,
+    stockQuantity: typeof p.stockQuantity === 'number' ? p.stockQuantity : null,
+    lowStockThreshold: typeof p.lowStockThreshold === 'number' ? p.lowStockThreshold : 5,
+    stockStatus, isLowStock,
+    disabled: p.disabled || false,
+  };
+  if (p.variants) return { ...base, variants: p.variants };
+  return {
+    ...base,
     variants: [{ id: 'v1', label: p.unit || '1 unit', imageUrl: p.imageUrl || '',
       mrp: p.mrp || null, inStock: p.inStock !== false,
       priceTiers: p.priceTiers || [{ minQty: 1, price: 0 }] }]
@@ -217,7 +240,14 @@ app.get('/api/store', async (req, res) => {
     ]);
     const fg = settings.freeGift || {};
     res.json({
-      categories, products: products.map(migrateProduct), banners, subcategories,
+      categories, products: products.map(p => {
+        const migrated = migrateProduct(p);
+        // For customers: mark variants as out of stock if product has 0 stock
+        if (migrated.stockQuantity === 0) {
+          migrated.variants = migrated.variants.map(v => ({ ...v, inStock: false }));
+        }
+        return migrated;
+      }), banners, subcategories,
       settings: {
         storeName: settings.storeName, minOrder: settings.minOrder,
         upiId: settings.upiId, whatsapp: settings.whatsapp,
@@ -420,6 +450,12 @@ app.post('/api/admin/products', adminAuth, async (req, res) => {
       brand: req.body.brand || '',
       keywords: Array.isArray(req.body.keywords) ? req.body.keywords : (req.body.keywords || '').split(',').map(k=>k.trim()).filter(Boolean),
       searchTokens: buildSearchTokens(req.body),
+      sku: req.body.sku || '',
+      barcode: req.body.barcode || '',
+      mrp: req.body.mrp ? parseFloat(req.body.mrp) : null,
+      stockQuantity: req.body.stockQuantity !== undefined ? parseInt(req.body.stockQuantity) : null,
+      lowStockThreshold: req.body.lowStockThreshold !== undefined ? parseInt(req.body.lowStockThreshold) : 5,
+      disabled: false,
       featured: req.body.featured || false, isNew: req.body.isNew || false,
       variants: req.body.variants || [{ id: 'v1', label: '1 unit', imageUrl: '', mrp: null, inStock: true, priceTiers: [{ minQty: 1, price: 0 }] }]
     };
@@ -434,16 +470,75 @@ app.put('/api/admin/products/:id', adminAuth, async (req, res) => {
       update.keywords = update.keywords.split(',').map(k=>k.trim()).filter(Boolean);
     }
     update.searchTokens = buildSearchTokens(update);
+    // Stock fields — keep as numbers
+    if (update.stockQuantity !== undefined) update.stockQuantity = parseInt(update.stockQuantity);
+    if (update.lowStockThreshold !== undefined) update.lowStockThreshold = parseInt(update.lowStockThreshold);
+    if (update.mrp !== undefined && update.mrp !== '') update.mrp = parseFloat(update.mrp);
+    // Remove empty barcode/sku to avoid index conflicts
+    if (update.barcode === '') delete update.barcode;
+    if (update.sku === '') delete update.sku;
     const result = await db.collection('products').findOneAndUpdate(
       { id: parseInt(req.params.id) }, { $set: update }, { returnDocument: 'after' }
     );
     if (!result) return res.status(404).json({ error: 'Not found' });
-    res.json(result);
+    res.json(migrateProduct(result));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/api/admin/products/:id', adminAuth, async (req, res) => {
   try { await db.collection('products').deleteOne({ id: parseInt(req.params.id) }); res.json({ ok: true }); }
   catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── BARCODE / SKU SEARCH (Admin only) ─────────────────────────────────────────
+// GET /api/admin/products/search?q=8901262010023
+// Searches by: barcode (exact), sku (exact), name (partial case-insensitive)
+app.get('/api/admin/products/search', adminAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q) return res.json({ results: [] });
+    // 1) Exact barcode match
+    let product = await db.collection('products').findOne({ barcode: q });
+    if (!product) product = await db.collection('products').findOne({ sku: q });
+    if (product) return res.json({ results: [migrateProduct(product)], matchType: product.barcode === q ? 'barcode' : 'sku' });
+    // 2) Partial name match
+    const byName = await db.collection('products').find({ name: { $regex: q, $options: 'i' } }).limit(10).toArray();
+    res.json({ results: byName.map(migrateProduct), matchType: 'name' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── STOCK MANAGEMENT ──────────────────────────────────────────────────────────
+// PATCH /api/admin/products/:id/stock — update stockQuantity and/or lowStockThreshold
+app.patch('/api/admin/products/:id/stock', adminAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { stockQuantity, lowStockThreshold, adjustment } = req.body;
+    const product = await db.collection('products').findOne({ id });
+    if (!product) return res.status(404).json({ error: 'Not found' });
+    const update = {};
+    if (typeof adjustment === 'number') {
+      // Relative adjustment (+/-) — safe: no negative stock
+      const current = typeof product.stockQuantity === 'number' ? product.stockQuantity : 0;
+      update.stockQuantity = Math.max(0, current + adjustment);
+    } else if (typeof stockQuantity === 'number') {
+      update.stockQuantity = Math.max(0, stockQuantity);
+    }
+    if (typeof lowStockThreshold === 'number') update.lowStockThreshold = Math.max(0, lowStockThreshold);
+    const result = await db.collection('products').findOneAndUpdate(
+      { id }, { $set: update }, { returnDocument: 'after' }
+    );
+    res.json(migrateProduct(result));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/admin/products/low-stock — list products at or below threshold
+app.get('/api/admin/products/low-stock', adminAuth, async (req, res) => {
+  try {
+    const products = await db.collection('products').find({
+      stockQuantity: { $type: 'number' },
+      $expr: { $lte: ['$stockQuantity', '$lowStockThreshold'] }
+    }).toArray();
+    res.json(products.map(migrateProduct));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── BANNERS ───────────────────────────────────────────────────────────────────
@@ -810,8 +905,28 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
 
 app.put('/api/admin/orders/:id', adminAuth, async (req, res) => {
   try {
+    const orderId = parseInt(req.params.id);
+    const existing = await db.collection('orders').findOne({ id: orderId });
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+
+    // If cancelling an order that was previously pending/processing, restore stock
+    const newStatus = req.body.status;
+    if (newStatus === 'cancelled' && existing.status !== 'cancelled' && !existing.stockRestored) {
+      const regularItems = (existing.items || []).filter(i => !i.isFreeGift);
+      for (const item of regularItems) {
+        const product = await db.collection('products').findOne({ id: item.productId });
+        if (product && typeof product.stockQuantity === 'number') {
+          await db.collection('products').updateOne(
+            { id: item.productId },
+            { $inc: { stockQuantity: item.qty } }
+          );
+        }
+      }
+      req.body.stockRestored = true;
+    }
+
     const result = await db.collection('orders').findOneAndUpdate(
-      { id: parseInt(req.params.id) }, { $set: req.body }, { returnDocument: 'after' }
+      { id: orderId }, { $set: req.body }, { returnDocument: 'after' }
     );
     if (!result) return res.status(404).json({ error: 'Not found' });
     res.json(result);
@@ -897,6 +1012,29 @@ app.post('/api/orders', async (req, res) => {
   try {
     const { customerName, phone, block, villa, note, items, total, freeGift, paymentMethod } = req.body;
     if (!customerName || !phone || !items?.length) return res.status(400).json({ error: 'Missing fields' });
+
+    // ── STOCK VALIDATION & ATOMIC DEDUCTION ──────────────────────────────────
+    const regularItems = items.filter(i => !i.isFreeGift);
+    for (const item of regularItems) {
+      const product = await db.collection('products').findOne({ id: item.productId });
+      if (!product) continue;
+      if (product.disabled) return res.status(400).json({ error: `"${product.name}" is not available.` });
+      if (typeof product.stockQuantity === 'number') {
+        if (product.stockQuantity === 0) return res.status(400).json({ error: `"${product.name}" is Out of Stock.` });
+        if (product.stockQuantity < item.qty) return res.status(400).json({ error: `Only ${product.stockQuantity} unit(s) of "${product.name}" available.` });
+        // Atomic decrement — uses findOneAndUpdate with a condition to prevent race conditions
+        const updateResult = await db.collection('products').findOneAndUpdate(
+          { id: item.productId, stockQuantity: { $gte: item.qty } },
+          { $inc: { stockQuantity: -item.qty } },
+          { returnDocument: 'after' }
+        );
+        if (!updateResult) {
+          return res.status(400).json({ error: `"${product.name}" stock changed during checkout. Please try again.` });
+        }
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const id = await getNextId('orderId');
     const customer = await db.collection('customers').findOne({ phone });
     const order = {

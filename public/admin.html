@@ -134,7 +134,59 @@ tr:hover td{background:#fafafa;}
 .empty-state .ei{font-size:2.5rem;margin-bottom:.5rem;}
 .empty-state p{font-size:.88rem;line-height:1.6;}
 
-/* Profile tabs */
+/* ── BARCODE SCANNER ─────────────────────────────────────────────────────── */
+.scan-wrapper{min-height:calc(100vh - 120px);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:2rem 1rem;gap:2rem;}
+.scan-card{background:var(--white);border-radius:20px;border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,.06);width:min(580px,100%);padding:2rem;}
+.scan-title{font-size:1.4rem;font-weight:800;margin-bottom:.3rem;display:flex;align-items:center;gap:.5rem;}
+.scan-subtitle{color:var(--text2);font-size:.9rem;margin-bottom:1.5rem;}
+.scan-input-wrap{position:relative;margin-bottom:1rem;}
+.scan-input{width:100%;border:2.5px solid var(--border);border-radius:14px;padding:1.1rem 3.2rem 1.1rem 1.2rem;font-size:1.25rem;font-weight:600;letter-spacing:.08em;transition:border-color .2s;background:var(--white);}
+.scan-input:focus{outline:none;border-color:var(--green);}
+.scan-input.scanning{border-color:var(--blue);animation:pulse-blue .6s ease-in-out;}
+.scan-input::placeholder{font-weight:400;letter-spacing:normal;color:var(--text3);}
+@keyframes pulse-blue{0%{box-shadow:0 0 0 0 rgba(37,99,235,.4);}70%{box-shadow:0 0 0 10px rgba(37,99,235,0);}100%{box-shadow:0 0 0 0 rgba(37,99,235,0);}}
+.scan-icon{position:absolute;right:1rem;top:50%;transform:translateY(-50%);font-size:1.6rem;opacity:.4;}
+.scan-result{border-radius:14px;padding:1.2rem;margin-top:.5rem;}
+.scan-result.found{background:var(--green-bg);border:1.5px solid #86efac;}
+.scan-result.not-found{background:var(--red-bg);border:1.5px solid #fecaca;}
+.scan-result.loading{background:var(--blue-bg);border:1.5px solid #bfdbfe;}
+.scan-status{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem;}
+.scan-result.found .scan-status{color:var(--green);}
+.scan-result.not-found .scan-status{color:var(--red);}
+.scan-result.loading .scan-status{color:var(--blue);}
+.scan-prod-name{font-size:1.1rem;font-weight:700;}
+.scan-prod-meta{font-size:.82rem;color:var(--text2);margin-top:.2rem;}
+.scan-history{background:var(--white);border-radius:14px;border:1px solid var(--border);width:min(580px,100%);overflow:hidden;}
+.scan-history-head{padding:.75rem 1.1rem;background:var(--bg);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);border-bottom:1px solid var(--border);}
+.scan-history-item{display:flex;align-items:center;gap:.8rem;padding:.65rem 1.1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.scan-history-item:last-child{border:none;}
+.scan-history-item:hover{background:var(--bg);}
+.shi-barcode{font-family:monospace;font-size:.78rem;color:var(--text2);flex:1;}
+.shi-name{font-size:.85rem;font-weight:600;flex:2;}
+.shi-time{font-size:.73rem;color:var(--text3);}
+
+/* ── STOCK STATUS BADGES ─────────────────────────────────────────────────── */
+.stock-in{background:#f0fdf4;color:#16a34a;border:1px solid #86efac;display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .7rem;border-radius:50px;font-size:.75rem;font-weight:700;}
+.stock-low{background:#fffbeb;color:#d97706;border:1px solid #fcd34d;display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .7rem;border-radius:50px;font-size:.75rem;font-weight:700;}
+.stock-out{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .7rem;border-radius:50px;font-size:.75rem;font-weight:700;}
+.low-stock-alert{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.2rem;}
+.low-stock-alert h3{font-size:.88rem;font-weight:700;color:#92400e;margin-bottom:.4rem;display:flex;align-items:center;gap:.4rem;}
+.low-stock-list{display:flex;flex-direction:column;gap:.3rem;}
+.low-stock-item{display:flex;align-items:center;justify-content:space-between;font-size:.83rem;padding:.25rem 0;border-bottom:1px solid #fde68a;}
+.low-stock-item:last-child{border:none;}
+.quick-stock-input{width:70px;border:1.5px solid var(--border);border-radius:7px;padding:.3rem .5rem;font-size:.85rem;text-align:center;}
+.quick-stock-input:focus{outline:none;border-color:var(--green);}
+
+/* ── PRODUCT EDIT VIEW ───────────────────────────────────────────────────── */
+.prod-view{max-width:680px;margin:0 auto;}
+.prod-view-header{display:flex;align-items:flex-start;gap:1.2rem;background:var(--white);border-radius:14px;border:1px solid var(--border);padding:1.2rem;margin-bottom:1rem;}
+.prod-view-img{width:80px;height:80px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1px solid var(--border);}
+.prod-view-img-ph{width:80px;height:80px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
+.prod-view-info{flex:1;}
+.prod-view-name{font-size:1.15rem;font-weight:800;}
+.prod-view-meta{font-size:.8rem;color:var(--text2);margin-top:.15rem;}
+.prod-view-tags{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;}
+</style>
 .profile-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg);overflow-x:auto;}
 .ptab-btn{padding:.65rem 1.2rem;font-size:.82rem;font-weight:600;border:none;cursor:pointer;background:none;border-bottom:3px solid transparent;color:var(--text2);transition:all .15s;white-space:nowrap;flex-shrink:0;}
 .ptab-btn.active{border-bottom-color:var(--green);color:var(--green);}
@@ -189,6 +241,7 @@ tr:hover td{background:#fafafa;}
       <div class="nav-link" onclick="goTo('milk')"><span class="icon">🥛</span><span>Milk</span></div>
       <div class="nav-link" onclick="goTo('udhar')"><span class="icon">📒</span><span>Udhar</span></div>
       <div class="nav-link" onclick="goTo('products')"><span class="icon">🛍️</span><span>Products</span></div>
+      <div class="nav-link" onclick="goTo('scanner')"><span class="icon">📷</span><span>Scanner</span></div>
       <div class="nav-link" onclick="goTo('categories')"><span class="icon">📂</span><span>Categories</span></div>
       <div class="nav-link" onclick="goTo('subcategories')"><span class="icon">🗂️</span><span>Subcategories</span></div>
       <div class="nav-link" onclick="goTo('banners')"><span class="icon">🖼️</span><span>Banners</span></div>
@@ -216,6 +269,40 @@ tr:hover td{background:#fafafa;}
     </div>
     <div class="modal-body">
       <input type="hidden" id="pEditId">
+      <div class="form-row">
+        <div class="form-group">
+          <label>SKU (Internal Code)</label>
+          <input type="text" id="pSku" placeholder="e.g. SKU-001">
+          <div class="form-hint">Unique internal product code</div>
+        </div>
+        <div class="form-group">
+          <label>Barcode (EAN/UPC)</label>
+          <input type="text" id="pBarcode" placeholder="e.g. 8901262010023">
+          <div class="form-hint">Scan with USB barcode scanner</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>MRP (₹)</label>
+          <input type="number" id="pMrp" placeholder="Maximum retail price" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Stock Quantity</label>
+          <input type="number" id="pStock" placeholder="Units available" min="0">
+          <div class="form-hint">Leave blank for unlimited / not tracked</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Low Stock Threshold</label>
+          <input type="number" id="pLowStock" placeholder="e.g. 5" min="0" value="5">
+          <div class="form-hint">Alert when stock falls to this level</div>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:.6rem;padding-top:1.6rem;">
+          <input type="checkbox" id="pDisabled" style="width:16px;height:16px;accent-color:var(--red)">
+          <label style="margin:0;text-transform:none;font-size:.88rem;color:var(--text)">Disable product (hide from customers)</label>
+        </div>
+      </div>
       <div class="form-row">
         <div class="form-group"><label>Product Name</label><input type="text" id="pName" placeholder="e.g. Maida, Tomatoes..."></div>
         <div class="form-group"><label>Category</label><select id="pCat" onchange="updateSubcatDropdown()"></select></div>
@@ -424,14 +511,14 @@ async function loadAll() {
 
 const ah = () => ({Authorization:'Bearer '+token,'Content-Type':'application/json'});
 
-const PAGE_NAMES = ['dashboard','customers','orders','milk','udhar','products','categories','subcategories','banners','settings'];
+const PAGE_NAMES = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'];
 
 function goTo(page) {
   currentPage = page;
   document.querySelectorAll('.nav-link').forEach((l,i) => l.classList.toggle('active', PAGE_NAMES[i]===page));
-  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Credit',products:'Products',categories:'Categories',subcategories:'Subcategories',banners:'Banners',settings:'Settings'};
+  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Credit',products:'Products',scanner:'📷 Barcode Scanner',categories:'Categories',subcategories:'Subcategories',banners:'Banners',settings:'Settings'};
   document.getElementById('pageTitle').textContent = titles[page]||page;
-  const fns = {dashboard:renderDashboard,customers:renderCustomers,orders:renderOrders,milk:renderMilk,udhar:renderUdhar,products:renderProducts,categories:renderCategories,subcategories:renderSubcategories,banners:renderBanners,settings:renderSettings};
+  const fns = {dashboard:renderDashboard,customers:renderCustomers,orders:renderOrders,milk:renderMilk,udhar:renderUdhar,products:renderProducts,scanner:renderScanner,categories:renderCategories,subcategories:renderSubcategories,banners:renderBanners,settings:renderSettings};
   if (fns[page]) {
     const r = fns[page]();
     if (r && r.then) r.then(() => wrapTables()); else setTimeout(wrapTables, 80);
@@ -453,12 +540,14 @@ function wrapTables() {
 // ═══════════════════════════════════════
 async function renderDashboard() {
   try {
-    const [ordersR, custR] = await Promise.all([
+    const [ordersR, custR, lowStockR] = await Promise.all([
       fetch('/api/admin/orders?status=pending',{headers:ah()}),
       fetch('/api/admin/customers',{headers:ah()}),
+      fetch('/api/admin/products/low-stock',{headers:ah()}),
     ]);
     const pendingOrders = ordersR.ok ? await ordersR.json() : [];
     const customers = custR.ok ? await custR.json() : [];
+    const lowStockProducts = lowStockR.ok ? await lowStockR.json() : [];
     const milkCount = customers.filter(c=>c.milkSubscription).length;
 
     document.getElementById('content').innerHTML = `
@@ -468,6 +557,18 @@ async function renderDashboard() {
         <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${milkCount}</div><div class="stat-lbl">Milk Subscribers</div></div>
         <div class="stat-card"><div class="stat-val">${allProducts.length}</div><div class="stat-lbl">Products</div></div>
       </div>
+      ${lowStockProducts.length > 0 ? `
+      <div class="low-stock-alert">
+        <h3>⚠️ Low / Out of Stock Alert (${lowStockProducts.length} product${lowStockProducts.length>1?'s':''})</h3>
+        <div class="low-stock-list">
+          ${lowStockProducts.map(p=>`<div class="low-stock-item">
+            <span style="font-weight:600">${p.name}</span>
+            <span>${stockBadge(p)}</span>
+            <span style="font-size:.78rem;color:var(--text2)">${p.stockQuantity===0?'🚫 OUT':'⚠️ '+p.stockQuantity+' left'}</span>
+            <button class="btn btn-yellow" style="font-size:.72rem;padding:.25rem .6rem" onclick="goTo('products');setTimeout(()=>editProduct(${p.id}),200)">Update</button>
+          </div>`).join('')}
+        </div>
+      </div>` : ''}
       <div class="card">
         <div class="card-header"><h2>⚡ Quick Actions</h2></div>
         <div class="card-body" style="display:flex;gap:.8rem;flex-wrap:wrap">
@@ -475,6 +576,7 @@ async function renderDashboard() {
           <button class="btn btn-blue" onclick="goTo('orders')">View Orders</button>
           <button class="btn btn-gray" onclick="goTo('milk')">🥛 Milk Delivery</button>
           <button class="btn btn-yellow" onclick="goTo('udhar')">📒 Udhar Summary</button>
+          <button class="btn btn-purple" onclick="goTo('scanner')">📷 Barcode Scanner</button>
           <a href="/" target="_blank"><button class="btn btn-gray">View Store</button></a>
         </div>
       </div>
@@ -1459,6 +1561,13 @@ async function saveLogEntry(customerId, date, qty) {
 // ═══════════════════════════════════════
 let _editVariants = [];
 
+function stockBadge(p) {
+  if (p.stockQuantity === null || p.stockQuantity === undefined) return '<span class="badge badge-blue">Not Tracked</span>';
+  if (p.stockQuantity === 0) return `<span class="stock-out">🚫 Out of Stock</span>`;
+  if (p.isLowStock) return `<span class="stock-low">⚠️ Low (${p.stockQuantity})</span>`;
+  return `<span class="stock-in">✓ ${p.stockQuantity} in stock</span>`;
+}
+
 function renderProducts() {
   const filtered = allProducts.filter(p=>p.name.toLowerCase().includes(productSearch));
   document.getElementById('content').innerHTML = `
@@ -1467,33 +1576,34 @@ function renderProducts() {
         <h2>Products (${allProducts.length})</h2>
         <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
           <input class="search-input" placeholder="Search..." value="${productSearch}" oninput="productSearch=this.value.toLowerCase();renderProducts()">
+          <button class="btn btn-purple" onclick="goTo('scanner')">📷 Scan</button>
           <button class="btn btn-green" onclick="openProductModal()">+ Add Product</button>
         </div>
       </div>
       ${filtered.length===0?`<div class="empty-state"><div class="ei">🛍️</div><p>No products yet.</p></div>`:`
       <table>
-        <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Brand</th><th>Keywords</th><th>Variants</th><th>Price Range</th><th>Stock</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Image</th><th>Name / SKU</th><th>Category</th><th>Variants</th><th>Price Range</th><th>Stock Status</th><th>Actions</th></tr></thead>
         <tbody>${filtered.map(p=>{
           const cat = allCategories.find(c=>c.id===p.catId);
           const variants = p.variants||[];
-          const allInStock = variants.every(v=>v.inStock);
-          const anyInStock = variants.some(v=>v.inStock);
           const allPrices = variants.flatMap(v=>(v.priceTiers||[]).map(t=>t.price));
           const minP = allPrices.length?Math.min(...allPrices):0;
           const maxP = allPrices.length?Math.max(...allPrices):0;
           const imgUrl = variants[0]?.imageUrl||p.imageUrl||'';
-          const kw = Array.isArray(p.keywords) ? p.keywords.slice(0,3).join(', ') : (p.keywords||'');
-          return `<tr>
+          return `<tr style="${p.disabled?'opacity:.5':''}">
             <td>${imgUrl?`<img class="td-img" src="${imgUrl}">`:`<div class="td-img-ph">📦</div>`}</td>
-            <td><div style="font-weight:600">${p.name}</div><div style="font-size:.72rem;color:var(--text2)">${p.featured?'⭐ Featured ':''} ${p.isNew?'✨ New':''}</div></td>
+            <td>
+              <div style="font-weight:600">${p.name}${p.disabled?' <span class="badge badge-red" style="font-size:.65rem">Disabled</span>':''}</div>
+              ${p.sku?`<div style="font-size:.72rem;color:var(--text2)">SKU: ${p.sku}</div>`:''}
+              ${p.barcode?`<div style="font-size:.72rem;color:var(--text3);font-family:monospace">${p.barcode}</div>`:''}
+            </td>
             <td>${cat?cat.name:'<span style="color:var(--text3)">—</span>'}</td>
-            <td style="font-size:.78rem;color:var(--text2)">${p.brand||'<span style="color:var(--text3)">—</span>'}</td>
-            <td style="font-size:.72rem;color:var(--text3);max-width:120px;word-break:break-word">${kw||'<span style="color:var(--text3)">—</span>'}</td>
-            <td><div style="display:flex;flex-wrap:wrap;gap:3px">${variants.length===0?'<span style="color:var(--text3)">—</span>':variants.map(v=>`<span class="badge badge-blue" title="₹${(v.priceTiers||[{price:0}])[0].price}">${v.label||'—'}</span>`).join('')}</div></td>
+            <td><div style="display:flex;flex-wrap:wrap;gap:3px">${variants.length===0?'<span style="color:var(--text3)">—</span>':variants.map(v=>`<span class="badge badge-blue">${v.label||'—'}</span>`).join('')}</div></td>
             <td style="font-weight:700">${minP===maxP?`₹${minP}`:`₹${minP}–${maxP}`}</td>
-            <td>${allInStock?'<span class="badge badge-green">In Stock</span>':anyInStock?'<span class="badge badge-yellow">Partial</span>':'<span class="badge badge-red">Out of Stock</span>'}</td>
+            <td>${stockBadge(p)}</td>
             <td><div class="actions">
-              <button class="btn btn-blue" onclick="openProductModal(${p.id})">Edit</button>
+              <button class="btn btn-blue" onclick="editProduct(${p.id})">Edit</button>
+              <button class="btn btn-green" onclick="quickStockUpdate(${p.id})" title="Quick stock update">📦</button>
               <button class="btn btn-red" onclick="deleteProduct(${p.id})">Del</button>
             </div></td>
           </tr>`;
@@ -1501,6 +1611,8 @@ function renderProducts() {
       </table>`}
     </div>`;
 }
+
+function editProduct(id) { openProductModal(id); }
 
 function openProductModal(id) {
   const p = id ? allProducts.find(x=>x.id===id) : null;
@@ -1510,6 +1622,12 @@ function openProductModal(id) {
   document.getElementById('pTag').value = p?.featured?'featured':p?.isNew?'new':'';
   document.getElementById('pBrand').value = p?.brand||'';
   document.getElementById('pKeywords').value = Array.isArray(p?.keywords) ? p.keywords.join(', ') : (p?.keywords||'');
+  document.getElementById('pSku').value = p?.sku||'';
+  document.getElementById('pBarcode').value = p?.barcode||'';
+  document.getElementById('pMrp').value = p?.mrp||'';
+  document.getElementById('pStock').value = p?.stockQuantity !== null && p?.stockQuantity !== undefined ? p.stockQuantity : '';
+  document.getElementById('pLowStock').value = p?.lowStockThreshold !== undefined ? p.lowStockThreshold : 5;
+  document.getElementById('pDisabled').checked = p?.disabled||false;
   const imgUrl = p?.imageUrl||'';
   document.getElementById('pImgUrl').value = imgUrl;
   previewUrlImg('pImgPreview', imgUrl);
@@ -1588,13 +1706,21 @@ async function saveProduct() {
   const subCatId = parseInt(document.getElementById('pSubCat').value) || null;
   const brand = document.getElementById('pBrand').value.trim();
   const keywords = document.getElementById('pKeywords').value.split(',').map(k=>k.trim()).filter(Boolean);
+  const stockVal = document.getElementById('pStock').value;
   const body = {
     name, catId:parseInt(document.getElementById('pCat').value)||0, subCatId,
     imageUrl:document.getElementById('pImgUrl').value, brand, keywords,
     featured:tag==='featured', isNew:tag==='new',
+    sku: document.getElementById('pSku').value.trim(),
+    barcode: document.getElementById('pBarcode').value.trim(),
+    mrp: document.getElementById('pMrp').value ? parseFloat(document.getElementById('pMrp').value) : null,
+    stockQuantity: stockVal !== '' ? parseInt(stockVal) : null,
+    lowStockThreshold: parseInt(document.getElementById('pLowStock').value) || 5,
+    disabled: document.getElementById('pDisabled').checked,
     variants:_editVariants.map((v,i)=>({...v,id:v.id||('v'+(i+1)),priceTiers:[...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)}))
   };
-  await fetch(id?`/api/admin/products/${id}`:'/api/admin/products',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
+  const r = await fetch(id?`/api/admin/products/${id}`:'/api/admin/products',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
+  if (!r.ok) { const err=await r.json(); return toast(err.error||'Save failed'); }
   await loadAll(); closeModal('productModal'); renderProducts();
   toast(id?'Product updated!':'Product added!');
 }
@@ -1603,6 +1729,187 @@ async function deleteProduct(id) {
   if (!confirm('Delete this product?')) return;
   await fetch(`/api/admin/products/${id}`,{method:'DELETE',headers:ah()});
   await loadAll(); renderProducts(); toast('Product deleted');
+}
+
+async function quickStockUpdate(id) {
+  const p = allProducts.find(x=>x.id===id);
+  if (!p) return;
+  const current = typeof p.stockQuantity === 'number' ? p.stockQuantity : '';
+  const val = prompt(`Update stock for "${p.name}"\nCurrent: ${current !== '' ? current : 'Not tracked'}\nEnter new quantity (or leave blank to cancel):`, current);
+  if (val === null || val === '') return;
+  const qty = parseInt(val);
+  if (isNaN(qty) || qty < 0) return toast('Invalid quantity');
+  const r = await fetch(`/api/admin/products/${id}/stock`, {method:'PATCH', headers:ah(), body:JSON.stringify({stockQuantity:qty})});
+  if (r.ok) { await loadAll(); if(currentPage==='products') renderProducts(); toast('Stock updated!'); }
+  else { const e=await r.json(); toast(e.error||'Failed to update'); }
+}
+
+// ═══════════════════════════════════════
+// BARCODE SCANNER
+// ═══════════════════════════════════════
+let scanHistory = [];
+let scanDebounceTimer = null;
+
+function renderScanner() {
+  document.getElementById('content').innerHTML = `
+    <div class="scan-wrapper">
+      <div class="scan-card">
+        <div class="scan-title">📷 Barcode Scanner</div>
+        <div class="scan-subtitle">Focus on the input below, then scan a product. USB barcode scanners work automatically — just scan!</div>
+        <div class="scan-input-wrap">
+          <input type="text" id="scanInput" class="scan-input" placeholder="Scan barcode or type SKU / name..." autocomplete="off" autocorrect="off" spellcheck="false"
+            onkeydown="handleScanKey(event)" oninput="handleScanInput(event)">
+          <span class="scan-icon">⌨️</span>
+        </div>
+        <div id="scanResult" style="display:none"></div>
+        <div style="display:flex;gap:.6rem;margin-top:.8rem;flex-wrap:wrap">
+          <button class="btn btn-gray" onclick="clearScan()">Clear</button>
+          <button class="btn btn-green" onclick="doScanSearch()">🔍 Search</button>
+          <span style="font-size:.78rem;color:var(--text2);align-self:center">Press Enter to search</span>
+        </div>
+      </div>
+      <div class="scan-history" id="scanHistoryPanel" style="${scanHistory.length?'':'display:none'}">
+        <div class="scan-history-head">Recent Scans</div>
+        <div id="scanHistoryList"></div>
+      </div>
+    </div>`;
+  // Auto-focus the input
+  setTimeout(() => {
+    const inp = document.getElementById('scanInput');
+    if (inp) inp.focus();
+  }, 80);
+  renderScanHistory();
+}
+
+function handleScanKey(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    doScanSearch();
+  }
+}
+
+// USB scanner types fast — debounce for manual typing
+function handleScanInput(e) {
+  clearTimeout(scanDebounceTimer);
+  // If input has 8+ digits (typical barcode), auto-search after short delay
+  const val = e.target.value.trim();
+  if (/^\d{8,}$/.test(val)) {
+    scanDebounceTimer = setTimeout(doScanSearch, 400);
+  }
+}
+
+async function doScanSearch() {
+  const inp = document.getElementById('scanInput');
+  if (!inp) return;
+  const q = inp.value.trim();
+  if (!q) return;
+  inp.classList.add('scanning');
+  setTimeout(() => inp.classList.remove('scanning'), 600);
+
+  showScanResult('loading', '🔍 Searching...', '');
+  try {
+    const r = await fetch(`/api/admin/products/search?q=${encodeURIComponent(q)}`, {headers:ah()});
+    const data = await r.json();
+    if (data.results && data.results.length > 0) {
+      const p = data.results[0];
+      const matchType = data.matchType || 'name';
+      addToScanHistory(q, p);
+      showScanResultProduct(p, matchType, data.results.length > 1 ? data.results.slice(1, 5) : []);
+    } else {
+      showScanResult('not-found', '❌ Product Not Found', `No product matched: "${q}"`);
+    }
+  } catch(e) {
+    showScanResult('not-found', '⚠️ Error', 'Could not connect to server.');
+  }
+}
+
+function showScanResult(type, title, msg) {
+  const el = document.getElementById('scanResult');
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = 'scan-result ' + type;
+  el.innerHTML = `<div class="scan-status">${title}</div><div style="font-size:.85rem;color:var(--text2)">${msg}</div>`;
+}
+
+function showScanResultProduct(p, matchType, others) {
+  const el = document.getElementById('scanResult');
+  if (!el) return;
+  const imgUrl = p.variants?.[0]?.imageUrl || p.imageUrl || '';
+  const cat = allCategories.find(c=>c.id===p.catId);
+  const prices = (p.variants||[]).flatMap(v=>(v.priceTiers||[]).map(t=>t.price));
+  const minP = prices.length ? Math.min(...prices) : 0;
+  el.style.display = 'block';
+  el.className = 'scan-result found';
+  el.innerHTML = `
+    <div class="scan-status">✅ Product Found (${matchType === 'barcode' ? '🔢 Barcode' : matchType === 'sku' ? '🏷️ SKU' : '📝 Name'})</div>
+    <div class="prod-view-header" style="margin-top:.6rem;margin-bottom:.4rem">
+      ${imgUrl?`<img src="${imgUrl}" class="prod-view-img" onerror="this.style.display='none'">`:`<div class="prod-view-img-ph">📦</div>`}
+      <div class="prod-view-info">
+        <div class="prod-view-name">${p.name}</div>
+        <div class="prod-view-meta">${cat?cat.name:''}${p.brand?' · '+p.brand:''}${p.sku?' · SKU: '+p.sku:''}${p.barcode?' · '+p.barcode:''}</div>
+        <div class="prod-view-tags" style="margin-top:.5rem">
+          ${stockBadge(p)}
+          ${p.mrp?`<span class="badge badge-purple">MRP ₹${p.mrp}</span>`:''}
+          <span class="badge badge-blue">₹${minP}</span>
+        </div>
+        ${p.stockQuantity !== null && p.stockQuantity !== undefined ? `
+        <div style="margin-top:.6rem;display:flex;align-items:center;gap:.5rem">
+          <span style="font-size:.78rem;color:var(--text2)">Stock:</span>
+          <input type="number" id="scanStockInput" class="quick-stock-input" value="${p.stockQuantity}" min="0">
+          <button class="btn btn-green" style="font-size:.75rem;padding:.3rem .7rem" onclick="updateStockFromScan(${p.id})">Update Stock</button>
+        </div>` : ''}
+      </div>
+    </div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem">
+      <button class="btn btn-blue" onclick="goTo('products');setTimeout(()=>editProduct(${p.id}),150)">✏️ Edit Product</button>
+      <button class="btn btn-gray" onclick="document.getElementById('scanInput').value='';document.getElementById('scanInput').focus()">🔄 Scan Next</button>
+    </div>
+    ${others.length ? `<div style="margin-top:.6rem;font-size:.8rem;color:var(--text2)">${others.length} more result${others.length>1?'s':''}: ${others.map(x=>x.name).join(', ')}</div>` : ''}`;
+}
+
+async function updateStockFromScan(productId) {
+  const inp = document.getElementById('scanStockInput');
+  if (!inp) return;
+  const qty = parseInt(inp.value);
+  if (isNaN(qty) || qty < 0) return toast('Invalid quantity');
+  const r = await fetch(`/api/admin/products/${productId}/stock`, {method:'PATCH', headers:ah(), body:JSON.stringify({stockQuantity:qty})});
+  if (r.ok) {
+    await loadAll();
+    toast('✅ Stock updated!');
+    const updated = allProducts.find(x=>x.id===productId);
+    if (updated) {
+      // Refresh the product info in scan result
+      const scanInput = document.getElementById('scanInput');
+      if (scanInput) doScanSearch();
+    }
+  } else toast('Failed to update stock');
+}
+
+function clearScan() {
+  const inp = document.getElementById('scanInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+  const el = document.getElementById('scanResult');
+  if (el) el.style.display = 'none';
+}
+
+function addToScanHistory(barcode, product) {
+  scanHistory.unshift({ barcode, name: product.name, id: product.id, time: new Date().toLocaleTimeString() });
+  if (scanHistory.length > 10) scanHistory.pop();
+  renderScanHistory();
+}
+
+function renderScanHistory() {
+  const panel = document.getElementById('scanHistoryPanel');
+  const list = document.getElementById('scanHistoryList');
+  if (!panel || !list) return;
+  if (!scanHistory.length) { panel.style.display='none'; return; }
+  panel.style.display = 'block';
+  list.innerHTML = scanHistory.map(h=>`
+    <div class="scan-history-item" onclick="goTo('products');setTimeout(()=>editProduct(${h.id}),150)">
+      <span class="shi-barcode">${h.barcode}</span>
+      <span class="shi-name">${h.name}</span>
+      <span class="shi-time">${h.time}</span>
+    </div>`).join('');
 }
 
 // ═══════════════════════════════════════
