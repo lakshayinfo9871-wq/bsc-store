@@ -100,6 +100,7 @@ function migrateProduct(p) {
   const { stockStatus, isLowStock } = computeStockStatus(p.stockQuantity, p.lowStockThreshold);
   const base = {
     id: p.id, name: p.name, catId: p.catId || 0,
+    subCatId: p.subCatId || null,
     imageUrl: p.imageUrl || '', featured: p.featured || false, isNew: p.isNew || false,
     brand: p.brand || '', keywords: p.keywords || [], searchTokens: p.searchTokens || [],
     sku: p.sku || '', barcode: p.barcode || '',
