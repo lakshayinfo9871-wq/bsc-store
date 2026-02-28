@@ -30,16 +30,54 @@ img{display:block;max-width:100%;}
 /* ── PRESS FEEDBACK ── */
 button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightness(.85);}
 
-/* ══════════════════════ TOPBAR ══════════════════════ */
-.topbar{flex-shrink:0;background:var(--bg);padding:0 16px;padding-top:max(env(safe-area-inset-top),0px);position:sticky;top:0;z-index:90;border-bottom:1px solid var(--border);}
-.top-row{display:flex;align-items:center;justify-content:space-between;overflow:hidden;margin-bottom:0;}
+/* ══════════════════════ TOPBAR (Collapsing) ══════════════════════ */
+/* Outer wrapper: stacks collapse section + tabs section */
+.topbar{
+  flex-shrink:0;
+  background:var(--bg);
+  position:sticky;
+  top:0;
+  z-index:90;
+  border-bottom:1px solid var(--border);
+  /* Reserve full height so layout doesn't jump */
+}
+
+/* The collapsible part: logo row + search bar */
+.topbar-collapse{
+  overflow:hidden;
+  /* Height is controlled by JS via max-height for smooth animation */
+  max-height:200px; /* more than actual height — allows smooth transition */
+  transition:max-height .28s cubic-bezier(.4,0,.2,1),
+             opacity .22s ease,
+             padding .28s cubic-bezier(.4,0,.2,1);
+  padding:0 16px;
+  padding-top:max(env(safe-area-inset-top),0px);
+  opacity:1;
+  will-change:max-height,opacity;
+}
+.topbar-collapse.collapsed{
+  max-height:0;
+  opacity:0;
+  padding-top:0;
+  padding-bottom:0;
+}
+
+/* Category tabs — always visible below the collapsible part */
+.topbar-tabs{
+  background:var(--bg);
+  border-top:1px solid var(--border);
+  position:relative; /* stays in document flow under topbar */
+}
+.topbar-tabs.at-top{ border-top-color:transparent; }
+
+.top-row{display:flex;align-items:center;justify-content:space-between;overflow:hidden;padding:10px 0 0;}
 .logo{font-size:1.2rem;font-weight:900;letter-spacing:-.5px;}
 .logo span{color:var(--green);}
 .icon-btn{width:38px;height:38px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;position:relative;}
 .cart-badge{position:absolute;top:-5px;right:-5px;background:var(--green);color:#000;font-size:.55rem;font-weight:900;min-width:17px;height:17px;border-radius:50%;display:none;align-items:center;justify-content:center;border:2px solid var(--bg);}
 
-/* Search bar — always visible */
-.search-wrap{padding:8px 0;margin-bottom:0;}
+/* Search bar */
+.search-wrap{padding:8px 0 10px;margin-bottom:0;}
 .search-bar{background:var(--bg2);border-radius:12px;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);}
 .search-bar:focus-within{border-color:var(--green);}
 .search-bar input{flex:1;background:none;border:none;outline:none;font-size:13.5px;color:var(--text);}
@@ -49,7 +87,7 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 @keyframes phFade{0%,100%{opacity:0;transform:translateY(4px)}10%,85%{opacity:1;transform:translateY(0)}}
 .ph-anim{animation:phFade 3s ease forwards;}
 
-.cat-tabs{display:flex;overflow-x:auto;gap:0;border-top:1px solid var(--border);}
+.cat-tabs{display:flex;overflow-x:auto;gap:0;}
 .ctab{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 14px 8px;cursor:pointer;border-bottom:2.5px solid transparent;transition:all .15s;}
 .ctab.active{border-bottom-color:var(--green);}
 .ctab .ti{width:28px;height:28px;border-radius:8px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.9rem;}
@@ -608,20 +646,26 @@ select.ck-inp option{background:var(--bg2);}
 </head>
 <body>
 
-<!-- TOPBAR -->
-<div class="topbar">
-  <div class="top-row" id="topRow">
-    <div class="logo">🛒 <span>BSC</span></div>
-    <div class="icon-btn" onclick="openCart()">🛒<div class="cart-badge" id="cartBadge">0</div></div>
-  </div>
-  <div class="search-wrap">
-    <div class="search-bar">
-      <span class="search-icon">🔍</span>
-      <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value)" onfocus="clearAnimatedPH()" onblur="startAnimatedPH()">
-      <span id="searchClear" style="color:var(--text3);cursor:pointer;font-size:.8rem;display:none" onclick="clearSearch()">✕</span>
+<!-- TOPBAR: Collapsing header (logo+search) + sticky tabs -->
+<div class="topbar" id="topbar">
+  <!-- COLLAPSIBLE SECTION: hides on scroll down, shows on scroll up -->
+  <div class="topbar-collapse" id="topbarCollapse">
+    <div class="top-row">
+      <div class="logo">🛒 <span>BSC</span></div>
+      <div class="icon-btn" onclick="openCart()">🛒<div class="cart-badge" id="cartBadge">0</div></div>
+    </div>
+    <div class="search-wrap">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value)" onfocus="clearAnimatedPH();expandHeader()" onblur="startAnimatedPH()">
+        <span id="searchClear" style="color:var(--text3);cursor:pointer;font-size:.8rem;display:none" onclick="clearSearch()">✕</span>
+      </div>
     </div>
   </div>
-  <div class="cat-tabs" id="catTabs"></div>
+  <!-- ALWAYS-VISIBLE SECTION: category tabs stick below the collapse -->
+  <div class="topbar-tabs" id="topbarTabs">
+    <div class="cat-tabs" id="catTabs"></div>
+  </div>
 </div>
 
 <!-- ACCOUNT PAGE -->
@@ -770,13 +814,77 @@ async function init() {
   } catch(e) {
     document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
   }
-  const scroller = document.getElementById('scroll');
-  scroller.addEventListener('scroll', () => {
-    // scroll tracking - header stays visible always
-  }, { passive:true });
+
+  // ── FEATURE 2: COLLAPSING HEADER ─────────────────────────────────────────
+  initCollapsingHeader();
 
   // Animated placeholder
   startAnimatedPH();
+}
+
+// ── COLLAPSING HEADER ENGINE ──────────────────────────────────────────────────
+// Architecture: tracks scroll velocity & direction via rAF for 60fps, no jank.
+// Only collapses after 60px threshold — prevents collapse on tiny flicks.
+// Re-expands instantly on upward scroll. At top (≤10px) always fully expanded.
+(function initCollapsingHeader() {
+  const scroller  = document.getElementById('scroll');
+  const collapse  = document.getElementById('topbarCollapse');
+  const tabs      = document.getElementById('topbarTabs');
+  if (!scroller || !collapse) return;
+
+  const HIDE_THRESHOLD  = 60;  // px scrolled down before collapsing starts
+  const SHOW_DELTA      = 6;   // px scrolled up to trigger expansion
+
+  let lastScrollY  = 0;
+  let isCollapsed  = false;
+  let rafPending   = false;
+  let scrollUpAcc  = 0; // accumulates upward scroll distance
+
+  function applyCollapse(collapse_) {
+    if (collapse_ === isCollapsed) return;
+    isCollapsed = collapse_;
+    if (collapse_) {
+      collapse.classList.add('collapsed');
+    } else {
+      collapse.classList.remove('collapsed');
+    }
+  }
+
+  function onScroll() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+      rafPending = false;
+      const y     = scroller.scrollTop;
+      const delta = y - lastScrollY;
+      lastScrollY = y;
+
+      // At very top — always expand fully, no threshold tricks
+      if (y <= 10) {
+        scrollUpAcc = 0;
+        applyCollapse(false);
+        return;
+      }
+
+      if (delta > 0) {
+        // Scrolling DOWN
+        scrollUpAcc = 0;
+        if (y > HIDE_THRESHOLD) applyCollapse(true);
+      } else if (delta < 0) {
+        // Scrolling UP — accumulate, reveal only after a real intentional pull
+        scrollUpAcc += Math.abs(delta);
+        if (scrollUpAcc >= SHOW_DELTA) applyCollapse(false);
+      }
+    });
+  }
+
+  scroller.addEventListener('scroll', onScroll, { passive: true });
+})();
+
+// Call this to force-expand (e.g. when search input is focused)
+function expandHeader() {
+  const collapse = document.getElementById('topbarCollapse');
+  if (collapse) collapse.classList.remove('collapsed');
 }
 
 const _phTerms = ['Search onion…','Search milk…','Search bread…','Search potato…','Search tomato…','Search eggs…','Search butter…','Search chips…','Search rice…','Search dal…'];
@@ -1263,21 +1371,139 @@ function renderFPContent(catId) {
   renderSplitRight(catId, window._openSubCatId);
 }
 
-// ── SEARCH ────────────────────────────────────────────────────────────────────
+// ── SMART SEARCH ──────────────────────────────────────────────────────────────
+// Client-side synonym map mirrors server-side for instant offline fallback
+const CLIENT_SYNONYMS = {
+  doodh:['milk','dairy'], dudh:['milk','dairy'],
+  dahi:['curd','yogurt','yoghurt'],
+  paneer:['cottage cheese','cheese'],
+  makhan:['butter'], ghee:['clarified butter','butter'],
+  chawal:['rice'], aata:['wheat flour','flour','atta'],
+  maida:['flour','refined flour'], dal:['lentils','pulses','daal'],
+  tamatar:['tomato','tomatoes'], pyaaz:['onion','onions'],
+  aloo:['potato','potatoes'], mirchi:['chilli','chili','pepper'],
+  namak:['salt'], cheeni:['sugar'], tel:['oil'],
+  jeera:['cumin'], haldi:['turmeric'], adrak:['ginger'],
+  lehsun:['garlic'], dhania:['coriander'],
+  anda:['egg','eggs'], chai:['tea'], nimbu:['lemon'],
+  kela:['banana'], seb:['apple'], aam:['mango'],
+  milk:['doodh','dudh','dairy milk'],
+  curd:['dahi','yogurt','yoghurt'],
+  butter:['makhan'], rice:['chawal'],
+  flour:['aata','atta','maida'], potato:['aloo'],
+  onion:['pyaaz'], tomato:['tamatar'],
+  egg:['anda'], eggs:['anda'], tea:['chai'],
+  lemon:['nimbu'], lassi:['dahi','curd','buttermilk'],
+  chaach:['buttermilk','curd','dahi'],
+  buttermilk:['chaach','lassi','curd'],
+};
+
+function clientExpandQuery(q) {
+  const terms = new Set([q]);
+  if (CLIENT_SYNONYMS[q]) CLIENT_SYNONYMS[q].forEach(s => terms.add(s));
+  q.split(/\s+/).forEach(w => {
+    if (CLIENT_SYNONYMS[w]) CLIENT_SYNONYMS[w].forEach(s => terms.add(s));
+  });
+  return [...terms];
+}
+
+function clientSmartSearch(q) {
+  const raw = q.toLowerCase().trim();
+  const terms = clientExpandQuery(raw);
+
+  // Score each product
+  const scored = prods.map(p => {
+    let score = 0;
+    const pName = (p.name || '').toLowerCase();
+    const pBrand = (p.brand || '').toLowerCase();
+    const pKw = (p.keywords || []).map(k => k.toLowerCase());
+    const pTok = (p.searchTokens || []).map(k => k.toLowerCase());
+    // Find cat/subcat names from loaded data
+    const pCat = (cats.find(c => c.id === p.catId)?.name || '').toLowerCase();
+    const pSub = (subcats.find(s => s.id === p.subCatId)?.name || '').toLowerCase();
+
+    for (const t of terms) {
+      if (pName === t)           { score += 100; continue; }
+      if (pName.startsWith(t))   { score += 60;  continue; }
+      if (pName.includes(t))       score += 40;
+      if (pBrand === t)            score += 50;
+      else if (pBrand.includes(t)) score += 25;
+      if (pKw.includes(t))         score += 45;
+      else if (pKw.some(k => k.includes(t) || t.includes(k))) score += 20;
+      if (pTok.includes(t))        score += 30;
+      if (pCat.includes(t))        score += 15;
+      if (pSub.includes(t))        score += 20;
+    }
+    // Boost: raw query direct hit
+    if (pName.includes(raw))         score += 35;
+    if (pBrand.includes(raw))        score += 20;
+    if (pKw.some(k => k.includes(raw))) score += 25;
+
+    return { p, score };
+  }).filter(x => x.score > 0);
+
+  scored.sort((a, b) => b.score - a.score || a.p.name.localeCompare(b.p.name));
+  return scored.map(x => x.p);
+}
+
+// Render search results in a styled grid with synonym hint
+function renderSearchResults(results, query, expandedTerms) {
+  const grid = document.getElementById('searchGrid');
+  if (!results.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="ei">🔍</div>
+      <p>No results for "<strong>${query}</strong>"</p>
+      <p style="font-size:.75rem;color:var(--text3);margin-top:6px">Try different keywords or check spelling</p>
+    </div>`;
+    return;
+  }
+
+  // Show synonym hint if we expanded terms
+  const synonymHint = expandedTerms && expandedTerms.length > 1
+    ? `<div style="font-size:.72rem;color:var(--text3);padding:8px 14px 0;grid-column:1/-1">
+        Showing results for: ${expandedTerms.slice(0,4).map(t=>`<span style="color:var(--green);font-weight:700">${t}</span>`).join(', ')}
+       </div>` : '';
+
+  grid.innerHTML = synonymHint + results.map(pCard).join('');
+}
+
 let searchTimer = null;
-function onSearch(q) {
+let _lastSearchQ = '';
+
+async function onSearch(q) {
   const clearBtn = document.getElementById('searchClear');
   if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
   clearTimeout(searchTimer);
-  if (!q.trim()) { closeSearch(); return; }
-  searchTimer = setTimeout(() => {
-    const results = prods.filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
-    document.getElementById('searchGrid').innerHTML = results.length
-      ? results.map(pCard).join('')
-      : `<div class="empty-state" style="grid-column:1/-1"><div class="ei">🔍</div><p>No results for "${q}"</p></div>`;
+
+  if (!q.trim()) {
+    closeSearch();
+    _lastSearchQ = '';
+    return;
+  }
+
+  // Instant client-side results while server responds
+  const clientResults = clientSmartSearch(q.toLowerCase());
+  if (q !== _lastSearchQ) {
+    renderSearchResults(clientResults, q, clientExpandQuery(q.toLowerCase()));
     document.getElementById('searchPage').classList.add('open');
     document.getElementById('fpage').classList.remove('open');
-  }, 200);
+    _lastSearchQ = q;
+  }
+
+  // Debounced server call for richer backend scoring
+  searchTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      if (!r.ok) return; // silently fall back to client results
+      const data = await r.json();
+      // Only update if query hasn't changed while we waited
+      if (document.getElementById('searchInput')?.value === q) {
+        renderSearchResults(data.results, data.query, data.expandedTerms);
+      }
+    } catch {
+      // Network error — client results already showing, nothing to do
+    }
+  }, 300);
 }
 function clearSearch() {
   const inp = document.getElementById('searchInput');

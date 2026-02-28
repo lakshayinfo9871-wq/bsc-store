@@ -239,6 +239,17 @@ tr:hover td{background:#fafafa;}
         </div>
         <div class="form-hint">Paste a direct image URL (WhatsApp, Google Drive, Cloudinary, etc.)</div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Brand (optional)</label>
+          <input type="text" id="pBrand" placeholder="e.g. Amul, Mother Dairy">
+        </div>
+        <div class="form-group">
+          <label>Search Keywords</label>
+          <input type="text" id="pKeywords" placeholder="e.g. doodh, milk, dairy, toned">
+          <div class="form-hint">Comma-separated. Enables smart search (doodh → milk)</div>
+        </div>
+      </div>
       <div class="form-group">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <label style="margin:0">Variants (sizes / units)</label>
@@ -1461,7 +1472,7 @@ function renderProducts() {
       </div>
       ${filtered.length===0?`<div class="empty-state"><div class="ei">🛍️</div><p>No products yet.</p></div>`:`
       <table>
-        <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Variants</th><th>Price Range</th><th>Stock</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Brand</th><th>Keywords</th><th>Variants</th><th>Price Range</th><th>Stock</th><th>Actions</th></tr></thead>
         <tbody>${filtered.map(p=>{
           const cat = allCategories.find(c=>c.id===p.catId);
           const variants = p.variants||[];
@@ -1471,10 +1482,13 @@ function renderProducts() {
           const minP = allPrices.length?Math.min(...allPrices):0;
           const maxP = allPrices.length?Math.max(...allPrices):0;
           const imgUrl = variants[0]?.imageUrl||p.imageUrl||'';
+          const kw = Array.isArray(p.keywords) ? p.keywords.slice(0,3).join(', ') : (p.keywords||'');
           return `<tr>
             <td>${imgUrl?`<img class="td-img" src="${imgUrl}">`:`<div class="td-img-ph">📦</div>`}</td>
             <td><div style="font-weight:600">${p.name}</div><div style="font-size:.72rem;color:var(--text2)">${p.featured?'⭐ Featured ':''} ${p.isNew?'✨ New':''}</div></td>
             <td>${cat?cat.name:'<span style="color:var(--text3)">—</span>'}</td>
+            <td style="font-size:.78rem;color:var(--text2)">${p.brand||'<span style="color:var(--text3)">—</span>'}</td>
+            <td style="font-size:.72rem;color:var(--text3);max-width:120px;word-break:break-word">${kw||'<span style="color:var(--text3)">—</span>'}</td>
             <td><div style="display:flex;flex-wrap:wrap;gap:3px">${variants.length===0?'<span style="color:var(--text3)">—</span>':variants.map(v=>`<span class="badge badge-blue" title="₹${(v.priceTiers||[{price:0}])[0].price}">${v.label||'—'}</span>`).join('')}</div></td>
             <td style="font-weight:700">${minP===maxP?`₹${minP}`:`₹${minP}–${maxP}`}</td>
             <td>${allInStock?'<span class="badge badge-green">In Stock</span>':anyInStock?'<span class="badge badge-yellow">Partial</span>':'<span class="badge badge-red">Out of Stock</span>'}</td>
@@ -1494,6 +1508,8 @@ function openProductModal(id) {
   document.getElementById('pEditId').value = p?.id||'';
   document.getElementById('pName').value = p?.name||'';
   document.getElementById('pTag').value = p?.featured?'featured':p?.isNew?'new':'';
+  document.getElementById('pBrand').value = p?.brand||'';
+  document.getElementById('pKeywords').value = Array.isArray(p?.keywords) ? p.keywords.join(', ') : (p?.keywords||'');
   const imgUrl = p?.imageUrl||'';
   document.getElementById('pImgUrl').value = imgUrl;
   previewUrlImg('pImgPreview', imgUrl);
@@ -1570,7 +1586,14 @@ async function saveProduct() {
   }
   const tag = document.getElementById('pTag').value;
   const subCatId = parseInt(document.getElementById('pSubCat').value) || null;
-  const body = {name,catId:parseInt(document.getElementById('pCat').value)||0,subCatId,imageUrl:document.getElementById('pImgUrl').value,featured:tag==='featured',isNew:tag==='new',variants:_editVariants.map((v,i)=>({...v,id:v.id||('v'+(i+1)),priceTiers:[...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)}))};
+  const brand = document.getElementById('pBrand').value.trim();
+  const keywords = document.getElementById('pKeywords').value.split(',').map(k=>k.trim()).filter(Boolean);
+  const body = {
+    name, catId:parseInt(document.getElementById('pCat').value)||0, subCatId,
+    imageUrl:document.getElementById('pImgUrl').value, brand, keywords,
+    featured:tag==='featured', isNew:tag==='new',
+    variants:_editVariants.map((v,i)=>({...v,id:v.id||('v'+(i+1)),priceTiers:[...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)}))
+  };
   await fetch(id?`/api/admin/products/${id}`:'/api/admin/products',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
   await loadAll(); closeModal('productModal'); renderProducts();
   toast(id?'Product updated!':'Product added!');

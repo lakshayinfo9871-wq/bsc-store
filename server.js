@@ -35,6 +35,12 @@ async function connectDB() {
   await db.collection('udharPayments').createIndex({ customerId: 1 });
   // Subcategories
   await db.collection('subcategories').createIndex({ catId: 1 });
+  // Smart search — compound text index across all searchable fields
+  await db.collection('products').createIndex(
+    { name: 'text', brand: 'text', keywords: 'text', searchTokens: 'text' },
+    { weights: { name: 10, brand: 5, keywords: 8, searchTokens: 3 }, name: 'product_text_search', default_language: 'none' }
+  );
+  await db.collection('products').createIndex({ catId: 1, subCatId: 1 });
 
   const settings = await db.collection('settings').findOne({ _id: 'main' });
   if (!settings) {
@@ -82,10 +88,95 @@ function migrateProduct(p) {
   return {
     id: p.id, name: p.name, catId: p.catId || 0,
     imageUrl: p.imageUrl || '', featured: p.featured || false, isNew: p.isNew || false,
+    brand: p.brand || '', keywords: p.keywords || [], searchTokens: p.searchTokens || [],
     variants: [{ id: 'v1', label: p.unit || '1 unit', imageUrl: p.imageUrl || '',
       mrp: p.mrp || null, inStock: p.inStock !== false,
       priceTiers: p.priceTiers || [{ minQty: 1, price: 0 }] }]
   };
+}
+
+// ── SYNONYMS MAP ──────────────────────────────────────────────────────────────
+// Bidirectional: searching either word will find the other
+const SYNONYMS = {
+  // Hindi → English
+  doodh: ['milk', 'dairy'],
+  dudh: ['milk', 'dairy'],
+  dahi: ['curd', 'yogurt', 'yoghurt', 'set curd'],
+  paneer: ['cottage cheese', 'cheese', 'chenna'],
+  makhan: ['butter'],
+  ghee: ['clarified butter'],
+  chawal: ['rice'],
+  aata: ['wheat flour', 'flour', 'atta'],
+  maida: ['flour', 'refined flour', 'all purpose flour'],
+  dal: ['lentils', 'pulses', 'daal'],
+  sabzi: ['vegetables', 'veggies'],
+  tamatar: ['tomato', 'tomatoes'],
+  pyaaz: ['onion', 'onions'],
+  aloo: ['potato', 'potatoes'],
+  mirchi: ['chilli', 'chili', 'pepper'],
+  namak: ['salt'],
+  cheeni: ['sugar'],
+  tel: ['oil', 'cooking oil'],
+  sarson: ['mustard'],
+  jeera: ['cumin'],
+  haldi: ['turmeric'],
+  adrak: ['ginger'],
+  lehsun: ['garlic'],
+  dhania: ['coriander', 'cilantro'],
+  anda: ['egg', 'eggs'],
+  murga: ['chicken'],
+  macchi: ['fish'],
+  murg: ['chicken'],
+  roti: ['bread', 'chapati', 'chapatti'],
+  bread: ['roti', 'pav'],
+  chai: ['tea'],
+  coffee: ['kafi'],
+  nimbu: ['lemon', 'lime'],
+  kela: ['banana'],
+  seb: ['apple'],
+  aam: ['mango'],
+  angoor: ['grapes'],
+  narangi: ['orange'],
+  // English → Hindi (reverse for discoverability)
+  milk: ['doodh', 'dudh', 'dairy milk'],
+  curd: ['dahi', 'yogurt', 'yoghurt'],
+  butter: ['makhan'],
+  rice: ['chawal'],
+  flour: ['aata', 'atta', 'maida'],
+  potato: ['aloo'],
+  onion: ['pyaaz'],
+  tomato: ['tamatar'],
+  egg: ['anda'],
+  eggs: ['anda'],
+  chicken: ['murga', 'murg'],
+  bread: ['roti', 'pav'],
+  tea: ['chai'],
+  lemon: ['nimbu'],
+  // Brand / type aliases
+  toned: ['milk', 'doodh'],
+  full: ['milk', 'doodh'],
+  skimmed: ['milk', 'doodh'],
+  lassi: ['curd', 'dahi', 'buttermilk', 'chaach'],
+  chaach: ['buttermilk', 'lassi', 'curd'],
+  buttermilk: ['chaach', 'lassi', 'curd', 'dahi'],
+  shrikhand: ['curd', 'dahi', 'yogurt'],
+  cream: ['malai'],
+  malai: ['cream'],
+  pouch: ['packet', 'pack'],
+  packet: ['pack', 'pouch'],
+};
+
+// Expand a query string into all synonym variants (flat, deduplicated)
+function expandQuery(raw) {
+  const q = raw.trim().toLowerCase();
+  const terms = new Set([q]);
+  // Add whole-query synonym matches
+  if (SYNONYMS[q]) SYNONYMS[q].forEach(s => terms.add(s));
+  // Also check word-by-word
+  q.split(/\s+/).forEach(word => {
+    if (SYNONYMS[word]) SYNONYMS[word].forEach(s => terms.add(s));
+  });
+  return [...terms];
 }
 
 // Calculate balance from ledger (credits - payments)
@@ -213,6 +304,108 @@ app.delete('/api/admin/subcategories/:id', adminAuth, async (req, res) => {
 });
 
 // ── PRODUCTS ──────────────────────────────────────────────────────────────────
+
+// Build a flat token array from all text fields + synonym expansion
+// Stored on the product for fast text-index matching
+function buildSearchTokens(body) {
+  const parts = [
+    body.name || '',
+    body.brand || '',
+    ...(Array.isArray(body.keywords) ? body.keywords : (body.keywords||'').split(','))
+  ];
+  const tokens = new Set();
+  parts.forEach(p => {
+    const clean = p.toLowerCase().trim();
+    if (!clean) return;
+    tokens.add(clean);
+    clean.split(/\s+/).forEach(word => {
+      tokens.add(word);
+      if (SYNONYMS[word]) SYNONYMS[word].forEach(s => tokens.add(s));
+    });
+    if (SYNONYMS[clean]) SYNONYMS[clean].forEach(s => tokens.add(s));
+  });
+  return [...tokens];
+}
+
+// ── PUBLIC SEARCH ──────────────────────────────────────────────────────────────
+// GET /api/search?q=doodh
+app.get('/api/search', async (req, res) => {
+  try {
+    const raw = (req.query.q || '').trim();
+    if (!raw) return res.json({ results: [] });
+
+    const expandedTerms = expandQuery(raw);
+    const q = raw.toLowerCase();
+
+    // Build an OR regex that matches any expanded term
+    const regexParts = expandedTerms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const orRegex = new RegExp(regexParts.join('|'), 'i');
+
+    // 1) Fetch all products (small dataset — no pagination needed at this scale)
+    const allProds = await db.collection('products').find().toArray();
+    const [allCats, allSubcats] = await Promise.all([
+      db.collection('categories').find().toArray(),
+      db.collection('subcategories').find().toArray(),
+    ]);
+
+    // Build lookup maps for category/subcategory name matching
+    const catMap = {};
+    allCats.forEach(c => { catMap[c.id] = c.name.toLowerCase(); });
+    const subcatMap = {};
+    allSubcats.forEach(s => { subcatMap[s.id] = s.name.toLowerCase(); });
+
+    // Score each product
+    const scored = [];
+    for (const p of allProds) {
+      let score = 0;
+      const pName = (p.name || '').toLowerCase();
+      const pBrand = (p.brand || '').toLowerCase();
+      const pKeywords = (p.keywords || []).map(k => k.toLowerCase());
+      const pTokens = (p.searchTokens || []).map(k => k.toLowerCase());
+      const pCatName = catMap[p.catId] || '';
+      const pSubcatName = subcatMap[p.subCatId] || '';
+
+      for (const term of expandedTerms) {
+        const t = term.toLowerCase();
+        // Exact name match — highest score
+        if (pName === t) { score += 100; continue; }
+        // Name starts with term
+        if (pName.startsWith(t)) { score += 60; continue; }
+        // Name contains term
+        if (pName.includes(t)) { score += 40; }
+        // Brand match
+        if (pBrand === t) score += 50;
+        else if (pBrand.includes(t)) score += 25;
+        // Keywords exact
+        if (pKeywords.includes(t)) score += 45;
+        // Keywords partial
+        else if (pKeywords.some(k => k.includes(t) || t.includes(k))) score += 20;
+        // Search tokens
+        if (pTokens.includes(t)) score += 30;
+        // Category / subcategory name
+        if (pCatName.includes(t)) score += 15;
+        if (pSubcatName.includes(t)) score += 20;
+      }
+
+      // Boost: original query in name/brand/keywords even without synonym expansion
+      if (pName.includes(q)) score += 35;
+      if (pBrand.includes(q)) score += 20;
+      if (pKeywords.some(k => k.includes(q))) score += 25;
+
+      if (score > 0) scored.push({ product: migrateProduct(p), score });
+    }
+
+    // Sort by score descending, then name
+    scored.sort((a, b) => b.score - a.score || a.product.name.localeCompare(b.product.name));
+
+    res.json({
+      query: raw,
+      expandedTerms,
+      results: scored.map(s => s.product),
+      total: scored.length
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 app.get('/api/admin/products', adminAuth, async (req, res) => {
   try { res.json((await db.collection('products').find().toArray()).map(migrateProduct)); }
   catch (e) { res.status(500).json({ error: e.message }); }
@@ -224,6 +417,9 @@ app.post('/api/admin/products', adminAuth, async (req, res) => {
       catId: parseInt(req.body.catId) || 0,
       subCatId: req.body.subCatId ? parseInt(req.body.subCatId) : null,
       imageUrl: req.body.imageUrl || '',
+      brand: req.body.brand || '',
+      keywords: Array.isArray(req.body.keywords) ? req.body.keywords : (req.body.keywords || '').split(',').map(k=>k.trim()).filter(Boolean),
+      searchTokens: buildSearchTokens(req.body),
       featured: req.body.featured || false, isNew: req.body.isNew || false,
       variants: req.body.variants || [{ id: 'v1', label: '1 unit', imageUrl: '', mrp: null, inStock: true, priceTiers: [{ minQty: 1, price: 0 }] }]
     };
@@ -233,8 +429,13 @@ app.post('/api/admin/products', adminAuth, async (req, res) => {
 });
 app.put('/api/admin/products/:id', adminAuth, async (req, res) => {
   try {
+    const update = { ...req.body };
+    if (update.keywords && !Array.isArray(update.keywords)) {
+      update.keywords = update.keywords.split(',').map(k=>k.trim()).filter(Boolean);
+    }
+    update.searchTokens = buildSearchTokens(update);
     const result = await db.collection('products').findOneAndUpdate(
-      { id: parseInt(req.params.id) }, { $set: req.body }, { returnDocument: 'after' }
+      { id: parseInt(req.params.id) }, { $set: update }, { returnDocument: 'after' }
     );
     if (!result) return res.status(404).json({ error: 'Not found' });
     res.json(result);
