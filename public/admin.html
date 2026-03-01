@@ -1135,13 +1135,17 @@ function buildMilkSubModal({customerId, isEdit=false, existingSub=null, defaultM
       : [{type:'Full Cream', qty:0.5, price:defaultMilkPrice}];
   const startDate = existingSub?.startDate || new Date().toISOString().slice(0,10);
 
-  const milkTypes = ['Full Cream','Toned','Double Toned','Skimmed','Buffalo'];
+  const DAILY_ITEMS = ['Full Cream','Toned','Double Toned','Skimmed','Buffalo','Curd','Paneer','Buttermilk','A2 Milk','Other'];
 
   const renderItemRow = (item, idx) => `
     <div class="sub-item-row" style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
-      <select style="flex:1.5;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .5rem;font-size:.83rem;font-family:inherit">
-        ${milkTypes.map(t=>`<option value="${t}" ${t===item.type?'selected':''}>${t}</option>`).join('')}
-      </select>
+      <div style="flex:1.5;position:relative">
+        <input list="dailyItemsList" value="${item.type}" placeholder="Product name"
+          style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .5rem;font-size:.83rem;font-family:inherit;box-sizing:border-box">
+        <datalist id="dailyItemsList">
+          ${DAILY_ITEMS.map(t=>`<option value="${t}">`).join('')}
+        </datalist>
+      </div>
       <input type="number" placeholder="Qty (L)" value="${item.qty}" min="0.25" max="20" step="0.25"
         style="width:75px;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .4rem;font-size:.83rem">
       <span style="font-size:.78rem;color:var(--text2);white-space:nowrap">L @ ₹</span>
@@ -1171,7 +1175,7 @@ function buildMilkSubModal({customerId, isEdit=false, existingSub=null, defaultM
               const row = document.createElement('div');
               row.className='sub-item-row';
               row.style='display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
-              row.innerHTML=\`<select style='flex:1.5;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .5rem;font-size:.83rem;font-family:inherit'>${milkTypes.map(t=>`<option>${t}</option>`).join('')}</select><input type='number' placeholder='Qty (L)' value='0.5' min='0.25' max='20' step='0.25' style='width:75px;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .4rem;font-size:.83rem'><span style='font-size:.78rem;color:var(--text2);white-space:nowrap'>L @ ₹</span><input type='number' placeholder='Price/L' value='${defaultMilkPrice}' min='1' step='0.5' style='width:72px;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .4rem;font-size:.83rem'><span style='font-size:.75rem;color:var(--text2)'>/L</span><button onclick='this.closest(&quot;.sub-item-row&quot;).remove();updateSubTotal()' style='background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;flex-shrink:0'>✕</button>\`;
+              row.innerHTML=\`<div style='flex:1.5;position:relative'><input list='dailyItemsList' placeholder='Product name' value='Full Cream' style='width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .5rem;font-size:.83rem;font-family:inherit;box-sizing:border-box'></div><input type='number' placeholder='Qty (L)' value='0.5' min='0.25' max='20' step='0.25' style='width:75px;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .4rem;font-size:.83rem'><span style='font-size:.78rem;color:var(--text2);white-space:nowrap'>L @ ₹</span><input type='number' placeholder='Price/L' value='${defaultMilkPrice}' min='1' step='0.5' style='width:72px;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .4rem;font-size:.83rem'><span style='font-size:.75rem;color:var(--text2)'>/L</span><button onclick='this.closest(&quot;.sub-item-row&quot;).remove();updateSubTotal()' style='background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;flex-shrink:0'>✕</button>\`;
               document.getElementById('subItemsList').appendChild(row);
               updateSubTotal();">
             + Add Another Milk Type
@@ -1207,11 +1211,11 @@ function updateSubTotal() {
 function getSubItemsFromModal() {
   const items = [];
   document.querySelectorAll('#subItemsList .sub-item-row').forEach(row => {
-    const select = row.querySelector('select');
+    const nameInput = row.querySelector('input[list]');
     const inputs = row.querySelectorAll('input[type=number]');
     const qty = parseFloat(inputs[0]?.value)||0;
     const price = parseFloat(inputs[1]?.value)||0;
-    const type = select?.value || 'Full Cream';
+    const type = (nameInput?.value||'Full Cream').trim();
     if (qty > 0) items.push({type, qty, price});
   });
   return items;
@@ -1753,15 +1757,20 @@ function openMultiMilkEntry(customerId, date) {
     existingItems = [{type:'Full Cream', qty:0.5, price:milkPrice}];
   }
 
-  const milkTypes = ['Full Cream','Toned','Double Toned','Skimmed','Buffalo'];
+  const DAILY_ITEMS_D = ['Full Cream','Toned','Double Toned','Skimmed','Buffalo','Curd','Paneer','Buttermilk','A2 Milk','Other'];
   const modalId = 'multiMilkModal';
   document.getElementById(modalId)?.remove();
 
   const renderItemRow = (item) => `
     <div class="milk-item-row" style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
-      <select onchange="updateDeliveryTotal()" style="flex:1.5;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;font-size:.83rem;font-family:inherit">
-        ${milkTypes.map(t=>`<option value="${t}" ${t===item.type?'selected':''}>${t}</option>`).join('')}
-      </select>
+      <div style="flex:1.5;position:relative">
+        <input list="deliveryItemsList" value="${item.type}" placeholder="Product name"
+          oninput="updateDeliveryTotal()"
+          style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;font-size:.83rem;font-family:inherit;box-sizing:border-box">
+        <datalist id="deliveryItemsList">
+          ${DAILY_ITEMS_D.map(t=>`<option value="${t}">`).join('')}
+        </datalist>
+      </div>
       <input type="number" placeholder="Qty" value="${item.qty}" min="0" max="20" step="0.25"
         onchange="updateDeliveryTotal()"
         style="width:68px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem">
@@ -1790,7 +1799,7 @@ function openMultiMilkEntry(customerId, date) {
               const row = document.createElement('div');
               row.className = 'milk-item-row';
               row.style.cssText = 'display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
-              row.innerHTML = \`<select onchange='updateDeliveryTotal()' style='flex:1.5;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;font-size:.83rem;font-family:inherit'><option>Full Cream</option><option>Toned</option><option>Double Toned</option><option>Skimmed</option><option>Buffalo</option></select><input type='number' placeholder='Qty' value='0.5' min='0' max='20' step='0.25' onchange='updateDeliveryTotal()' style='width:68px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem'><span style='font-size:.75rem;color:var(--text2)'>L@₹</span><input type='number' placeholder='₹/L' value='${milkPrice}' min='1' step='0.5' onchange='updateDeliveryTotal()' style='width:65px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem'><button onclick='this.closest(&quot;.milk-item-row&quot;).remove();updateDeliveryTotal()' style='background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;padding:0;flex-shrink:0'>×</button>\`;
+              row.innerHTML = \`<div style='flex:1.5;position:relative'><input list='deliveryItemsList' placeholder='Product name' value='Full Cream' oninput='updateDeliveryTotal()' style='width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;font-size:.83rem;font-family:inherit;box-sizing:border-box'></div><input type='number' placeholder='Qty' value='0.5' min='0' max='20' step='0.25' onchange='updateDeliveryTotal()' style='width:68px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem'><span style='font-size:.75rem;color:var(--text2)'>L@₹</span><input type='number' placeholder='₹/L' value='${milkPrice}' min='1' step='0.5' onchange='updateDeliveryTotal()' style='width:65px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem'><button onclick='this.closest(&quot;.milk-item-row&quot;).remove();updateDeliveryTotal()' style='background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;padding:0;flex-shrink:0'>×</button>\`;
               document.getElementById('milkItemsList').appendChild(row);
               updateDeliveryTotal();">
             + Add Type
@@ -1824,10 +1833,10 @@ async function saveMultiMilkEntry(customerId, date) {
   const items = [];
   rows.forEach(row => {
     const inputs = row.querySelectorAll('input[type=number]');
-    const select = row.querySelector('select');
+    const nameInp = row.querySelector('input[list]');
     const qty = parseFloat(inputs[0]?.value) || 0;
     const price = parseFloat(inputs[1]?.value) || milkPrice;
-    const type = select?.value || 'Full Cream';
+    const type = (nameInp?.value || 'Full Cream').trim();
     if (qty > 0) items.push({type, qty, price});
   });
   if (!items.length) return toast('Enter at least one milk item');
