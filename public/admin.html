@@ -943,11 +943,17 @@ function renderInfoTab(data, customerId) {
         <div class="form-group" style="margin:0"><label>Villa / Flat</label><input type="text" id="ei_villa" value="${c.villa||''}" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
       </div>
       <div class="form-group" style="margin-top:.7rem"><label>Notes</label><textarea id="ei_notes" rows="2" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;resize:vertical">${c.notes||''}</textarea></div>
-      <div class="form-group"><label>Customer PIN (set by customer)</label>
-        <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem;font-family:monospace;letter-spacing:.1em">
-          ${c.pinPlain ? `<span style="font-weight:700;color:var(--text1)">${c.pinPlain}</span>` : '<span style="color:var(--text2);font-style:italic">Not set yet (customer hasn\'t registered)</span>'}
-        </div>
-        <div style="font-size:.75rem;color:var(--text2);margin-top:.3rem">🔒 This is the customer's login PIN. Share it only if they forget.</div>
+      <div class="form-group"><label>Customer PIN</label>
+        ${c.pinPlain
+          ? `<div style="display:flex;align-items:center;gap:.8rem;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:.6rem .9rem">
+               <span style="font-size:1.3rem;font-weight:800;font-family:monospace;letter-spacing:.15em;color:#15803d">${c.pinPlain}</span>
+               <span class="badge badge-green" style="font-size:.7rem">✓ Active</span>
+             </div>
+             <div style="font-size:.75rem;color:var(--text2);margin-top:.3rem">Customer has registered. Share this PIN only if they forget it.</div>`
+          : `<div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:8px;padding:.6rem .9rem;font-size:.82rem;color:#92400e">
+               ⏳ <strong>Waiting for customer to register</strong><br>
+               <span style="font-size:.78rem">Ask them to open the app and sign up with <strong>${c.phone}</strong>. Their PIN will appear here automatically.</span>
+             </div>`}
       </div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap">
         <button class="btn btn-green" onclick="saveCustomerInfo(${customerId})">💾 Save Info</button>
@@ -975,9 +981,10 @@ function openAddCustomerModal() {
             <div class="form-group" style="margin:0"><label>Block</label><input type="text" id="nc_block" placeholder="A / B / C..." style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
             <div class="form-group" style="margin:0"><label>Villa / Flat</label><input type="text" id="nc_villa" placeholder="14" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.88rem"></div>
           </div>
-          <div class="form-group" style="margin-top:.7rem"><label>4-digit PIN (customer portal login)</label>
-            <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:.5rem .8rem;font-size:.84rem;color:var(--text2);font-style:italic">
-              Customer sets their own PIN when registering via the app
+          <div class="form-group" style="margin-top:.7rem"><label>PIN</label>
+            <div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:8px;padding:.7rem .9rem;font-size:.82rem;color:#92400e;line-height:1.5">
+              📱 <strong>No PIN needed from you.</strong><br>
+              Just add their phone number. When the customer opens the app and registers with the <strong>same number</strong>, the system will automatically link to this account and save their PIN — which you'll see here.
             </div>
           </div>
           <hr style="border:none;border-top:1px solid var(--border);margin:.8rem 0">

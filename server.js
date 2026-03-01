@@ -686,7 +686,11 @@ app.put('/api/admin/customers/:id', adminAuth, async (req, res) => {
     const customerId = parseInt(req.params.id);
     const { pin, ...rest } = req.body;
     const update = { ...rest };
-    // Admin cannot change PIN via this endpoint (customer sets their own PIN)
+    // Admin can set/reset a customer's PIN
+    if (pin && /^\d{4}$/.test(String(pin))) {
+      update.pin = sha256(String(pin));
+      update.pinPlain = String(pin);
+    }
     const result = await db.collection('customers').findOneAndUpdate(
       { customerId }, { $set: update }, { returnDocument: 'after' }
     );
@@ -1384,8 +1388,29 @@ app.post('/api/milk/register', async (req, res) => {
     const { name, phone, address, pin } = req.body;
     if (!name || !phone) return res.status(400).json({ error: 'Name and phone required' });
     if (!pin || !/^\d{4}$/.test(String(pin))) return res.status(400).json({ error: '4-digit PIN required' });
-    if (await db.collection('customers').findOne({ phone }))
-      return res.status(409).json({ error: 'Phone already registered' });
+
+    const existing = await db.collection('customers').findOne({ phone });
+
+    if (existing) {
+      // If admin pre-created this account (no PIN set yet) — let customer complete it
+      if (!existing.pin) {
+        await db.collection('customers').updateOne(
+          { phone },
+          { $set: {
+            name: name || existing.name,
+            address: address || existing.address || '',
+            pin: sha256(String(pin)),
+            pinPlain: String(pin),
+            joinedAt: existing.joinedAt || new Date().toISOString()
+          }}
+        );
+        return res.json({ ok: true, linked: true });
+      }
+      // Already fully registered
+      return res.status(409).json({ error: 'This phone number is already registered. Please login instead.' });
+    }
+
+    // Brand new customer — create fresh
     const customerId = await getNextId('customerId');
     await db.collection('customers').insertOne({
       customerId, name, phone, address: address || '',
