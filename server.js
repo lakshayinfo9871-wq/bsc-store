@@ -667,8 +667,21 @@ app.post('/api/admin/customers', adminAuth, async (req, res) => {
   try {
     const { name, phone, address, block, villa, pin, notes, creditLimit } = req.body;
     if (!name || !phone) return res.status(400).json({ error: 'Name and phone required' });
-    if (await db.collection('customers').findOne({ phone }))
-      return res.status(409).json({ error: 'Phone already registered' });
+    const phoneExists = await db.collection('customers').findOne({ phone, deleted: { $ne: true } });
+    if (phoneExists) return res.status(409).json({ error: 'Phone already registered' });
+    // If a deleted account exists with this phone, restore it instead of creating new
+    const deletedExisting = await db.collection('customers').findOne({ phone, deleted: true });
+    if (deletedExisting) {
+      await db.collection('customers').updateOne({ phone }, { $set: {
+        name, address: address||'', block: block||'', villa: villa||'',
+        notes: notes||'', deleted: false, deletedAt: null,
+        pin: pin ? sha256(String(pin)) : deletedExisting.pin,
+        pinPlain: pin ? String(pin) : deletedExisting.pinPlain,
+        active: true
+      }});
+      const restored = await db.collection('customers').findOne({ phone });
+      return res.json({ ok: true, customer: { ...restored, pin: undefined } });
+    }
     const customerId = await getNextId('customerId');
     const customer = {
       customerId, name, phone, address: address || '', block: block || '', villa: villa || '',
@@ -1392,21 +1405,29 @@ app.post('/api/milk/register', async (req, res) => {
     const existing = await db.collection('customers').findOne({ phone });
 
     if (existing) {
+      // If account was deleted — restore it and set new PIN
+      if (existing.deleted) {
+        await db.collection('customers').updateOne({ phone }, { $set: {
+          name: name || existing.name,
+          address: address || existing.address || '',
+          pin: sha256(String(pin)),
+          pinPlain: String(pin),
+          deleted: false, deletedAt: null, active: true
+        }});
+        return res.json({ ok: true, restored: true });
+      }
       // If admin pre-created this account (no PIN set yet) — let customer complete it
       if (!existing.pin) {
-        await db.collection('customers').updateOne(
-          { phone },
-          { $set: {
-            name: name || existing.name,
-            address: address || existing.address || '',
-            pin: sha256(String(pin)),
-            pinPlain: String(pin),
-            joinedAt: existing.joinedAt || new Date().toISOString()
-          }}
-        );
+        await db.collection('customers').updateOne({ phone }, { $set: {
+          name: name || existing.name,
+          address: address || existing.address || '',
+          pin: sha256(String(pin)),
+          pinPlain: String(pin),
+          joinedAt: existing.joinedAt || new Date().toISOString()
+        }});
         return res.json({ ok: true, linked: true });
       }
-      // Already fully registered
+      // Already fully registered and active
       return res.status(409).json({ error: 'This phone number is already registered. Please login instead.' });
     }
 
@@ -1430,6 +1451,8 @@ app.post('/api/milk/login', async (req, res) => {
     const attempt = pin || password;
     if (!c || sha256(String(attempt)) !== c.pin)
       return res.status(401).json({ error: 'Wrong phone or PIN' });
+    if (c.deleted)
+      return res.status(401).json({ error: 'Account not found. Please register again.' });
     const token = jwt.sign({ cid: c.customerId, phone: c.phone }, SECRET, { expiresIn: '90d' });
     res.json({ token, customer: { id: c.customerId, name: c.name, phone: c.phone, address: c.address } });
   } catch (e) { res.status(500).json({ error: e.message }); }
