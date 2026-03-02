@@ -233,6 +233,8 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .cat-right::-webkit-scrollbar{display:none;}
 .cat-right-section{margin-bottom:16px;}
 .cat-right-section-title{font-size:.8rem;font-weight:900;color:var(--text);padding:8px 4px 10px;letter-spacing:-.2px;}
+.cat-right-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+@media(max-width:360px){.cat-right-grid{grid-template-columns:repeat(2,1fr);gap:7px;}}
 /* ── OUT OF STOCK overlay on card image ── */
 .pc-oos-badge{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.72);color:#fff;font-size:.58rem;font-weight:800;padding:3px 8px;border-radius:6px;letter-spacing:.04em;z-index:3;backdrop-filter:blur(4px);}
 .pcard.oos{opacity:.6;}

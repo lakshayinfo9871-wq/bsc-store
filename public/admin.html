@@ -20,7 +20,7 @@ input,select,textarea{font-family:'Inter',sans-serif;}
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
 
-#loginScreen{min-height:100vh;display:none;align-items:center;justify-content:center;background:var(--sidebar);}
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--sidebar);}
 .login-box{background:var(--white);border-radius:20px;padding:2.5rem;width:min(400px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.3);}
 .login-logo{font-size:1.8rem;font-weight:900;margin-bottom:.3rem;}
 .login-logo span{color:var(--green);}
@@ -478,8 +478,8 @@ let allProducts = [], allCategories = [], allBanners = [], allSubcategories = []
 let currentPage = 'dashboard';
 
 window.onload = function() {
-  if (token) { startApp(); }
-  else { document.getElementById('loginScreen').style.display = 'flex'; }
+  if (token) { document.getElementById('loginScreen').style.display = 'none'; startApp(); }
+  // loginScreen is already visible by default, so no else needed
 };
 
 async function doLogin() {
