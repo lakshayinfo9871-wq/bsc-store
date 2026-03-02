@@ -125,19 +125,25 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .see-all{font-size:11px;font-weight:700;color:var(--green);cursor:pointer;}
 
 /* ══════════ PERSONALISED HOME ══════════ */
-/* Hero card */
-.pers-hero{margin:14px 14px 0;border-radius:20px;padding:18px 18px 58px;position:relative;overflow:hidden;}
-.pers-hero-glow{position:absolute;top:-50px;right:-50px;width:200px;height:200px;border-radius:50%;opacity:.25;pointer-events:none;}
-.pers-hero-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:3px 10px 3px 7px;font-size:.58rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:rgba(255,255,255,.8);margin-bottom:10px;}
-.pers-hero-greeting{font-size:1.18rem;font-weight:900;color:#fff;line-height:1.3;margin-bottom:5px;}
-.pers-hero-sub{font-size:.75rem;color:rgba(255,255,255,.5);line-height:1.5;}
-.pers-hero-emoji{position:absolute;right:18px;bottom:14px;font-size:3rem;opacity:.6;line-height:1;pointer-events:none;}
-/* AI section header */
-.ai-sec-hd{display:flex;align-items:center;gap:7px;margin-bottom:12px;}
-.ai-sec-title{font-size:15px;font-weight:800;letter-spacing:-.3px;}
-.ai-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,rgba(139,92,246,.18),rgba(99,102,241,.12));border:1px solid rgba(139,92,246,.3);border-radius:20px;padding:2px 8px;font-size:.58rem;font-weight:800;color:#c4b5fd;letter-spacing:.04em;white-space:nowrap;}
-@keyframes aiPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-.ai-dot{width:5px;height:5px;border-radius:50%;background:#a78bfa;display:inline-block;animation:aiPulse 1.8s ease-in-out infinite;}
+/* Animated scene banner */
+.scene-banner{margin:14px 14px 0;border-radius:20px;height:160px;position:relative;overflow:hidden;cursor:default;}
+.scene-canvas{width:100%;height:100%;position:absolute;inset:0;}
+/* Text overlay on scene */
+.scene-text{position:absolute;bottom:0;left:0;right:0;padding:14px 18px;background:linear-gradient(to top,rgba(0,0,0,.55) 0%,transparent 100%);pointer-events:none;}
+.scene-greeting{font-size:1.05rem;font-weight:900;color:#fff;line-height:1.3;text-shadow:0 1px 4px rgba(0,0,0,.4);}
+.scene-sub{font-size:.72rem;color:rgba(255,255,255,.7);margin-top:3px;text-shadow:0 1px 3px rgba(0,0,0,.4);}
+/* Context tag (no AI mention) */
+.scene-tag{position:absolute;top:12px;left:12px;display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(6px);border-radius:20px;padding:4px 10px;font-size:.6rem;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.9);}
+/* Section header (no AI label) */
+.ctx-sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.ctx-sec-title{font-size:15px;font-weight:800;letter-spacing:-.3px;}
+/* Coming soon festival banner */
+.fest-coming{margin:0 14px;border-radius:16px;padding:13px 16px;position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;cursor:default;}
+.fest-coming-emoji{font-size:2rem;flex-shrink:0;line-height:1;}
+.fest-coming-text{}
+.fest-coming-label{font-size:.58rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.fest-coming-title{font-size:.92rem;font-weight:900;color:#fff;}
+.fest-coming-sub{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:2px;}
 /* Fade-in for pers block */
 @keyframes persFadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 .pers-block{animation:persFadeIn .45s cubic-bezier(.22,.61,.36,1) both;}
@@ -961,16 +967,15 @@ function getCcBg(i) { return 'cc-bg-' + (i % 8); }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ── PERSONALISED HOME ENGINE ──────────────────────────────────────────────────
-// Signals used: time-of-day · day-of-week · season · weather · past orders
-// Weather: free Open-Meteo API — no key required, GDPR-safe, cached 2 hours.
-// Past orders: tracked locally in localStorage after every successful order.
-// Everything is a soft enhancement — if anything fails, the normal home shows.
+// Signals: time-of-day · day-of-week · season · past orders
+// NO geolocation used — privacy-friendly by design.
+// Weather tone derived from season alone (no external API, no location request).
+// Past orders tracked locally in localStorage after each successful order.
 // ══════════════════════════════════════════════════════════════════════════════
 
-const PERS_WEATHER_KEY = 'bsc_wx_v1';   // localStorage: {signal,temp,at,lat,lon}
-const PERS_ORDERS_KEY  = 'bsc_ordhist_v1'; // localStorage: {productId: count, ...}
+const PERS_ORDERS_KEY = 'bsc_ordhist_v1'; // {productId:count, _ts:timestamp}
 
-// ── SIGNAL: TIME ──────────────────────────────────────────────────────────────
+// ── TIME ──────────────────────────────────────────────────────────────────────
 function _getTimeSlot() {
   const h = new Date().getHours();
   if (h >= 5  && h < 9)  return 'earlyMorning';
@@ -979,76 +984,54 @@ function _getTimeSlot() {
   if (h >= 15 && h < 17) return 'afternoon';
   if (h >= 17 && h < 21) return 'evening';
   if (h >= 21 && h < 24) return 'night';
-  return 'lateNight'; // 0-4am
+  return 'lateNight';
 }
 
-// ── SIGNAL: SEASON (India-centric) ────────────────────────────────────────────
+// ── SEASON (India months) ─────────────────────────────────────────────────────
 function _getSeason() {
-  const m = new Date().getMonth() + 1; // 1-12
-  if (m >= 3 && m <= 5)  return 'summer';   // Mar-May: hot
-  if (m >= 6 && m <= 9)  return 'monsoon';  // Jun-Sep: rains
-  if (m >= 10 && m <= 11) return 'autumn';  // Oct-Nov: pleasant
-  return 'winter'; // Dec-Feb
+  const m = new Date().getMonth() + 1;
+  if (m >= 3 && m <= 5)  return 'summer';
+  if (m >= 6 && m <= 9)  return 'monsoon';
+  if (m >= 10 && m <= 11) return 'autumn';
+  return 'winter';
 }
 
-// ── SIGNAL: DAY TYPE ──────────────────────────────────────────────────────────
+// ── DAY TYPE ──────────────────────────────────────────────────────────────────
 function _getDayType() {
   const d = new Date().getDay();
   return (d === 0 || d === 6) ? 'weekend' : 'weekday';
 }
 
-// ── SIGNAL: FESTIVAL (hardcoded major Indian festivals, approximate dates) ─────
-function _getFestival() {
+// ── FESTIVALS: active + upcoming (within 7 days) ──────────────────────────────
+function _getFestivals() {
   const n = new Date(), m = n.getMonth()+1, d = n.getDate();
   const fests = [
-    { name:'Diwali',             emoji:'🪔', m:10, d1:20, d2:31 },
-    { name:'Diwali',             emoji:'🪔', m:11, d1:1,  d2:5  },
-    { name:'Holi',               emoji:'🎨', m:3,  d1:8,  d2:16 },
-    { name:'Eid',                emoji:'🌙', m:3,  d1:27, d2:31 },
-    { name:'Eid',                emoji:'🌙', m:4,  d1:1,  d2:3  },
-    { name:'Raksha Bandhan',     emoji:'🎀', m:8,  d1:15, d2:22 },
-    { name:'Ganesh Chaturthi',   emoji:'🙏', m:8,  d1:25, d2:31 },
-    { name:'Ganesh Chaturthi',   emoji:'🙏', m:9,  d1:1,  d2:5  },
-    { name:'Christmas',          emoji:'🎄', m:12, d1:20, d2:26 },
-    { name:'New Year',           emoji:'🎆', m:12, d1:27, d2:31 },
-    { name:'New Year',           emoji:'🎆', m:1,  d1:1,  d2:3  },
-    { name:'Independence Day',   emoji:'🇮🇳', m:8,  d1:13, d2:16 },
+    { name:'Diwali',           emoji:'🪔', kw:['snacks','namkeen','chips','drinks','juice','sweets','dry fruit','farsan'],        m:10, d1:20, d2:31, grad:'linear-gradient(135deg,#78350f,#431407)', glow:'#fbbf24', scene:'diwali'  },
+    { name:'Diwali',           emoji:'🪔', kw:['snacks','namkeen','chips','drinks','juice','sweets','dry fruit'],                 m:11, d1:1,  d2:5,  grad:'linear-gradient(135deg,#78350f,#431407)', glow:'#fbbf24', scene:'diwali'  },
+    { name:'Holi',             emoji:'🎨', kw:['drinks','juice','cold drink','milk','snacks','chips','colours','sweets','thandai'], m:3, d1:8, d2:16, grad:'linear-gradient(135deg,#831843,#500724)', glow:'#f9a8d4', scene:'holi'    },
+    { name:'Eid',              emoji:'🌙', kw:['sweets','milk','bread','juice','drinks','snacks','biryani'],                      m:3, d1:27, d2:31, grad:'linear-gradient(135deg,#1e3a5f,#0c1a2e)', glow:'#93c5fd', scene:'eid'     },
+    { name:'Eid',              emoji:'🌙', kw:['sweets','milk','bread','juice','drinks','snacks'],                                m:4, d1:1,  d2:3,  grad:'linear-gradient(135deg,#1e3a5f,#0c1a2e)', glow:'#93c5fd', scene:'eid'     },
+    { name:'Raksha Bandhan',   emoji:'🎀', kw:['sweets','chocolate','juice','snacks','biscuit','milk'],                          m:8, d1:15, d2:22, grad:'linear-gradient(135deg,#9d174d,#500724)', glow:'#fbcfe8', scene:'default' },
+    { name:'Ganesh Chaturthi', emoji:'🙏', kw:['milk','coconut','fruits','sweets','juice','snacks','modak'],                     m:8, d1:25, d2:31, grad:'linear-gradient(135deg,#78350f,#3b1d08)', glow:'#fbbf24', scene:'default' },
+    { name:'Ganesh Chaturthi', emoji:'🙏', kw:['milk','coconut','fruits','sweets','juice','snacks'],                             m:9, d1:1,  d2:5,  grad:'linear-gradient(135deg,#78350f,#3b1d08)', glow:'#fbbf24', scene:'default' },
+    { name:'Christmas',        emoji:'🎄', kw:['juice','drinks','cake','bread','butter','chocolate','snacks','biscuit'],         m:12, d1:20, d2:26, grad:'linear-gradient(135deg,#14532d,#052e16)', glow:'#86efac', scene:'christmas'},
+    { name:'New Year',         emoji:'🎆', kw:['drinks','juice','snacks','chips','soda','cold drink','chocolate'],               m:12, d1:27, d2:31, grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#c4b5fd', scene:'newyear' },
+    { name:'New Year',         emoji:'🎆', kw:['drinks','juice','snacks','chips','soda'],                                        m:1,  d1:1,  d2:3,  grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#c4b5fd', scene:'newyear' },
+    { name:'Independence Day', emoji:'🇮🇳', kw:['drinks','snacks','juice','chips','namkeen','biscuit'],                          m:8, d1:13, d2:16, grad:'linear-gradient(135deg,#14532d,#052e16)', glow:'#86efac', scene:'default' },
   ];
-  return fests.find(f => f.m === m && d >= f.d1 && d <= f.d2) || null;
+  // Active festival (within date range)
+  const active = fests.find(f => f.m === m && d >= f.d1 && d <= f.d2) || null;
+  // Upcoming in next 7 days
+  const next7 = new Date(n); next7.setDate(d + 7);
+  const upcoming = fests.find(f => {
+    if (active && f.name === active.name) return false; // don't show as upcoming if already active
+    const festStart = new Date(n.getFullYear(), f.m-1, f.d1);
+    return festStart > n && festStart <= next7;
+  }) || null;
+  return { active, upcoming };
 }
 
-// ── SIGNAL: WEATHER (Open-Meteo, cached 2h) ────────────────────────────────────
-async function _getWeather() {
-  try {
-    const cached = JSON.parse(localStorage.getItem(PERS_WEATHER_KEY)||'null');
-    if (cached && (Date.now() - cached.at) < 2 * 3600 * 1000) return cached;
-
-    // Get geolocation — user may deny, we catch and fallback
-    const pos = await new Promise((res, rej) =>
-      navigator.geolocation
-        ? navigator.geolocation.getCurrentPosition(res, rej, { timeout: 4000 })
-        : rej('no-geo')
-    );
-    const { latitude: lat, longitude: lon } = pos.coords;
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current_weather=true&forecast_days=1`;
-    const data = await fetch(url, { signal: AbortSignal.timeout(5000) }).then(r => r.json());
-    const wc  = data.current_weather?.weathercode ?? 0;
-    const temp = data.current_weather?.temperature ?? 28;
-    // WMO codes: 0=clear, 1-3=cloudy, 45-48=fog, 51-67=rain, 71-77=snow, 80-99=storm
-    let signal = 'clear';
-    if (wc >= 51 && wc <= 99) signal = 'rain';
-    else if (wc >= 1  && wc <= 3)  signal = 'cloudy';
-    else if (wc >= 45 && wc <= 48) signal = 'fog';
-    const wx = { signal, temp: Math.round(temp), wc, at: Date.now(), lat, lon };
-    localStorage.setItem(PERS_WEATHER_KEY, JSON.stringify(wx));
-    return wx;
-  } catch {
-    return { signal: 'unknown', temp: 28 };
-  }
-}
-
-// ── ORDER HISTORY TRACKER ─────────────────────────────────────────────────────
-// Called from _doPlaceOrder after a successful order.
+// ── ORDER HISTORY ─────────────────────────────────────────────────────────────
 function _trackOrderedItems(items) {
   try {
     const hist = JSON.parse(localStorage.getItem(PERS_ORDERS_KEY)||'{}');
@@ -1059,325 +1042,637 @@ function _trackOrderedItems(items) {
     localStorage.setItem(PERS_ORDERS_KEY, JSON.stringify(hist));
   } catch {}
 }
-
 function _getTopReorderedIds(n=6) {
   try {
     const hist = JSON.parse(localStorage.getItem(PERS_ORDERS_KEY)||'{}');
     return Object.entries(hist)
       .filter(([k]) => k !== '_ts')
       .sort((a,b) => b[1]-a[1])
-      .slice(0, n)
+      .slice(0,n)
       .map(([id]) => parseInt(id));
   } catch { return []; }
 }
 
-// ── KEYWORD → PRODUCT MATCHER ─────────────────────────────────────────────────
-// Matches products against a keyword list using name + brand + category + keywords
-// Returns best N in-stock products sorted by match score.
+// ── PRODUCT MATCHER ───────────────────────────────────────────────────────────
+// Scores products against keywords: name, brand, category name, product keywords
+// Returns best N in-stock products.
+// What gets picked: products whose NAME, CATEGORY or KEYWORDS contain any of
+// the context keywords. e.g. "rain" context → keywords include 'maggi','chai',
+// 'biscuit' → any product named "Maggi Masala" or in a "Snacks" category scores.
+// If no products match, falls back to featured/new products.
 function _matchByKeywords(keywords, maxN=8) {
   const kw = keywords.map(k => k.toLowerCase());
-  const scored = prods
-    .filter(p => !p.disabled)
-    .map(p => {
-      const dv = p.variants?.[0];
-      const name = (p.name||'').toLowerCase();
-      const brand = (p.brand||'').toLowerCase();
-      const catName = (cats.find(c=>c.id===p.catId)?.name||'').toLowerCase();
-      const pkws = (p.keywords||[]).map(k=>k.toLowerCase());
-      let score = 0;
-      kw.forEach(k => {
-        if (name.includes(k))           score += 10;
-        if (brand.includes(k))          score += 6;
-        if (catName.includes(k))        score += 5;
-        if (pkws.some(pk => pk.includes(k)||k.includes(pk))) score += 8;
-      });
-      // Prefer in-stock
-      if (dv?.inStock !== false)        score += 2;
-      return { p, score };
-    })
-    .filter(x => x.score > 0)
-    .sort((a,b) => b.score - a.score)
-    .slice(0, maxN)
-    .map(x => x.p);
+  const scored = prods.filter(p => !p.disabled).map(p => {
+    const dv = p.variants?.[0];
+    const name    = (p.name||'').toLowerCase();
+    const brand   = (p.brand||'').toLowerCase();
+    const catName = (cats.find(c=>c.id===p.catId)?.name||'').toLowerCase();
+    const pkws    = (p.keywords||[]).map(k=>k.toLowerCase());
+    let score = 0;
+    kw.forEach(k => {
+      if (name.includes(k))    score += 10;
+      if (brand.includes(k))   score += 6;
+      if (catName.includes(k)) score += 5;
+      if (pkws.some(pk => pk.includes(k)||k.includes(pk))) score += 8;
+    });
+    if (dv?.inStock !== false) score += 2;
+    return { p, score };
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,maxN).map(x=>x.p);
 
-  // Fallback: pad with featured if too few results
   if (scored.length < 3) {
-    const extras = prods
-      .filter(p => (p.featured||p.isNew) && !scored.includes(p))
-      .slice(0, maxN - scored.length);
-    return [...scored, ...extras];
+    const extras = prods.filter(p=>(p.featured||p.isNew)&&!scored.includes(p)).slice(0,maxN-scored.length);
+    return [...scored,...extras];
   }
   return scored;
 }
 
-// ── SECTION DEFINITIONS ────────────────────────────────────────────────────────
-// Each section: { id, priority, title, subtitle, emoji, gradient, glowColor,
-//                 greeting, sub, aiLabel, keywords }
-// Higher priority = shown first / used as hero card.
+// ── SECTION DEFINITIONS ───────────────────────────────────────────────────────
 function _getActiveSections(ctx) {
   const secs = [];
-
-  // FESTIVAL — always highest priority when active
-  if (ctx.festival) {
-    const f = ctx.festival;
-    const kwMap = {
-      'Diwali':           ['snacks','namkeen','chips','drinks','juice','sweets','dry fruit'],
-      'Holi':             ['drinks','juice','cold drink','milk','thandai','colours','sweets','snacks'],
-      'Eid':              ['sweets','milk','bread','juice','drinks','sevai','biryani'],
-      'Raksha Bandhan':   ['sweets','chocolate','juice','snacks','biscuit'],
-      'Ganesh Chaturthi': ['modak','milk','coconut','fruits','sweets','juice'],
-      'Christmas':        ['juice','drinks','cake','bread','butter','chocolate','snacks'],
-      'New Year':         ['drinks','juice','snacks','chips','soda','cold drink'],
-      'Independence Day': ['drinks','snacks','juice','chips','namkeen'],
-    };
-    secs.push({
-      id:'festival', priority:100,
-      title:`${f.emoji} ${f.name} Picks`,
-      greeting:`${f.name} is here!`,
-      sub:`Stock up for the celebrations 🎉`,
-      emoji: f.emoji,
-      aiLabel:`${f.name} edition`,
-      gradient:'linear-gradient(135deg,#78350f 0%,#451a03 100%)',
-      glowColor:'#fbbf24',
-      keywords: kwMap[f.name] || ['snacks','drinks','sweets'],
-    });
+  if (ctx.festivals.active) {
+    const f = ctx.festivals.active;
+    secs.push({ id:'festival', priority:100,
+      title:`${f.emoji} ${f.name} Picks`, tag:`${f.name} special`,
+      greeting:`${f.name} is here!`, sub:`Stock up for the celebrations 🎉`,
+      emoji:f.emoji, grad:f.grad, glow:f.glow, scene:f.scene, kw:f.kw });
   }
-
-  // RAIN — highest non-festival priority
-  if (ctx.weather.signal === 'rain') {
-    secs.push({
-      id:'rain', priority:90,
-      title:'🌧 Rainy Day Essentials',
-      greeting:'It\'s raining outside!',
-      sub:'Stay cosy. We\'ll deliver to your door.',
-      emoji:'☔',
-      aiLabel:'weather: rain',
-      gradient:'linear-gradient(135deg,#0c1a2e 0%,#0a1628 100%)',
-      glowColor:'#60a5fa',
-      keywords:['maggi','noodles','chai','tea','coffee','bread','butter','biscuit','instant','soup','snacks','chips','pakoda','ginger','curd'],
-    });
+  if (ctx.season==='monsoon') {
+    secs.push({ id:'rain', priority:90,
+      title:'🌧 Rainy Day Essentials', tag:'rainy season',
+      greeting:'Stay cosy inside', sub:'Everything for a rainy day, delivered fast.',
+      emoji:'☔', grad:'linear-gradient(135deg,#0c1a2e,#0a1322)', glow:'#60a5fa', scene:'rain',
+      kw:['maggi','noodles','chai','tea','coffee','bread','butter','biscuit','instant','soup','snacks','chips','ginger','curd'] });
   }
-
-  // HOT SUMMER
-  if (ctx.season === 'summer' && ctx.weather.temp > 30) {
-    secs.push({
-      id:'summer', priority:88,
-      title:'🌡 Beat the Heat',
-      greeting:`${ctx.weather.temp}°C today`,
-      sub:'Cool down — we\'ll bring it fast.',
-      emoji:'🥤',
-      aiLabel:`${ctx.weather.temp}°C · summer`,
-      gradient:'linear-gradient(135deg,#7c1d1d 0%,#450a0a 100%)',
-      glowColor:'#fca5a5',
-      keywords:['cold drink','soda','juice','lemon','nimbu','cola','lassi','buttermilk','coconut water','ice cream','cold coffee','cooling','sprite','cold'],
-    });
+  if (ctx.season==='summer') {
+    secs.push({ id:'summer', priority:88,
+      title:'🥤 Beat the Heat', tag:'peak summer',
+      greeting:'Hot day!', sub:'Cool drinks and quick bites, delivered cold.',
+      emoji:'🌡️', grad:'linear-gradient(135deg,#7c1d1d,#450a0a)', glow:'#fca5a5', scene:'sun',
+      kw:['cold drink','soda','juice','lemon','nimbu','cola','lassi','buttermilk','coconut water','cold coffee','sprite','cold'] });
   }
-
-  // WINTER COLD
-  if (ctx.season === 'winter' && ctx.weather.temp < 18) {
-    secs.push({
-      id:'winter', priority:85,
-      title:'🧣 Cosy Winter Picks',
-      greeting:`${ctx.weather.temp}°C — chilly!`,
-      sub:'Warm up with these essentials.',
-      emoji:'☕',
-      aiLabel:`${ctx.weather.temp}°C · winter`,
-      gradient:'linear-gradient(135deg,#1e3a5f 0%,#0c1a2e 100%)',
-      glowColor:'#93c5fd',
-      keywords:['chai','tea','coffee','milk','ginger','turmeric','haldi','soup','biscuit','bread','ghee','butter','blanket','warm','sarson'],
-    });
+  if (ctx.season==='winter') {
+    secs.push({ id:'winter', priority:85,
+      title:'🧣 Cosy Winter Picks', tag:'winter season',
+      greeting:'Chilly outside!', sub:'Warm up with hot drinks and essentials.',
+      emoji:'☕', grad:'linear-gradient(135deg,#1e3a5f,#0c1a2e)', glow:'#93c5fd', scene:'cloud',
+      kw:['chai','tea','coffee','milk','ginger','turmeric','soup','biscuit','bread','ghee','butter'] });
   }
-
-  // MONSOON SEASON (but not actually raining right now)
-  if (ctx.season === 'monsoon' && ctx.weather.signal !== 'rain') {
-    secs.push({
-      id:'monsoon', priority:70,
-      title:'🌿 Monsoon Season Picks',
-      greeting:'Monsoon vibes!',
-      sub:'Our picks for the rainy season.',
-      emoji:'🌦',
-      aiLabel:'monsoon season',
-      gradient:'linear-gradient(135deg,#0a2416 0%,#061510 100%)',
-      glowColor:'#34d399',
-      keywords:['chai','tea','instant','biscuit','snacks','bread','maggi','ginger','turmeric','coffee'],
-    });
+  if (ctx.dayType==='weekend') {
+    secs.push({ id:'weekend', priority:75,
+      title:'🎉 Weekend Favourites', tag:'weekend picks',
+      greeting:'Happy Weekend!', sub:'Snack up and chill.',
+      emoji:'🎮', grad:'linear-gradient(135deg,#2e1065,#1a0847)', glow:'#c4b5fd', scene:'default',
+      kw:['chips','snacks','cold drink','soda','juice','biscuit','chocolate','namkeen','ice cream','noodles'] });
   }
-
-  // WEEKEND
-  if (ctx.dayType === 'weekend') {
-    secs.push({
-      id:'weekend', priority:75,
-      title:'🎉 Weekend Favourites',
-      greeting:'Happy Weekend!',
-      sub:'Snack up, chill out.',
-      emoji:'🎮',
-      aiLabel:'weekend picks',
-      gradient:'linear-gradient(135deg,#2e1065 0%,#1a0847 100%)',
-      glowColor:'#c4b5fd',
-      keywords:['chips','snacks','cold drink','soda','juice','biscuit','chocolate','namkeen','ice cream','noodles','frozen'],
-    });
-  }
-
-  // TIME-BASED SECTIONS
   const timeMap = {
-    earlyMorning: {
-      title:'🌅 Good Morning!',
-      greeting:'Rise and shine!',
-      sub:'Fresh morning essentials delivered.',
-      emoji:'🌞',
-      aiLabel:'early morning',
-      priority:78,
-      gradient:'linear-gradient(135deg,#14290a 0%,#0c1a06 100%)',
-      glowColor:'#86efac',
-      keywords:['milk','bread','eggs','butter','chai','tea','curd','yogurt','banana','fruit','juice','dahi'],
-    },
-    morning: {
-      title:'☀️ Morning Essentials',
-      greeting:'Good morning!',
-      sub:'Everything for a fresh start.',
-      emoji:'🥛',
-      aiLabel:'morning',
-      priority:77,
-      gradient:'linear-gradient(135deg,#14290a 0%,#0c1a06 100%)',
-      glowColor:'#86efac',
-      keywords:['milk','bread','eggs','butter','chai','tea','curd','paneer','fruit','juice','dahi','oats'],
-    },
-    lunch: {
-      title:'🍛 Lunch Time',
-      greeting:'Lunchtime!',
-      sub:'Fresh ingredients, delivered fast.',
-      emoji:'🥗',
-      aiLabel:'lunchtime',
-      priority:76,
-      gradient:'linear-gradient(135deg,#1a2e0a 0%,#0e1a05 100%)',
-      glowColor:'#a3e635',
-      keywords:['rice','dal','vegetables','curd','roti','paneer','tomato','onion','potato','ghee','oil','coriander','spice'],
-    },
-    afternoon: {
-      title:'☕ Afternoon Snacks',
-      greeting:'Need a break?',
-      sub:'Chai and snacks incoming.',
-      emoji:'🍪',
-      aiLabel:'afternoon break',
-      priority:72,
-      gradient:'linear-gradient(135deg,#1c1207 0%,#120c04 100%)',
-      glowColor:'#fbbf24',
-      keywords:['biscuit','chai','tea','coffee','snacks','namkeen','chips','bread','butter','chocolate'],
-    },
-    evening: {
-      title:'🌆 Evening Cravings',
-      greeting:'Evening!',
-      sub:'Chai time delivered to your door.',
-      emoji:'🫖',
-      aiLabel:'evening time',
-      priority:74,
-      gradient:'linear-gradient(135deg,#3d1a00 0%,#200e00 100%)',
-      glowColor:'#fb923c',
-      keywords:['chai','tea','snacks','biscuit','namkeen','chips','bread','eggs','instant','maggi','noodles'],
-    },
-    night: {
-      title:'🌙 Late Night Bites',
-      greeting:'Still up?',
-      sub:'Quick bites delivered now.',
-      emoji:'🌙',
-      aiLabel:'night time',
-      priority:73,
-      gradient:'linear-gradient(135deg,#0f0a23 0%,#07051a 100%)',
-      glowColor:'#818cf8',
-      keywords:['chips','biscuit','chocolate','bread','eggs','cold coffee','cola','juice','instant','maggi','noodles','snacks'],
-    },
-    lateNight: {
-      title:'🦉 Night Owl Picks',
-      greeting:'Midnight craving?',
-      sub:'We\'ve got you covered.',
-      emoji:'🌃',
-      aiLabel:'late night',
-      priority:73,
-      gradient:'linear-gradient(135deg,#0f0a23 0%,#07051a 100%)',
-      glowColor:'#818cf8',
-      keywords:['chips','biscuit','chocolate','bread','instant','maggi','cola','juice','snacks','cold coffee'],
-    },
+    earlyMorning:{ title:'🌅 Rise & Shine', tag:'early morning',   greeting:'Good morning!',   sub:'Fresh essentials for a great start.',         emoji:'🌞', grad:'linear-gradient(135deg,#14290a,#0c1a06)', glow:'#86efac', scene:'sunrise', priority:78, kw:['milk','bread','eggs','butter','chai','tea','curd','banana','fruit','juice','dahi'] },
+    morning:     { title:'☀️ Morning Essentials', tag:'morning',   greeting:'Good morning!',   sub:'Delivered before your day begins.',           emoji:'🥛', grad:'linear-gradient(135deg,#14290a,#0c1a06)', glow:'#86efac', scene:'sun',     priority:77, kw:['milk','bread','eggs','butter','chai','tea','curd','paneer','fruit','juice','dahi','oats'] },
+    lunch:       { title:'🍛 Lunch Time',       tag:'lunchtime',   greeting:'Lunchtime!',      sub:'Fresh ingredients delivered to your door.',   emoji:'🥗', grad:'linear-gradient(135deg,#1a2e0a,#0e1a05)', glow:'#a3e635', scene:'sun',     priority:76, kw:['rice','dal','vegetables','curd','roti','paneer','tomato','onion','potato','ghee','oil'] },
+    afternoon:   { title:'☕ Afternoon Break',   tag:'afternoon',   greeting:'Need a break?',   sub:'Chai and snacks on their way.',               emoji:'🍪', grad:'linear-gradient(135deg,#1c1207,#120c04)', glow:'#fbbf24', scene:'cloud',   priority:72, kw:['biscuit','chai','tea','coffee','snacks','namkeen','chips','bread','butter','chocolate'] },
+    evening:     { title:'🌆 Evening Cravings',  tag:'evening',    greeting:'Good evening!',   sub:'Chai time essentials delivered fast.',        emoji:'🫖', grad:'linear-gradient(135deg,#3d1a00,#200e00)', glow:'#fb923c', scene:'sunset',  priority:74, kw:['chai','tea','snacks','biscuit','namkeen','chips','bread','eggs','instant','maggi','noodles'] },
+    night:       { title:'🌙 Night Picks',       tag:'tonight',    greeting:'Good night!',     sub:'Late night cravings sorted.',                 emoji:'🌙', grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#818cf8', scene:'night',   priority:73, kw:['chips','biscuit','chocolate','bread','eggs','cold coffee','cola','juice','instant','maggi','snacks'] },
+    lateNight:   { title:'🦉 Night Owl Picks',   tag:'late night', greeting:'Still up?',       sub:'Midnight cravings delivered.',                emoji:'🌃', grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#818cf8', scene:'night',   priority:73, kw:['chips','biscuit','chocolate','bread','instant','maggi','cola','juice','snacks','cold coffee'] },
   };
   const ts = timeMap[ctx.timeSlot];
-  if (ts) secs.push({ id: ctx.timeSlot, ...ts });
-
-  secs.sort((a,b) => b.priority - a.priority);
+  if (ts) secs.push({ id:ctx.timeSlot, ...ts });
+  secs.sort((a,b) => b.priority-a.priority);
   return secs;
 }
 
-// ── HTML BUILDERS ──────────────────────────────────────────────────────────────
-function _heroHtml(sec) {
-  return `<div class="pers-hero" style="background:${sec.gradient}">
-    <div class="pers-hero-glow" style="background:radial-gradient(circle,${sec.glowColor},transparent 70%)"></div>
-    <div class="pers-hero-pill">
-      <span class="ai-dot"></span>
-      AI · ${sec.aiLabel}
+// ══════════════════════════════════════════════════════════════════════════════
+// ── ANIMATED SVG SCENES ───────────────────────────────────────────────────────
+// Pure CSS + SVG animations — no canvas, no images, no external resources.
+// Each scene is a self-contained SVG that fills the banner area.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function _buildScene(sceneId, grad, glow) {
+  const scenes = {
+
+    // ── RAIN ────────────────────────────────────────────────────────────────
+    rain: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="rainBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0c1a2e"/>
+          <stop offset="100%" stop-color="#050d18"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#rainBg)"/>
+      <!-- Clouds -->
+      <g opacity=".7">
+        <ellipse cx="80" cy="38" rx="55" ry="22" fill="#1e3a5f"/>
+        <ellipse cx="115" cy="30" rx="38" ry="20" fill="#1e3a5f"/>
+        <ellipse cx="55" cy="34" rx="30" ry="16" fill="#162d4a"/>
+      </g>
+      <g opacity=".5">
+        <ellipse cx="290" cy="28" rx="65" ry="22" fill="#1e3a5f"/>
+        <ellipse cx="330" cy="20" rx="42" ry="18" fill="#1e3a5f"/>
+        <ellipse cx="260" cy="25" rx="35" ry="16" fill="#162d4a"/>
+      </g>
+      <!-- Rain drops: 30 drops with staggered animation -->
+      ${Array.from({length:30}, (_,i) => {
+        const x = 10 + Math.round((i*13.7+i*i*0.3) % 380);
+        const dur = (0.6 + (i*0.07)%0.5).toFixed(2);
+        const delay = -(i*0.11 % 0.8).toFixed(2);
+        const h = 8 + (i%5)*3;
+        const op = 0.4 + (i%4)*0.15;
+        return `<line x1="${x}" y1="50" x2="${x-2}" y2="${50+h}" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round" opacity="${op.toFixed(1)}">
+          <animateTransform attributeName="transform" type="translate" from="0 -110" to="0 120" dur="${dur}s" begin="${delay}s" repeatCount="indefinite"/>
+        </line>`;
+      }).join('')}
+      <!-- Lightning flash -->
+      <polyline points="200,0 192,40 204,40 195,80" fill="none" stroke="#e0f2fe" stroke-width="2" opacity="0" stroke-linecap="round">
+        <animate attributeName="opacity" values="0;0;0;0;0.8;0.3;0.8;0;0;0;0;0;0;0;0" dur="4s" repeatCount="indefinite"/>
+      </polyline>
+    </svg>`,
+
+    // ── SUN (clear day / summer / morning) ──────────────────────────────────
+    sun: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <radialGradient id="sunGlow" cx="50%" cy="35%" r="50%">
+          <stop offset="0%" stop-color="#fef3c7"/>
+          <stop offset="40%" stop-color="#f59e0b" stop-opacity=".3"/>
+          <stop offset="100%" stop-color="#7c2d12" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="skyBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1c0a00"/>
+          <stop offset="100%" stop-color="#7c2d12"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#skyBg)"/>
+      <ellipse cx="200" cy="55" rx="160" ry="100" fill="url(#sunGlow)"/>
+      <!-- Sun disc -->
+      <circle cx="200" cy="50" r="22" fill="#fef08a" opacity=".9">
+        <animate attributeName="r" values="22;24;22" dur="3s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values=".9;1;.9" dur="3s" repeatCount="indefinite"/>
+      </circle>
+      <!-- Rays -->
+      ${Array.from({length:12}, (_,i) => {
+        const angle = i*30;
+        const r1=28, r2=38;
+        const rad=angle*Math.PI/180;
+        const x1=200+r1*Math.cos(rad), y1=50+r1*Math.sin(rad);
+        const x2=200+r2*Math.cos(rad), y2=50+r2*Math.sin(rad);
+        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#fde68a" stroke-width="2" stroke-linecap="round" opacity=".7">
+          <animate attributeName="opacity" values=".7;.3;.7" dur="2s" begin="${(i*0.16).toFixed(1)}s" repeatCount="indefinite"/>
+        </line>`;
+      }).join('')}
+      <!-- Heat shimmer wavy lines at bottom -->
+      <path d="M0,130 Q50,125 100,130 Q150,135 200,130 Q250,125 300,130 Q350,135 400,130" fill="none" stroke="rgba(251,146,60,.2)" stroke-width="1.5">
+        <animate attributeName="d" values="M0,130 Q50,125 100,130 Q150,135 200,130 Q250,125 300,130 Q350,135 400,130;M0,132 Q50,128 100,132 Q150,128 200,132 Q250,128 300,132 Q350,128 400,132;M0,130 Q50,125 100,130 Q150,135 200,130 Q250,125 300,130 Q350,135 400,130" dur="2.5s" repeatCount="indefinite"/>
+      </path>
+    </svg>`,
+
+    // ── CLOUDS (cloudy / winter / autumn) ───────────────────────────────────
+    cloud: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="cloudBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0c1624"/>
+          <stop offset="100%" stop-color="#162032"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#cloudBg)"/>
+      <!-- Moving cloud 1 -->
+      <g opacity=".75">
+        <animateTransform attributeName="transform" type="translate" from="-80 0" to="480 0" dur="18s" repeatCount="indefinite"/>
+        <ellipse cx="80" cy="45" rx="60" ry="22" fill="#1e3a5f"/>
+        <ellipse cx="110" cy="36" rx="40" ry="22" fill="#253d5e"/>
+        <ellipse cx="55" cy="42" rx="32" ry="18" fill="#1e3a5f"/>
+      </g>
+      <!-- Moving cloud 2 -->
+      <g opacity=".55">
+        <animateTransform attributeName="transform" type="translate" from="200 0" to="900 0" dur="25s" repeatCount="indefinite"/>
+        <ellipse cx="60" cy="70" rx="50" ry="18" fill="#172d47"/>
+        <ellipse cx="88" cy="62" rx="34" ry="18" fill="#1e3a5f"/>
+        <ellipse cx="38" cy="66" rx="28" ry="15" fill="#162d4a"/>
+      </g>
+      <!-- Static bg cloud -->
+      <ellipse cx="310" cy="35" rx="70" ry="24" fill="#1a3050" opacity=".5"/>
+      <ellipse cx="350" cy="27" rx="45" ry="20" fill="#1e3a5f" opacity=".4"/>
+      <!-- Stars (subtle) -->
+      ${Array.from({length:15}, (_,i) => {
+        const sx = 20 + (i*27)%360, sy = 8 + (i*11)%50;
+        return `<circle cx="${sx}" cy="${sy}" r="1" fill="#fff" opacity="${(0.2+i*0.04).toFixed(2)}">
+          <animate attributeName="opacity" values="${(0.2+i*0.04).toFixed(2)};0.05;${(0.2+i*0.04).toFixed(2)}" dur="${(2+i*0.3).toFixed(1)}s" repeatCount="indefinite"/>
+        </circle>`;
+      }).join('')}
+    </svg>`,
+
+    // ── SUNRISE ─────────────────────────────────────────────────────────────
+    sunrise: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="sunriseBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0f172a"/>
+          <stop offset="60%" stop-color="#1e3a5f"/>
+          <stop offset="100%" stop-color="#7c2d12"/>
+        </linearGradient>
+        <radialGradient id="sunriseGlow" cx="50%" cy="90%" r="60%">
+          <stop offset="0%" stop-color="#fbbf24" stop-opacity=".5"/>
+          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#sunriseBg)"/>
+      <rect width="400" height="160" fill="url(#sunriseGlow)"/>
+      <!-- Rising sun (half disc at horizon) -->
+      <clipPath id="horizon"><rect x="0" y="108" width="400" height="52"/></clipPath>
+      <circle cx="200" cy="108" r="32" fill="#fef08a" opacity=".85">
+        <animate attributeName="cy" values="115;108;115" dur="5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values=".85;.95;.85" dur="5s" repeatCount="indefinite"/>
+      </circle>
+      <!-- Horizon line -->
+      <line x1="0" y1="108" x2="400" y2="108" stroke="#fde68a" stroke-width="1" opacity=".3"/>
+      <!-- Birds -->
+      ${Array.from({length:5}, (_,i) => {
+        const bx=60+i*60, by=40+i*8;
+        return `<path d="M${bx},${by} Q${bx+6},${by-4} ${bx+12},${by}" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="translate" from="0 0" to="${30+i*5} -5" dur="${(4+i*0.5).toFixed(1)}s" repeatCount="indefinite" additive="sum"/>
+        </path>`;
+      }).join('')}
+    </svg>`,
+
+    // ── SUNSET ──────────────────────────────────────────────────────────────
+    sunset: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="sunsetBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1c0a00"/>
+          <stop offset="50%" stop-color="#7c2d12"/>
+          <stop offset="100%" stop-color="#b45309"/>
+        </linearGradient>
+        <radialGradient id="sunsetGlowR" cx="60%" cy="80%" r="50%">
+          <stop offset="0%" stop-color="#fb923c" stop-opacity=".45"/>
+          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#sunsetBg)"/>
+      <rect width="400" height="160" fill="url(#sunsetGlowR)"/>
+      <!-- Sun going down -->
+      <circle cx="240" cy="120" r="26" fill="#fef08a" opacity=".7">
+        <animate attributeName="cy" values="118;122;118" dur="4s" repeatCount="indefinite"/>
+      </circle>
+      <!-- Horizon reflection -->
+      <path d="M160,120 Q200,115 240,120 Q280,125 320,120" fill="none" stroke="#fde68a" stroke-width="1.5" opacity=".5"/>
+      <!-- Clouds silhouetted -->
+      <ellipse cx="100" cy="60" rx="60" ry="18" fill="#3b0f00" opacity=".7"/>
+      <ellipse cx="130" cy="52" rx="40" ry="18" fill="#3b0f00" opacity=".6"/>
+      <ellipse cx="320" cy="45" rx="50" ry="16" fill="#3b0f00" opacity=".5"/>
+    </svg>`,
+
+    // ── NIGHT ────────────────────────────────────────────────────────────────
+    night: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="nightBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#020617"/>
+          <stop offset="100%" stop-color="#0f0a1e"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#nightBg)"/>
+      <!-- Stars -->
+      ${Array.from({length:40}, (_,i) => {
+        const sx = 5+(i*9.7+i*i*0.11)%390, sy = 5+(i*7.3+i*0.4)%90;
+        const r = i%5===0?1.5:i%3===0?1.2:0.8;
+        const dur = (2+i*0.15).toFixed(1);
+        return `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="${r}" fill="#fff" opacity="${(0.3+i%5*0.12).toFixed(2)}">
+          <animate attributeName="opacity" values="${(0.3+i%5*0.12).toFixed(2)};0.05;${(0.3+i%5*0.12).toFixed(2)}" dur="${dur}s" begin="${(i*0.08).toFixed(2)}s" repeatCount="indefinite"/>
+        </circle>`;
+      }).join('')}
+      <!-- Crescent moon -->
+      <circle cx="320" cy="38" r="18" fill="#fef3c7" opacity=".85"/>
+      <circle cx="328" cy="34" r="15" fill="#020617"/>
+      <!-- City skyline silhouette -->
+      <rect x="0"   y="125" width="18"  height="35" fill="#0a0a1a"/>
+      <rect x="22"  y="110" width="22"  height="50" fill="#0a0a1a"/>
+      <rect x="48"  y="118" width="15"  height="42" fill="#0a0a1a"/>
+      <rect x="68"  y="100" width="28"  height="60" fill="#0a0a1a"/>
+      <rect x="100" y="115" width="20"  height="45" fill="#0a0a1a"/>
+      <rect x="125" y="105" width="25"  height="55" fill="#0a0a1a"/>
+      <rect x="155" y="120" width="18"  height="40" fill="#0a0a1a"/>
+      <rect x="178" y="108" width="30"  height="52" fill="#0a0a1a"/>
+      <rect x="215" y="118" width="22"  height="42" fill="#0a0a1a"/>
+      <rect x="245" y="103" width="26"  height="57" fill="#0a0a1a"/>
+      <rect x="278" y="115" width="18"  height="45" fill="#0a0a1a"/>
+      <rect x="300" y="122" width="22"  height="38" fill="#0a0a1a"/>
+      <rect x="328" y="112" width="28"  height="48" fill="#0a0a1a"/>
+      <rect x="360" y="118" width="20"  height="42" fill="#0a0a1a"/>
+      <rect x="382" y="125" width="18"  height="35" fill="#0a0a1a"/>
+      <!-- Lit windows -->
+      ${Array.from({length:18}, (_,i) => {
+        const wx = 25+i*21, wy = 108+Math.floor(i/3)*12;
+        return `<rect x="${wx}" y="${wy}" width="4" height="5" fill="#fef08a" opacity="${i%3===0?'0.7':i%3===1?'0.4':'0'}"/>`;
+      }).join('')}
+    </svg>`,
+
+    // ── DIWALI ───────────────────────────────────────────────────────────────
+    diwali: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="diwaliBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1c0a00"/>
+          <stop offset="100%" stop-color="#431407"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#diwaliBg)"/>
+      <!-- Firework bursts — 6 at different positions and timings -->
+      ${[
+        {cx:80,  cy:45, r:30, color:'#fbbf24', dur:3.0, del:0   },
+        {cx:200, cy:30, r:35, color:'#f472b6', dur:3.2, del:1.1 },
+        {cx:320, cy:55, r:28, color:'#34d399', dur:2.8, del:0.6 },
+        {cx:140, cy:70, r:24, color:'#fb923c', dur:3.4, del:1.8 },
+        {cx:270, cy:80, r:22, color:'#818cf8', dur:3.0, del:2.3 },
+        {cx:60,  cy:90, r:18, color:'#f9a8d4', dur:2.6, del:0.3 },
+      ].map(fw => {
+        const rays = Array.from({length:12}, (_,i) => {
+          const angle = i*30*Math.PI/180;
+          return `<line x1="${fw.cx}" y1="${fw.cy}" x2="${(fw.cx+fw.r*Math.cos(angle)).toFixed(1)}" y2="${(fw.cy+fw.r*Math.sin(angle)).toFixed(1)}" stroke="${fw.color}" stroke-width="2" stroke-linecap="round" opacity="0">
+            <animate attributeName="opacity" values="0;0;0.9;0.6;0;0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+            <animate attributeName="x2" values="${fw.cx};${(fw.cx+fw.r*Math.cos(angle)).toFixed(1)}" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+          </line>`;
+        }).join('');
+        return `<g>${rays}</g>`;
+      }).join('')}
+      <!-- Diyas (small oil lamps) at bottom -->
+      ${Array.from({length:7}, (_,i) => {
+        const dx = 28 + i*54;
+        return `<g>
+          <ellipse cx="${dx}" cy="148" rx="12" ry="5" fill="#92400e"/>
+          <ellipse cx="${dx}" cy="146" rx="10" ry="4" fill="#b45309"/>
+          <ellipse cx="${dx}" cy="144" rx="8" ry="3" fill="#fbbf24" opacity=".8"/>
+          <!-- Flame -->
+          <ellipse cx="${dx}" cy="138" rx="3" ry="6" fill="#fef08a" opacity="0.85">
+            <animate attributeName="ry" values="6;8;5;7;6" dur="0.8s" begin="${(i*0.12).toFixed(2)}s" repeatCount="indefinite"/>
+            <animate attributeName="cx" values="${dx};${dx+1};${dx-1};${dx}" dur="0.8s" begin="${(i*0.12).toFixed(2)}s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.85;0.95;0.8;0.9;0.85" dur="0.8s" begin="${(i*0.12).toFixed(2)}s" repeatCount="indefinite"/>
+          </ellipse>
+          <!-- Inner flame -->
+          <ellipse cx="${dx}" cy="140" rx="1.5" ry="3" fill="#fb923c" opacity="0.7">
+            <animate attributeName="ry" values="3;4;2.5;3.5;3" dur="0.8s" begin="${(i*0.12).toFixed(2)}s" repeatCount="indefinite"/>
+          </ellipse>
+        </g>`;
+      }).join('')}
+    </svg>`,
+
+    // ── HOLI ─────────────────────────────────────────────────────────────────
+    holi: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="holiBg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#1e0a2e"/>
+          <stop offset="100%" stop-color="#2e0a1e"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#holiBg)"/>
+      <!-- Colour splashes — watercolour blobs -->
+      ${[
+        {cx:60,  cy:55, rx:40, ry:28, fill:'#f472b6', op:.35, dur:4,   del:0   },
+        {cx:160, cy:35, rx:55, ry:30, fill:'#fb923c', op:.3,  dur:5,   del:1   },
+        {cx:280, cy:60, rx:48, ry:32, fill:'#34d399', op:.35, dur:4.5, del:0.7 },
+        {cx:360, cy:30, rx:38, ry:24, fill:'#818cf8', op:.3,  dur:3.8, del:1.5 },
+        {cx:100, cy:100, rx:50, ry:28, fill:'#fbbf24', op:.3, dur:5.2, del:0.4 },
+        {cx:240, cy:110, rx:55, ry:26, fill:'#e879f9', op:.3, dur:4.2, del:1.2 },
+        {cx:360, cy:120, rx:38, ry:22, fill:'#67e8f9', op:.25,dur:3.5, del:0.9 },
+      ].map(b => `<ellipse cx="${b.cx}" cy="${b.cy}" rx="${b.rx}" ry="${b.ry}" fill="${b.fill}" opacity="${b.op}">
+        <animate attributeName="opacity" values="${b.op};${b.op*1.4};${b.op}" dur="${b.dur}s" begin="${b.del}s" repeatCount="indefinite"/>
+        <animate attributeName="rx" values="${b.rx};${b.rx+6};${b.rx}" dur="${b.dur}s" begin="${b.del}s" repeatCount="indefinite"/>
+      </ellipse>`).join('')}
+      <!-- Water balloon projectiles -->
+      ${Array.from({length:6}, (_,i) => {
+        const startX = i*70, startY = 30+i%3*20;
+        const endX = startX+80, endY = 120+i%2*20;
+        const colors = ['#f472b6','#fb923c','#34d399','#818cf8','#fbbf24','#67e8f9'];
+        return `<g>
+          <circle r="8" fill="${colors[i]}" opacity=".8">
+            <animateMotion path="M${startX},${startY} Q${(startX+endX)/2},${startY-40} ${endX},${endY}" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values=".8;.8;.8;.4;0;0;0;0" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
+          </circle>
+          <!-- Splash on impact -->
+          <circle r="18" fill="${colors[i]}" opacity="0">
+            <animate attributeName="cx" values="${endX};" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
+            <animate attributeName="cy" values="${endY};" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
+            <animate attributeName="r" values="0;0;0;0;0;22;0" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0;0;0;0;0;0.5;0" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
+          </circle>
+        </g>`;
+      }).join('')}
+    </svg>`,
+
+    // ── EID ──────────────────────────────────────────────────────────────────
+    eid: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="eidBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#020617"/>
+          <stop offset="100%" stop-color="#0c1a2e"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#eidBg)"/>
+      <!-- Stars -->
+      ${Array.from({length:25}, (_,i) => {
+        const sx=(i*16.3)%390, sy=(i*9.7)%80;
+        return `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="${i%4===0?1.5:0.8}" fill="#fef3c7" opacity="${(0.3+i%5*0.1).toFixed(1)}">
+          <animate attributeName="opacity" values="${(0.3+i%5*0.1).toFixed(1)};0.05;${(0.3+i%5*0.1).toFixed(1)}" dur="${(2+i*0.12).toFixed(1)}s" repeatCount="indefinite"/>
+        </circle>`;
+      }).join('')}
+      <!-- Crescent moon large -->
+      <circle cx="70" cy="50" r="30" fill="#fef3c7" opacity=".85"/>
+      <circle cx="83" cy="44" r="25" fill="#020617"/>
+      <!-- Star near moon -->
+      <polygon points="95,30 97,36 103,36 98,40 100,46 95,42 90,46 92,40 87,36 93,36" fill="#fef3c7" opacity=".8"/>
+      <!-- Lanterns -->
+      ${Array.from({length:4}, (_,i) => {
+        const lx = 160+i*65, ly = 40;
+        const colors = ['#f59e0b','#ec4899','#10b981','#8b5cf6'];
+        return `<g>
+          <line x1="${lx}" y1="0" x2="${lx}" y2="${ly-15}" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
+          <rect x="${lx-10}" y="${ly-15}" width="20" height="30" rx="3" fill="${colors[i]}" opacity=".7">
+            <animate attributeName="opacity" values=".7;.9;.7" dur="${(1.5+i*0.3).toFixed(1)}s" repeatCount="indefinite"/>
+          </rect>
+          <!-- Glow -->
+          <ellipse cx="${lx}" cy="${ly}" rx="14" ry="20" fill="${colors[i]}" opacity=".15">
+            <animate attributeName="opacity" values=".15;.25;.15" dur="${(1.5+i*0.3).toFixed(1)}s" repeatCount="indefinite"/>
+          </ellipse>
+          <line x1="${lx}" y1="${ly+15}" x2="${lx}" y2="${ly+25}" stroke="${colors[i]}" stroke-width="1" opacity=".6"/>
+        </g>`;
+      }).join('')}
+    </svg>`,
+
+    // ── CHRISTMAS ────────────────────────────────────────────────────────────
+    christmas: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="xmasBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#020617"/>
+          <stop offset="100%" stop-color="#052e16"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#xmasBg)"/>
+      <!-- Snow falling -->
+      ${Array.from({length:25}, (_,i) => {
+        const sx=(i*16+i*i*0.2)%390, dur=(3+i*0.22).toFixed(1), del=-(i*0.35).toFixed(1);
+        const r=i%3===0?2.5:i%3===1?1.8:1.2;
+        return `<circle cx="${sx.toFixed(0)}" cy="0" r="${r}" fill="white" opacity="${(0.5+i%4*0.1).toFixed(1)}">
+          <animateTransform attributeName="transform" type="translate" from="${(i%5-2)*0.4},0" to="${(i%5-2)*0.4*5},170" dur="${dur}s" begin="${del}s" repeatCount="indefinite" additive="sum"/>
+        </circle>`;
+      }).join('')}
+      <!-- Christmas tree -->
+      <polygon points="200,20 230,70 170,70" fill="#15803d" opacity=".9"/>
+      <polygon points="200,45 238,105 162,105" fill="#166534" opacity=".9"/>
+      <polygon points="200,70 248,140 152,140" fill="#14532d" opacity=".9"/>
+      <rect x="193" y="140" width="14" height="15" fill="#78350f"/>
+      <!-- Star on top -->
+      <polygon points="200,12 202,19 209,19 203,23 205,30 200,26 195,30 197,23 191,19 198,19" fill="#fef08a" opacity=".9">
+        <animate attributeName="opacity" values=".9;.5;.9" dur="1.5s" repeatCount="indefinite"/>
+      </polygon>
+      <!-- Baubles -->
+      <circle cx="185" cy="78" r="5" fill="#ef4444" opacity=".85"/>
+      <circle cx="215" cy="82" r="5" fill="#fbbf24" opacity=".85"/>
+      <circle cx="200" cy="95" r="5" fill="#60a5fa" opacity=".85"/>
+      <circle cx="175" cy="112" r="5" fill="#a78bfa" opacity=".85"/>
+      <circle cx="225" cy="108" r="5" fill="#34d399" opacity=".85"/>
+      <circle cx="200" cy="125" r="5" fill="#f472b6" opacity=".85"/>
+    </svg>`,
+
+    // ── NEW YEAR ─────────────────────────────────────────────────────────────
+    newyear: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="nyBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#020617"/>
+          <stop offset="100%" stop-color="#0f0a1e"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#nyBg)"/>
+      <!-- Big firework bursts -->
+      ${[
+        {cx:80,  cy:50, r:38, c:'#f472b6', dur:2.5, del:0   },
+        {cx:200, cy:35, r:45, c:'#fbbf24', dur:2.8, del:0.9 },
+        {cx:330, cy:55, r:36, c:'#34d399', dur:2.6, del:1.6 },
+        {cx:140, cy:80, r:28, c:'#818cf8', dur:2.4, del:2.1 },
+        {cx:290, cy:90, r:26, c:'#fb923c', dur:2.7, del:0.5 },
+      ].map(fw => {
+        const count = 16;
+        return Array.from({length:count}, (_,i) => {
+          const angle = (i*360/count)*Math.PI/180;
+          const x2 = (fw.cx+fw.r*Math.cos(angle)).toFixed(1);
+          const y2 = (fw.cy+fw.r*Math.sin(angle)).toFixed(1);
+          return `<line x1="${fw.cx}" y1="${fw.cy}" x2="${x2}" y2="${y2}" stroke="${fw.c}" stroke-width="2.5" stroke-linecap="round" opacity="0">
+            <animate attributeName="opacity" values="0;0;1;0.6;0;0;0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+          </line>`;
+        }).join('');
+      }).join('')}
+      <!-- Confetti -->
+      ${Array.from({length:20}, (_,i) => {
+        const cx2=(i*22)%380, sw=4, sh=10;
+        const colors=['#f472b6','#fbbf24','#34d399','#818cf8','#fb923c','#67e8f9'];
+        return `<rect x="${cx2}" y="-${sh}" width="${sw}" height="${sh}" fill="${colors[i%6]}" opacity=".7" rx="1">
+          <animateTransform attributeName="transform" type="translate" from="${(i%3-1)*2},0" to="${(i%3-1)*10},180" dur="${(2.5+i*0.15).toFixed(1)}s" begin="${-(i*0.2).toFixed(1)}s" repeatCount="indefinite" additive="sum"/>
+          <animateTransform attributeName="transform" type="rotate" from="0 ${cx2} 0" to="720 ${cx2} 180" dur="${(2.5+i*0.15).toFixed(1)}s" begin="${-(i*0.2).toFixed(1)}s" repeatCount="indefinite" additive="sum"/>
+        </rect>`;
+      }).join('')}
+    </svg>`,
+
+    // ── DEFAULT (no specific scene) ───────────────────────────────────────────
+    default: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+      <defs>
+        <linearGradient id="defBg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#0a0a0a"/>
+          <stop offset="100%" stop-color="#141414"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill="url(#defBg)"/>
+    </svg>`,
+  };
+  return scenes[sceneId] || scenes.default;
+}
+
+// ── COMING SOON FESTIVAL BANNER ────────────────────────────────────────────────
+function _festComingHtml(fest) {
+  const daysMap = {
+    'Diwali':'🪔','Holi':'🎨','Eid':'🌙','Christmas':'🎄','New Year':'🎆',
+    'Raksha Bandhan':'🎀','Ganesh Chaturthi':'🙏','Independence Day':'🇮🇳',
+  };
+  // Days remaining
+  const now = new Date(), n = new Date(now.getFullYear(), fest.m-1, fest.d1);
+  const days = Math.ceil((n-now)/(1000*60*60*24));
+  const daysStr = days===1?'Tomorrow':`In ${days} days`;
+  return `<div class="fest-coming" style="background:${fest.grad};margin-top:10px">
+    <div class="fest-coming-emoji">${fest.emoji}</div>
+    <div class="fest-coming-text">
+      <div class="fest-coming-label">Coming soon · ${daysStr}</div>
+      <div class="fest-coming-title">${fest.name} is almost here!</div>
+      <div class="fest-coming-sub">Stock up on ${fest.kw.slice(0,3).join(', ')} and more.</div>
     </div>
-    <div class="pers-hero-greeting">${sec.greeting}</div>
-    <div class="pers-hero-sub">${sec.sub}</div>
-    <div class="pers-hero-emoji">${sec.emoji}</div>
   </div>`;
 }
 
-function _aiSecHd(title) {
-  return `<div class="ai-sec-hd">
-    <span class="ai-sec-title">${title}</span>
-    <span class="ai-badge"><span class="ai-dot"></span> AI pick</span>
+// ── SCENE BANNER (replaces pers-hero) ─────────────────────────────────────────
+function _sceneBannerHtml(sec) {
+  const svg = _buildScene(sec.scene || 'default', sec.grad, sec.glow);
+  return `<div class="scene-banner" style="background:${sec.grad}">
+    ${svg}
+    <div class="scene-tag">${sec.tag}</div>
+    <div class="scene-text">
+      <div class="scene-greeting">${sec.greeting}</div>
+      <div class="scene-sub">${sec.sub}</div>
+    </div>
   </div>`;
 }
 
-// ── MAIN: Build all personalised HTML ─────────────────────────────────────────
+function _ctxSecHd(title) {
+  return `<div class="ctx-sec-hd"><span class="ctx-sec-title">${title}</span></div>`;
+}
+
+// ── MAIN: Build personalised HTML ─────────────────────────────────────────────
 async function buildPersonalisedHome() {
   try {
-    const [weather] = await Promise.all([_getWeather()]);
     const ctx = {
-      timeSlot : _getTimeSlot(),
-      season   : _getSeason(),
-      dayType  : _getDayType(),
-      festival : _getFestival(),
-      weather,
+      timeSlot  : _getTimeSlot(),
+      season    : _getSeason(),
+      dayType   : _getDayType(),
+      festivals : _getFestivals(),
     };
 
     const sections = _getActiveSections(ctx);
     if (!sections.length) return '';
 
     const hero = sections[0];
-    const heroProd = _matchByKeywords(hero.keywords, 8);
+    const heroProd = _matchByKeywords(hero.kw, 8);
     if (heroProd.length < 1) return '';
 
-    let h = _heroHtml(hero);
+    let h = '';
 
-    // Primary AI section (matches hero context)
-    h += `<div class="sec">${_aiSecHd(hero.title)}<div class="pstrip">${heroProd.map(pCard).join('')}</div></div>`;
+    // Coming festival banner (7 days prior, shown above hero)
+    if (ctx.festivals.upcoming) {
+      h += _festComingHtml(ctx.festivals.upcoming);
+    }
 
-    // "Order Again" — if user has order history
+    // Animated scene banner
+    h += _sceneBannerHtml(hero);
+
+    // Primary contextual section
+    h += `<div class="sec">${_ctxSecHd(hero.title)}<div class="pstrip">${heroProd.map(pCard).join('')}</div></div>`;
+
+    // "Order Again" — from local history
     const reorderIds = _getTopReorderedIds(6);
     if (reorderIds.length >= 2) {
       const rp = reorderIds
-        .map(id => prods.find(p => p.id === id))
+        .map(id => prods.find(p=>p.id===id))
         .filter(p => p && !p.disabled && p.variants?.[0]?.inStock !== false)
         .slice(0, 6);
       if (rp.length >= 2) {
-        h += `<div class="sec">${_aiSecHd('🔁 Order Again')}<div class="pstrip">${rp.map(pCard).join('')}</div></div>`;
+        h += `<div class="sec">${_ctxSecHd('🔁 Order Again')}<div class="pstrip">${rp.map(pCard).join('')}</div></div>`;
       }
     }
 
-    // Second context section (different from primary, e.g. morning + weekend)
+    // Second context section
     if (sections.length > 1) {
       const sec2 = sections[1];
-      const sec2Prods = _matchByKeywords(sec2.keywords, 8)
-        .filter(p => !heroProd.some(h => h.id === p.id))
+      const sec2Prods = _matchByKeywords(sec2.kw, 8)
+        .filter(p => !heroProd.some(x=>x.id===p.id))
         .slice(0, 6);
       if (sec2Prods.length >= 2) {
-        h += `<div class="sec">${_aiSecHd(sec2.title)}<div class="pstrip">${sec2Prods.map(pCard).join('')}</div></div>`;
+        h += `<div class="sec">${_ctxSecHd(sec2.title)}<div class="pstrip">${sec2Prods.map(pCard).join('')}</div></div>`;
       }
     }
 
     return h;
   } catch {
-    return ''; // silent fail — static home still renders
+    return '';
   }
 }
+
 
 function renderHome() {
   let h = '';
