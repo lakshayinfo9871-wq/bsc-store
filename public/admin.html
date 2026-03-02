@@ -112,8 +112,8 @@ tr:hover td{background:#fafafa;}
 .modal-head{padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--white);z-index:1;}
 .modal-head h2{font-size:1rem;font-weight:700;}
 .modal-close{background:none;font-size:1.3rem;color:var(--text2);padding:.2rem .4rem;cursor:pointer;}
-.modal-body{padding:1.5rem;}
-.modal-foot{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end;position:sticky;bottom:0;background:var(--white);}
+.modal-body{padding:1.5rem 1.5rem 2.5rem;}
+.modal-foot{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end;position:sticky;bottom:0;background:var(--white);z-index:2;}
 
 .action-picker{border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-top:.5rem;background:var(--bg);}
 .prod-pick-list{max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--white);margin-top:.5rem;}
@@ -1018,7 +1018,7 @@ function renderInfoTab(data, customerId) {
 // ── CUSTOMER CRUD ─────────────────────────────────────────────────────────────
 function openAddCustomerModal() {
   document.body.insertAdjacentHTML('beforeend',`
-    <div id="addCustModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+    <div id="addCustModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem" onclick="if(event.target===this)document.getElementById('addCustModal').remove()">
       <div style="background:#fff;border-radius:18px;width:min(500px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.25)">
         <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
           <div><div style="font-weight:700;font-size:1rem">Add New Customer</div><div style="font-size:.74rem;color:var(--text2)">Customer only. Milk added separately by admin.</div></div>
@@ -1259,7 +1259,7 @@ function buildMilkSubModal({customerId, isEdit=false, existingSub=null, defaultM
   const modalId = 'milkSubModal';
   document.getElementById(modalId)?.remove();
   document.body.insertAdjacentHTML('beforeend',`
-    <div id="${modalId}" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+    <div id="${modalId}" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem" onclick="if(event.target===this)this.remove()">
       <div style="background:#fff;border-radius:18px;width:min(500px,100%);max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.28)">
         <div style="padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1">
           <div>
@@ -1271,14 +1271,8 @@ function buildMilkSubModal({customerId, isEdit=false, existingSub=null, defaultM
         <div style="padding:1.3rem 1.4rem">
           <div style="font-size:.78rem;font-weight:700;color:var(--text2);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Daily Milk Items</div>
           <div id="subItemsList">${items.map((item,i)=>renderItemRow(item,i)).join('')}</div>
-          <button class="btn btn-gray" style="font-size:.8rem;margin-top:.2rem;margin-bottom:1rem"
-            onclick="
-              const row = document.createElement('div');
-              row.className='sub-item-row';
-              row.style='display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
-              row.innerHTML='<div style=\'flex:1.5;position:relative\'><input list=\'dailyItemsList\' placeholder=\'Product name\' value=\'Full Cream\' style=\'width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .5rem;font-size:.83rem;font-family:inherit;box-sizing:border-box\'></div><input type=\'number\' placeholder=\'Qty (L)\' value=\'0.5\' min=\'0.25\' max=\'20\' step=\'0.25\' style=\'width:75px;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .4rem;font-size:.83rem\'><span style=\'font-size:.78rem;color:var(--text2);white-space:nowrap\'>L @ ₹</span><input type=\'number\' placeholder=\'Price/L\' value=\'' + defaultMilkPrice + '\' min=\'1\' step=\'0.5\' style=\'width:72px;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .4rem;font-size:.83rem\'><span style=\'font-size:.75rem;color:var(--text2)\'>/L</span><button onclick=\'this.closest(&quot;.sub-item-row&quot;).remove();updateSubTotal()\' style=\'background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;flex-shrink:0\'>✕</button>';
-              document.getElementById('subItemsList').appendChild(row);
-              updateSubTotal();">
+          <button type="button" class="btn btn-gray" style="font-size:.8rem;margin-top:.2rem;margin-bottom:1rem"
+            onclick="document.getElementById('subItemsList').appendChild(_makeMilkSubRow(defaultMilkPrice));updateSubTotal()">
             + Add Another Milk Type
           </button>
           <div style="background:var(--bg);border-radius:10px;padding:.8rem 1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
@@ -1856,6 +1850,85 @@ function renderMilkBilling() {
     </div>`;
 }
 
+
+// ─────────────────────────────────────────────────────────────────
+// MILK ROW HELPERS — safe DOM creation (replaces brittle innerHTML=)
+// ─────────────────────────────────────────────────────────────────
+function _milkTypes() {
+  return ['Full Cream','Toned','Double Toned','Skimmed','Buffalo','Curd','Paneer','Buttermilk','A2 Milk','Other'];
+}
+function _makeMilkSubRow(pricePerLitre) {
+  const p = parseFloat(pricePerLitre) || 60;
+  const row = document.createElement('div');
+  row.className = 'sub-item-row';
+  row.style.cssText = 'display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
+  const dl = document.createElement('datalist');
+  dl.id = 'dailyItemsList';
+  _milkTypes().forEach(t => { const o = document.createElement('option'); o.value = t; dl.appendChild(o); });
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'flex:1.5;position:relative';
+  const nameInp = document.createElement('input');
+  nameInp.setAttribute('list', 'dailyItemsList');
+  nameInp.placeholder = 'Product name'; nameInp.value = 'Full Cream';
+  nameInp.style.cssText = 'width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .5rem;font-size:.83rem;font-family:inherit;box-sizing:border-box';
+  wrap.appendChild(nameInp); wrap.appendChild(dl);
+  const qtyInp = document.createElement('input');
+  qtyInp.type = 'number'; qtyInp.placeholder = 'Qty (L)'; qtyInp.value = '0.5';
+  qtyInp.min = '0.25'; qtyInp.max = '20'; qtyInp.step = '0.25';
+  qtyInp.style.cssText = 'width:75px;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .4rem;font-size:.83rem';
+  qtyInp.addEventListener('input', updateSubTotal);
+  const sep1 = document.createElement('span');
+  sep1.style.cssText = 'font-size:.78rem;color:var(--text2);white-space:nowrap'; sep1.textContent = 'L @ ₹';
+  const priceInp = document.createElement('input');
+  priceInp.type = 'number'; priceInp.placeholder = 'Price/L'; priceInp.value = String(p);
+  priceInp.min = '1'; priceInp.step = '0.5';
+  priceInp.style.cssText = 'width:72px;border:1.5px solid var(--border);border-radius:8px;padding:.38rem .4rem;font-size:.83rem';
+  priceInp.addEventListener('input', updateSubTotal);
+  const unit = document.createElement('span');
+  unit.style.cssText = 'font-size:.75rem;color:var(--text2)'; unit.textContent = '/L';
+  const del = document.createElement('button');
+  del.type = 'button'; del.textContent = '✕';
+  del.style.cssText = 'background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;flex-shrink:0';
+  del.onclick = () => { row.remove(); updateSubTotal(); };
+  row.append(wrap, qtyInp, sep1, priceInp, unit, del);
+  return row;
+}
+function _makeMilkDeliveryRow(pricePerLitre) {
+  const p = parseFloat(pricePerLitre) || (typeof milkPrice !== 'undefined' ? milkPrice : 60);
+  const row = document.createElement('div');
+  row.className = 'milk-item-row';
+  row.style.cssText = 'display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
+  const dl = document.createElement('datalist');
+  dl.id = 'deliveryItemsList';
+  _milkTypes().forEach(t => { const o = document.createElement('option'); o.value = t; dl.appendChild(o); });
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'flex:1.5;position:relative';
+  const nameInp = document.createElement('input');
+  nameInp.setAttribute('list', 'deliveryItemsList');
+  nameInp.placeholder = 'Product name'; nameInp.value = 'Full Cream';
+  nameInp.style.cssText = 'width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;font-size:.83rem;font-family:inherit;box-sizing:border-box';
+  nameInp.addEventListener('input', updateDeliveryTotal);
+  wrap.appendChild(nameInp); wrap.appendChild(dl);
+  const qtyInp = document.createElement('input');
+  qtyInp.type = 'number'; qtyInp.placeholder = 'Qty'; qtyInp.value = '0.5';
+  qtyInp.min = '0'; qtyInp.max = '20'; qtyInp.step = '0.25';
+  qtyInp.style.cssText = 'width:68px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem';
+  qtyInp.addEventListener('change', updateDeliveryTotal);
+  const sep2 = document.createElement('span');
+  sep2.style.cssText = 'font-size:.75rem;color:var(--text2)'; sep2.textContent = 'L@₹';
+  const priceInp = document.createElement('input');
+  priceInp.type = 'number'; priceInp.placeholder = '₹/L'; priceInp.value = String(p);
+  priceInp.min = '1'; priceInp.step = '0.5';
+  priceInp.style.cssText = 'width:65px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem';
+  priceInp.addEventListener('change', updateDeliveryTotal);
+  const del = document.createElement('button');
+  del.type = 'button'; del.textContent = '×';
+  del.style.cssText = 'background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;padding:0;flex-shrink:0';
+  del.onclick = () => { row.remove(); updateDeliveryTotal(); };
+  row.append(wrap, qtyInp, sep2, priceInp, del);
+  return row;
+}
+
 async function markOne(customerId, date, qty) {
   // Pre-fill from customer's subscription defaultItems
   const c = milkCustomers.find(x=>x.id===customerId);
@@ -1883,6 +1956,7 @@ async function bulkMark(date) {
     </div>`
   ).join('') + (unmarked.length>20?`<div style="font-size:.8rem;color:var(--text3);padding:8px 0">...and ${unmarked.length-20} more</div>`:'');
 
+  document.getElementById('_miniModal')?.remove();
   document.body.insertAdjacentHTML('beforeend', `
     <div id="_miniModal" class="mini-modal-overlay" onclick="if(event.target===this)this.remove()">
       <div class="mini-modal" style="max-width:480px">
@@ -1968,7 +2042,7 @@ function openDayLog(customerId) {
     </div>`;
   }
   document.body.insertAdjacentHTML('beforeend',`
-    <div id="dlModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem">
+    <div id="dlModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem" onclick="if(event.target===this){this.remove();renderMilk();}">
       <div style="background:#fff;border-radius:18px;width:min(420px,100%);max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)">
         <div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
           <div><div style="font-weight:700">${c?.name}</div><div style="font-size:.75rem;color:var(--text2)">Edit delivery log</div></div>
@@ -2019,7 +2093,7 @@ function openMultiMilkEntry(customerId, date) {
     </div>`;
 
   document.body.insertAdjacentHTML('beforeend',`
-    <div id="${modalId}" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem">
+    <div id="${modalId}" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem" onclick="if(event.target===this)this.remove()">
       <div style="background:#fff;border-radius:18px;width:min(460px,100%);box-shadow:0 24px 64px rgba(0,0,0,.25)">
         <div style="padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
           <div>
@@ -2031,14 +2105,8 @@ function openMultiMilkEntry(customerId, date) {
         <div style="padding:1.2rem 1.4rem">
           <div style="font-size:.75rem;font-weight:700;color:var(--text2);margin-bottom:.5rem">MILK DELIVERED</div>
           <div id="milkItemsList">${existingItems.map(i=>renderItemRow(i)).join('')}</div>
-          <button class="btn btn-gray" style="font-size:.78rem;margin-top:.3rem"
-            onclick="
-              const row = document.createElement('div');
-              row.className = 'milk-item-row';
-              row.style.cssText = 'display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
-              row.innerHTML = '<div style=\'flex:1.5;position:relative\'><input list=\'deliveryItemsList\' placeholder=\'Product name\' value=\'Full Cream\' oninput=\'updateDeliveryTotal()\' style=\'width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;font-size:.83rem;font-family:inherit;box-sizing:border-box\'></div><input type=\'number\' placeholder=\'Qty\' value=\'0.5\' min=\'0\' max=\'20\' step=\'0.25\' onchange=\'updateDeliveryTotal()\' style=\'width:68px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem\'><span style=\'font-size:.75rem;color:var(--text2)\'>L@₹</span><input type=\'number\' placeholder=\'₹/L\' value=\'' + milkPrice + '\' min=\'1\' step=\'0.5\' onchange=\'updateDeliveryTotal()\' style=\'width:65px;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .4rem;font-size:.83rem\'><button onclick=\'this.closest(&quot;.milk-item-row&quot;).remove();updateDeliveryTotal()\' style=\'background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;padding:0;flex-shrink:0\'>×</button>';
-              document.getElementById('milkItemsList').appendChild(row);
-              updateDeliveryTotal();">
+          <button type="button" class="btn btn-gray" style="font-size:.78rem;margin-top:.3rem"
+            onclick="document.getElementById('milkItemsList').appendChild(_makeMilkDeliveryRow(milkPrice));updateDeliveryTotal()">
             + Add Type
           </button>
           <div style="background:var(--bg);border-radius:8px;padding:.6rem 1rem;margin-top:.8rem;display:flex;justify-content:space-between;align-items:center">

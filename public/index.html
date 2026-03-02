@@ -3535,7 +3535,7 @@ function renderAuthScreen() {
           </div>
           <button class="acc-btn acc-btn-green" onclick="doCreateAccount()" style="margin-top:8px">Create Account</button>
         ` : `
-          <div class="acc-field"><label class="acc-label">Phone Number</label><input class="acc-inp" type="tel" id="afPhone" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric"></div>
+          <div class="acc-field"><label class="acc-label">Phone Number</label><input class="acc-inp" type="tel" id="afLoginPhone" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric"></div>
           <div class="acc-field">
             <label class="acc-label">4-Digit PIN</label>
             <div class="pin-input-row" id="pinLoginRow">
@@ -3566,7 +3566,7 @@ function getPinValue(prefix, total) {
 }
 
 async function doLogin() {
-  const phone = (document.getElementById('afPhone')?.value||'').trim();
+  const phone = (document.getElementById('afLoginPhone')?.value||'').trim();
   const pin = getPinValue('lp', 4);
   if (!phone || phone.length < 10) { showToast('Enter valid phone number'); return; }
   if (pin.length < 4) { showToast('Enter your 4-digit PIN'); return; }
