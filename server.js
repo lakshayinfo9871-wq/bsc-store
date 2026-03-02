@@ -80,7 +80,8 @@ async function connectDB() {
       whatsapp: '', upiId: '', minOrder: 99, storeName: 'BSC Store',
       milkPrice: 60, freeDeliveryMin: 99,
       freeGift: { threshold: 100, productId: null, qty: 1, autoAdd: false, label: '', discountPrice: 0 },
-      upsellProductIds: []
+      upsellProductIds: [],
+      storeLocation: null  // { lat, lon } — set by admin, used for live weather banners
     });
   }
 }
@@ -281,6 +282,7 @@ app.get('/api/store', async (req, res) => {
         upiId: settings.upiId, whatsapp: settings.whatsapp,
         freeDeliveryMin: settings.freeDeliveryMin || 99,
         upsellProductIds: settings.upsellProductIds || [],
+        storeLocation: settings.storeLocation || null,
         freeGift: {
           threshold: fg.threshold || 0, productId: fg.productId || null,
           variantId: fg.variantId || null, qty: fg.qty || 1,
