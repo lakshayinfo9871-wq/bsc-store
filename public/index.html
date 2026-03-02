@@ -144,6 +144,9 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .fest-coming-label{font-size:.58rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
 .fest-coming-title{font-size:.92rem;font-weight:900;color:#fff;}
 .fest-coming-sub{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:2px;}
+/* Context full page scene strip */
+.ctx-page-scene{flex-shrink:0;height:110px;position:relative;overflow:hidden;}
+.ctx-page-scene svg{width:100%;height:100%;display:block;}
 /* Fade-in for pers block */
 @keyframes persFadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 .pers-block{animation:persFadeIn .45s cubic-bezier(.22,.61,.36,1) both;}
@@ -715,6 +718,25 @@ select.ck-inp option{background:var(--bg2);}
   <div class="fp-body"><div class="fp-grid" id="searchGrid"></div></div>
 </div>
 
+<!-- CONTEXTUAL PICKS FULL PAGE -->
+<div class="fpage" id="ctxPage">
+  <div class="fp-head" id="ctxPageHead">
+    <button class="back-btn" onclick="closeCtxPage()">&#8592;</button>
+    <span class="fp-title" id="ctxPageTitle">All Picks</span>
+  </div>
+  <!-- Scene banner (mini, 100px tall) -->
+  <div class="ctx-page-scene" id="ctxPageScene"></div>
+  <!-- Sort chips -->
+  <div class="fp-filter-bar" id="ctxFilterBar">
+    <div class="filter-chip active" id="ctxFilterAll"    onclick="ctxSort('all')">⊞ All</div>
+    <div class="filter-chip"        id="ctxFilterLow"    onclick="ctxSort('low')">↑ Low Price</div>
+    <div class="filter-chip"        id="ctxFilterHigh"   onclick="ctxSort('high')">↓ High Price</div>
+    <div class="filter-chip"        id="ctxFilterInStock" onclick="ctxSort('stock')">✓ In Stock</div>
+  </div>
+  <!-- 2-column grid -->
+  <div class="fp-body"><div class="fp-grid" id="ctxGrid"></div></div>
+</div>
+
 <!-- CHECKOUT PAGE -->
 <div class="cko-page" id="ckoPage">
   <div class="cko-topbar">
@@ -1002,32 +1024,69 @@ function _getDayType() {
   return (d === 0 || d === 6) ? 'weekend' : 'weekday';
 }
 
-// ── FESTIVALS: active + upcoming (within 7 days) ──────────────────────────────
+// ── FESTIVALS ─────────────────────────────────────────────────────────────────
+// Exact festival dates per year (most reliable approach for Indian festivals).
+// ACTIVE = from 7 days before the festival through festival end date.
+// UPCOMING TEASER = 8-14 days before festival (smaller strip below active banner).
+// To update each year: change the festDates map below.
 function _getFestivals() {
-  const n = new Date(), m = n.getMonth()+1, d = n.getDate();
-  const fests = [
-    { name:'Diwali',           emoji:'🪔', kw:['snacks','namkeen','chips','drinks','juice','sweets','dry fruit','farsan'],        m:10, d1:20, d2:31, grad:'linear-gradient(135deg,#78350f,#431407)', glow:'#fbbf24', scene:'diwali'  },
-    { name:'Diwali',           emoji:'🪔', kw:['snacks','namkeen','chips','drinks','juice','sweets','dry fruit'],                 m:11, d1:1,  d2:5,  grad:'linear-gradient(135deg,#78350f,#431407)', glow:'#fbbf24', scene:'diwali'  },
-    { name:'Holi',             emoji:'🎨', kw:['drinks','juice','cold drink','milk','snacks','chips','colours','sweets','thandai'], m:3, d1:8, d2:16, grad:'linear-gradient(135deg,#831843,#500724)', glow:'#f9a8d4', scene:'holi'    },
-    { name:'Eid',              emoji:'🌙', kw:['sweets','milk','bread','juice','drinks','snacks','biryani'],                      m:3, d1:27, d2:31, grad:'linear-gradient(135deg,#1e3a5f,#0c1a2e)', glow:'#93c5fd', scene:'eid'     },
-    { name:'Eid',              emoji:'🌙', kw:['sweets','milk','bread','juice','drinks','snacks'],                                m:4, d1:1,  d2:3,  grad:'linear-gradient(135deg,#1e3a5f,#0c1a2e)', glow:'#93c5fd', scene:'eid'     },
-    { name:'Raksha Bandhan',   emoji:'🎀', kw:['sweets','chocolate','juice','snacks','biscuit','milk'],                          m:8, d1:15, d2:22, grad:'linear-gradient(135deg,#9d174d,#500724)', glow:'#fbcfe8', scene:'default' },
-    { name:'Ganesh Chaturthi', emoji:'🙏', kw:['milk','coconut','fruits','sweets','juice','snacks','modak'],                     m:8, d1:25, d2:31, grad:'linear-gradient(135deg,#78350f,#3b1d08)', glow:'#fbbf24', scene:'default' },
-    { name:'Ganesh Chaturthi', emoji:'🙏', kw:['milk','coconut','fruits','sweets','juice','snacks'],                             m:9, d1:1,  d2:5,  grad:'linear-gradient(135deg,#78350f,#3b1d08)', glow:'#fbbf24', scene:'default' },
-    { name:'Christmas',        emoji:'🎄', kw:['juice','drinks','cake','bread','butter','chocolate','snacks','biscuit'],         m:12, d1:20, d2:26, grad:'linear-gradient(135deg,#14532d,#052e16)', glow:'#86efac', scene:'christmas'},
-    { name:'New Year',         emoji:'🎆', kw:['drinks','juice','snacks','chips','soda','cold drink','chocolate'],               m:12, d1:27, d2:31, grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#c4b5fd', scene:'newyear' },
-    { name:'New Year',         emoji:'🎆', kw:['drinks','juice','snacks','chips','soda'],                                        m:1,  d1:1,  d2:3,  grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#c4b5fd', scene:'newyear' },
-    { name:'Independence Day', emoji:'🇮🇳', kw:['drinks','snacks','juice','chips','namkeen','biscuit'],                          m:8, d1:13, d2:16, grad:'linear-gradient(135deg,#14532d,#052e16)', glow:'#86efac', scene:'default' },
-  ];
-  // Active festival (within date range)
-  const active = fests.find(f => f.m === m && d >= f.d1 && d <= f.d2) || null;
-  // Upcoming in next 7 days
-  const next7 = new Date(n); next7.setDate(d + 7);
-  const upcoming = fests.find(f => {
-    if (active && f.name === active.name) return false; // don't show as upcoming if already active
-    const festStart = new Date(n.getFullYear(), f.m-1, f.d1);
-    return festStart > n && festStart <= next7;
-  }) || null;
+  const now = new Date();
+  const todayMs = now.setHours(0,0,0,0) || new Date().setHours(0,0,0,0);
+  const today = new Date(todayMs);
+
+  // Key = "YYYY-name", value = { festDay: Date, endDay: Date }
+  // festDay = actual festival day. Active window = festDay-7 to endDay.
+  const festDates = {
+    // 2026 dates
+    'holi-2026':         { festDay: new Date(2026,2,4),  endDay: new Date(2026,2,5)  }, // Mar 4-5
+    'eid-2026':          { festDay: new Date(2026,2,20), endDay: new Date(2026,2,22) }, // Mar 20-22
+    'diwali-2026':       { festDay: new Date(2026,9,19), endDay: new Date(2026,9,23) }, // Oct 19-23
+    'christmas-2026':    { festDay: new Date(2026,11,25),endDay: new Date(2026,11,26)},
+    'newyear-2027':      { festDay: new Date(2027,0,1),  endDay: new Date(2027,0,1)  },
+    'rakshabandhan-2026':{ festDay: new Date(2026,7,9),  endDay: new Date(2026,7,9)  },
+    'ganesh-2026':       { festDay: new Date(2026,8,12), endDay: new Date(2026,8,22) },
+    'independence-2026': { festDay: new Date(2026,7,15), endDay: new Date(2026,7,15) },
+    // 2025 dates (for any still active)
+    'holi-2025':         { festDay: new Date(2025,2,14), endDay: new Date(2025,2,14) },
+    'diwali-2025':       { festDay: new Date(2025,9,20), endDay: new Date(2025,9,24) },
+    'christmas-2025':    { festDay: new Date(2025,11,25),endDay: new Date(2025,11,26)},
+    'newyear-2026':      { festDay: new Date(2026,0,1),  endDay: new Date(2026,0,1)  },
+  };
+
+  const festMeta = {
+    holi:         { name:'Holi',             emoji:'🎨', kw:['drinks','juice','cold drink','milk','snacks','chips','sweets','thandai','colours'],    grad:'linear-gradient(135deg,#831843,#500724)', scene:'holi'    },
+    eid:          { name:'Eid',              emoji:'🌙', kw:['sweets','milk','bread','juice','drinks','snacks','biryani'],                            grad:'linear-gradient(135deg,#1e3a5f,#0c1a2e)', scene:'eid'     },
+    diwali:       { name:'Diwali',           emoji:'🪔', kw:['snacks','namkeen','chips','drinks','juice','sweets','dry fruit','farsan'],              grad:'linear-gradient(135deg,#78350f,#431407)', scene:'diwali'  },
+    christmas:    { name:'Christmas',        emoji:'🎄', kw:['juice','drinks','cake','bread','butter','chocolate','snacks','biscuit'],                grad:'linear-gradient(135deg,#14532d,#052e16)', scene:'christmas'},
+    newyear:      { name:'New Year',         emoji:'🎆', kw:['drinks','juice','snacks','chips','soda','cold drink','chocolate'],                     grad:'linear-gradient(135deg,#0f0a23,#07051a)', scene:'newyear' },
+    rakshabandhan:{ name:'Raksha Bandhan',   emoji:'🎀', kw:['sweets','chocolate','juice','snacks','biscuit','milk'],                                grad:'linear-gradient(135deg,#9d174d,#500724)', scene:'default' },
+    ganesh:       { name:'Ganesh Chaturthi', emoji:'🙏', kw:['milk','coconut','fruits','sweets','juice','snacks','modak'],                           grad:'linear-gradient(135deg,#78350f,#3b1d08)', scene:'default' },
+    independence: { name:'Independence Day', emoji:'🇮🇳', kw:['drinks','snacks','juice','chips','namkeen','biscuit'],                                 grad:'linear-gradient(135deg,#14532d,#052e16)', scene:'default' },
+  };
+
+  let active = null, upcoming = null;
+
+  for (const [key, dates] of Object.entries(festDates)) {
+    const festKey = key.replace(/-\d+$/, '').replace('newyear','newyear'); // strip year
+    // Extract fest type from key (e.g. 'holi-2026' → 'holi')
+    const typeMatch = key.match(/^([a-z]+)-\d+$/);
+    if (!typeMatch) continue;
+    const type = typeMatch[1]; // 'holi', 'diwali', etc.
+    const meta = festMeta[type];
+    if (!meta) continue;
+
+    const activeStart = new Date(dates.festDay); activeStart.setDate(activeStart.getDate() - 7);
+    const upcomingStart = new Date(dates.festDay); upcomingStart.setDate(upcomingStart.getDate() - 14);
+
+    const obj = { ...meta, festDay: dates.festDay, endDay: dates.endDay };
+
+    if (today >= activeStart && today <= dates.endDay) {
+      if (!active) active = obj; // first matching = most imminent
+    } else if (today >= upcomingStart && today < activeStart) {
+      if (!upcoming) upcoming = obj;
+    }
+  }
+
   return { active, upcoming };
 }
 
@@ -1091,10 +1150,13 @@ function _getActiveSections(ctx) {
   const secs = [];
   if (ctx.festivals.active) {
     const f = ctx.festivals.active;
+    const now = new Date(); now.setHours(0,0,0,0);
+    const daysUntil = Math.ceil((f.festDay - now) / (1000*60*60*24));
+    const greeting = daysUntil <= 0 ? `${f.name} is here!` : daysUntil === 1 ? `${f.name} tomorrow!` : `${f.name} in ${daysUntil} days!`;
     secs.push({ id:'festival', priority:100,
       title:`${f.emoji} ${f.name} Picks`, tag:`${f.name} special`,
-      greeting:`${f.name} is here!`, sub:`Stock up for the celebrations 🎉`,
-      emoji:f.emoji, grad:f.grad, glow:f.glow, scene:f.scene, kw:f.kw });
+      greeting, sub:`Stock up before it begins 🎉`,
+      emoji:f.emoji, grad:f.grad, scene:f.scene, kw:f.kw });
   }
   if (ctx.season==='monsoon') {
     secs.push({ id:'rain', priority:90,
@@ -1145,448 +1207,723 @@ function _getActiveSections(ctx) {
 // Each scene is a self-contained SVG that fills the banner area.
 // ══════════════════════════════════════════════════════════════════════════════
 
-function _buildScene(sceneId, grad, glow) {
+function _buildScene(sceneId) {
+  // All scenes: 400×200 viewBox for taller, richer look
   const scenes = {
 
-    // ── RAIN ────────────────────────────────────────────────────────────────
-    rain: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="rainBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0c1a2e"/>
-          <stop offset="100%" stop-color="#050d18"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#rainBg)"/>
-      <!-- Clouds -->
-      <g opacity=".7">
-        <ellipse cx="80" cy="38" rx="55" ry="22" fill="#1e3a5f"/>
-        <ellipse cx="115" cy="30" rx="38" ry="20" fill="#1e3a5f"/>
-        <ellipse cx="55" cy="34" rx="30" ry="16" fill="#162d4a"/>
-      </g>
-      <g opacity=".5">
-        <ellipse cx="290" cy="28" rx="65" ry="22" fill="#1e3a5f"/>
-        <ellipse cx="330" cy="20" rx="42" ry="18" fill="#1e3a5f"/>
-        <ellipse cx="260" cy="25" rx="35" ry="16" fill="#162d4a"/>
-      </g>
-      <!-- Rain drops: 30 drops with staggered animation -->
-      ${Array.from({length:30}, (_,i) => {
-        const x = 10 + Math.round((i*13.7+i*i*0.3) % 380);
-        const dur = (0.6 + (i*0.07)%0.5).toFixed(2);
-        const delay = -(i*0.11 % 0.8).toFixed(2);
-        const h = 8 + (i%5)*3;
-        const op = 0.4 + (i%4)*0.15;
-        return `<line x1="${x}" y1="50" x2="${x-2}" y2="${50+h}" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round" opacity="${op.toFixed(1)}">
-          <animateTransform attributeName="transform" type="translate" from="0 -110" to="0 120" dur="${dur}s" begin="${delay}s" repeatCount="indefinite"/>
-        </line>`;
-      }).join('')}
-      <!-- Lightning flash -->
-      <polyline points="200,0 192,40 204,40 195,80" fill="none" stroke="#e0f2fe" stroke-width="2" opacity="0" stroke-linecap="round">
-        <animate attributeName="opacity" values="0;0;0;0;0.8;0.3;0.8;0;0;0;0;0;0;0;0" dur="4s" repeatCount="indefinite"/>
-      </polyline>
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// RAIN — heavy clouds, 50 rain streaks, lightning, puddle ripples at bottom
+rain: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <linearGradient id="rBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#060e1a"/><stop offset="100%" stop-color="#0a1528"/></linearGradient>
+  <linearGradient id="rGnd" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0d1f35"/><stop offset="100%" stop-color="#081120"/></linearGradient>
+  <filter id="rBlur"><feGaussianBlur stdDeviation="1.5"/></filter>
+  <filter id="rSoft"><feGaussianBlur stdDeviation="3"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#rBg)"/>
+<!-- Ground reflection -->
+<rect x="0" y="172" width="400" height="28" fill="url(#rGnd)"/>
+<!-- Big storm cloud bank -->
+<ellipse cx="70"  cy="52" rx="75" ry="32" fill="#111d2e"/>
+<ellipse cx="110" cy="42" rx="58" ry="28" fill="#162436"/>
+<ellipse cx="50"  cy="48" rx="45" ry="22" fill="#0d1824"/>
+<ellipse cx="160" cy="55" rx="50" ry="24" fill="#0e1e30"/>
+<ellipse cx="200" cy="40" rx="65" ry="28" fill="#142030"/>
+<ellipse cx="240" cy="50" rx="55" ry="26" fill="#111c2e"/>
+<ellipse cx="290" cy="45" rx="70" ry="30" fill="#0e1b2c"/>
+<ellipse cx="340" cy="55" rx="60" ry="28" fill="#12202e"/>
+<ellipse cx="370" cy="42" rx="48" ry="22" fill="#0d1928"/>
+<!-- Lighter cloud highlights -->
+<ellipse cx="100" cy="38" rx="38" ry="16" fill="#1a2e44" opacity=".6"/>
+<ellipse cx="210" cy="32" rx="45" ry="18" fill="#1a3040" opacity=".5"/>
+<ellipse cx="320" cy="36" rx="42" ry="16" fill="#18293c" opacity=".5"/>
+<!-- 50 rain streaks -->
+${Array.from({length:50}, (_,i) => {
+  const x = Math.round((i*8.1+i*i*0.19+7)%395);
+  const dur = (0.5+i%7*0.06).toFixed(2);
+  const del = -(i*0.13%1.1).toFixed(2);
+  const h = 10+i%6*3, op = (0.35+i%5*0.1).toFixed(2), w = i%4===0?1.8:1.2;
+  return `<line x1="${x}" y1="0" x2="${x-3}" y2="${h}" stroke="#7ab8e8" stroke-width="${w}" stroke-linecap="round" opacity="${op}"><animateTransform attributeName="transform" type="translate" values="2,-200;-4,220" dur="${dur}s" begin="${del}s" repeatCount="indefinite"/></line>`;
+}).join('')}
+<!-- Lightning bolt 1 -->
+<polyline points="130,0 122,38 134,38 125,78 112,78 140,120" fill="none" stroke="#dbeafe" stroke-width="2.5" stroke-linejoin="round" opacity="0">
+  <animate attributeName="opacity" values="0;0;0;0;0;0.9;0.2;0.8;0;0;0;0;0;0;0;0;0;0;0;0" dur="5s" begin="0.3s" repeatCount="indefinite"/>
+</polyline>
+<!-- Lightning bolt 2 -->
+<polyline points="300,0 294,32 306,32 299,65" fill="none" stroke="#bfdbfe" stroke-width="2" stroke-linejoin="round" opacity="0">
+  <animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0.85;0.15;0.7;0;0;0;0;0;0" dur="7s" begin="1.8s" repeatCount="indefinite"/>
+</polyline>
+<!-- Ambient lightning flash on whole sky -->
+<rect width="400" height="170" fill="#c7e4ff" opacity="0">
+  <animate attributeName="opacity" values="0;0;0;0;0;0.04;0.01;0.05;0;0;0;0;0;0;0;0;0;0;0;0" dur="5s" begin="0.3s" repeatCount="indefinite"/>
+</rect>
+<!-- Puddle ripples at bottom -->
+${Array.from({length:5}, (_,i) => {
+  const px = 40+i*72, dur = (1.4+i*0.22).toFixed(2), del = (i*0.38).toFixed(2);
+  return `<ellipse cx="${px}" cy="178" rx="0" ry="0" fill="none" stroke="#5b9dc9" stroke-width="1" opacity="0">
+    <animate attributeName="rx" values="0;18;28" dur="${dur}s" begin="${del}s" repeatCount="indefinite"/>
+    <animate attributeName="ry" values="0;4;7" dur="${dur}s" begin="${del}s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.5;0.3;0" dur="${dur}s" begin="${del}s" repeatCount="indefinite"/>
+  </ellipse>`;
+}).join('')}
+<!-- Rain reflection shimmer on ground -->
+<rect x="0" y="173" width="400" height="3" fill="#3b7aaa" opacity=".12"/>
+</svg>`,
 
-    // ── SUN (clear day / summer / morning) ──────────────────────────────────
-    sun: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <radialGradient id="sunGlow" cx="50%" cy="35%" r="50%">
-          <stop offset="0%" stop-color="#fef3c7"/>
-          <stop offset="40%" stop-color="#f59e0b" stop-opacity=".3"/>
-          <stop offset="100%" stop-color="#7c2d12" stop-opacity="0"/>
-        </radialGradient>
-        <linearGradient id="skyBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#1c0a00"/>
-          <stop offset="100%" stop-color="#7c2d12"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#skyBg)"/>
-      <ellipse cx="200" cy="55" rx="160" ry="100" fill="url(#sunGlow)"/>
-      <!-- Sun disc -->
-      <circle cx="200" cy="50" r="22" fill="#fef08a" opacity=".9">
-        <animate attributeName="r" values="22;24;22" dur="3s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values=".9;1;.9" dur="3s" repeatCount="indefinite"/>
-      </circle>
-      <!-- Rays -->
-      ${Array.from({length:12}, (_,i) => {
-        const angle = i*30;
-        const r1=28, r2=38;
-        const rad=angle*Math.PI/180;
-        const x1=200+r1*Math.cos(rad), y1=50+r1*Math.sin(rad);
-        const x2=200+r2*Math.cos(rad), y2=50+r2*Math.sin(rad);
-        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#fde68a" stroke-width="2" stroke-linecap="round" opacity=".7">
-          <animate attributeName="opacity" values=".7;.3;.7" dur="2s" begin="${(i*0.16).toFixed(1)}s" repeatCount="indefinite"/>
-        </line>`;
-      }).join('')}
-      <!-- Heat shimmer wavy lines at bottom -->
-      <path d="M0,130 Q50,125 100,130 Q150,135 200,130 Q250,125 300,130 Q350,135 400,130" fill="none" stroke="rgba(251,146,60,.2)" stroke-width="1.5">
-        <animate attributeName="d" values="M0,130 Q50,125 100,130 Q150,135 200,130 Q250,125 300,130 Q350,135 400,130;M0,132 Q50,128 100,132 Q150,128 200,132 Q250,128 300,132 Q350,128 400,132;M0,130 Q50,125 100,130 Q150,135 200,130 Q250,125 300,130 Q350,135 400,130" dur="2.5s" repeatCount="indefinite"/>
-      </path>
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// SUN — clear sky, rays, heat shimmer, distant hills
+sun: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <radialGradient id="sBg" cx="50%" cy="0%" r="100%"><stop offset="0%" stop-color="#5c1500"/><stop offset="55%" stop-color="#7c2d12"/><stop offset="100%" stop-color="#451a03"/></radialGradient>
+  <radialGradient id="sGlow" cx="50%" cy="40%" r="55%"><stop offset="0%" stop-color="#fef3c7" stop-opacity=".9"/><stop offset="35%" stop-color="#fbbf24" stop-opacity=".4"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/></radialGradient>
+  <radialGradient id="sDisc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fff"/><stop offset="60%" stop-color="#fef08a"/><stop offset="100%" stop-color="#fbbf24"/></radialGradient>
+  <filter id="sSunBlur"><feGaussianBlur stdDeviation="4"/></filter>
+  <filter id="sHeat"><feTurbulence type="turbulence" baseFrequency="0.02 0.08" numOctaves="2" result="noise" seed="2"><animate attributeName="baseFrequency" values="0.02 0.08;0.025 0.09;0.02 0.08" dur="3s" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#sBg)"/>
+<!-- Horizon glow -->
+<ellipse cx="200" cy="200" rx="300" ry="90" fill="#c2410c" opacity=".35"/>
+<!-- Sun corona (blurred) -->
+<circle cx="200" cy="72" r="48" fill="#fef3c7" opacity=".25" filter="url(#sSunBlur)"/>
+<!-- Sun disc -->
+<circle cx="200" cy="72" r="30" fill="url(#sDisc)" opacity=".95">
+  <animate attributeName="r" values="30;32;30" dur="3s" repeatCount="indefinite"/>
+</circle>
+<rect width="400" height="200" fill="url(#sGlow)"/>
+<!-- 16 rays -->
+${Array.from({length:16}, (_,i) => {
+  const a = i*22.5*Math.PI/180, r1=34, r2=54+i%3*8;
+  const x1=(200+r1*Math.cos(a)).toFixed(1), y1=(72+r1*Math.sin(a)).toFixed(1);
+  const x2=(200+r2*Math.cos(a)).toFixed(1), y2=(72+r2*Math.sin(a)).toFixed(1);
+  const w = i%4===0?2.5:1.5;
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#fde68a" stroke-width="${w}" stroke-linecap="round" opacity="0.7"><animate attributeName="opacity" values="0.7;0.25;0.7" dur="2.5s" begin="${(i*0.14).toFixed(2)}s" repeatCount="indefinite"/><animate attributeName="x2" values="${x2};${(200+(r2+4)*Math.cos(a)).toFixed(1)};${x2}" dur="2.5s" begin="${(i*0.14).toFixed(2)}s" repeatCount="indefinite"/></line>`;
+}).join('')}
+<!-- Distant hills silhouette -->
+<path d="M0,155 Q50,130 100,148 Q150,162 200,138 Q250,115 300,145 Q350,168 400,150 L400,200 L0,200 Z" fill="#3b0f00" opacity=".7"/>
+<path d="M0,168 Q80,155 160,162 Q240,168 320,158 Q370,152 400,162 L400,200 L0,200 Z" fill="#2d0c00" opacity=".8"/>
+<!-- Heat shimmer band -->
+<rect x="0" y="148" width="400" height="18" fill="#f97316" opacity=".06" filter="url(#sHeat)"/>
+<!-- Glare streaks -->
+<line x1="180" y1="42" x2="172" y2="28" stroke="#fff" stroke-width="1.5" opacity=".4"><animate attributeName="opacity" values=".4;.1;.4" dur="2s" repeatCount="indefinite"/></line>
+<line x1="216" y1="48" x2="225" y2="35" stroke="#fff" stroke-width="1" opacity=".3"><animate attributeName="opacity" values=".3;.08;.3" dur="2.4s" begin=".5s" repeatCount="indefinite"/></line>
+</svg>`,
 
-    // ── CLOUDS (cloudy / winter / autumn) ───────────────────────────────────
-    cloud: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="cloudBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0c1624"/>
-          <stop offset="100%" stop-color="#162032"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#cloudBg)"/>
-      <!-- Moving cloud 1 -->
-      <g opacity=".75">
-        <animateTransform attributeName="transform" type="translate" from="-80 0" to="480 0" dur="18s" repeatCount="indefinite"/>
-        <ellipse cx="80" cy="45" rx="60" ry="22" fill="#1e3a5f"/>
-        <ellipse cx="110" cy="36" rx="40" ry="22" fill="#253d5e"/>
-        <ellipse cx="55" cy="42" rx="32" ry="18" fill="#1e3a5f"/>
-      </g>
-      <!-- Moving cloud 2 -->
-      <g opacity=".55">
-        <animateTransform attributeName="transform" type="translate" from="200 0" to="900 0" dur="25s" repeatCount="indefinite"/>
-        <ellipse cx="60" cy="70" rx="50" ry="18" fill="#172d47"/>
-        <ellipse cx="88" cy="62" rx="34" ry="18" fill="#1e3a5f"/>
-        <ellipse cx="38" cy="66" rx="28" ry="15" fill="#162d4a"/>
-      </g>
-      <!-- Static bg cloud -->
-      <ellipse cx="310" cy="35" rx="70" ry="24" fill="#1a3050" opacity=".5"/>
-      <ellipse cx="350" cy="27" rx="45" ry="20" fill="#1e3a5f" opacity=".4"/>
-      <!-- Stars (subtle) -->
-      ${Array.from({length:15}, (_,i) => {
-        const sx = 20 + (i*27)%360, sy = 8 + (i*11)%50;
-        return `<circle cx="${sx}" cy="${sy}" r="1" fill="#fff" opacity="${(0.2+i*0.04).toFixed(2)}">
-          <animate attributeName="opacity" values="${(0.2+i*0.04).toFixed(2)};0.05;${(0.2+i*0.04).toFixed(2)}" dur="${(2+i*0.3).toFixed(1)}s" repeatCount="indefinite"/>
-        </circle>`;
-      }).join('')}
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// CLOUD — overcast, layered drifting clouds, moon peeking, stars
+cloud: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <linearGradient id="cBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#060c18"/><stop offset="100%" stop-color="#0d1a2e"/></linearGradient>
+  <filter id="cGlow"><feGaussianBlur stdDeviation="6"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#cBg)"/>
+<!-- Stars (many, twinkling) -->
+${Array.from({length:35}, (_,i) => {
+  const sx=(i*11.3+i*i*0.17)%395, sy=(i*7.1+i*0.5)%85;
+  const r=i%5===0?1.6:i%3===0?1.1:0.7, dur=(1.8+i*0.11).toFixed(1), op=(0.15+i%6*0.1).toFixed(2);
+  return `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="${r}" fill="#e2e8f0" opacity="${op}"><animate attributeName="opacity" values="${op};0.03;${op}" dur="${dur}s" begin="${(i*0.09).toFixed(2)}s" repeatCount="indefinite"/></circle>`;
+}).join('')}
+<!-- Moon glow -->
+<circle cx="320" cy="42" r="28" fill="#fef3c7" opacity=".07" filter="url(#cGlow)"/>
+<circle cx="320" cy="42" r="20" fill="#fef3c7" opacity=".8"/>
+<circle cx="329" cy="37" r="16" fill="#060c18"/>
+<!-- Background dark clouds -->
+<ellipse cx="50"  cy="80" rx="80" ry="28" fill="#111d30" opacity=".9"/>
+<ellipse cx="160" cy="70" rx="100" ry="32" fill="#0f1b2e" opacity=".95"/>
+<ellipse cx="300" cy="78" rx="90" ry="30" fill="#111d30" opacity=".9"/>
+<!-- Moving cloud layer 1 (slow) -->
+<g opacity=".85">
+  <animateTransform attributeName="transform" type="translate" values="-60,0;380,0" dur="22s" repeatCount="indefinite"/>
+  <ellipse cx="80"  cy="55" rx="70" ry="26" fill="#182840"/>
+  <ellipse cx="125" cy="46" rx="52" ry="24" fill="#1c2e48"/>
+  <ellipse cx="55"  cy="52" rx="40" ry="20" fill="#14223a"/>
+  <ellipse cx="150" cy="58" rx="45" ry="20" fill="#182840"/>
+</g>
+<!-- Moving cloud layer 2 (medium) -->
+<g opacity=".7">
+  <animateTransform attributeName="transform" type="translate" values="260,0;760,0" dur="30s" repeatCount="indefinite"/>
+  <ellipse cx="40"  cy="70" rx="60" ry="22" fill="#1a2d42"/>
+  <ellipse cx="80"  cy="62" rx="44" ry="20" fill="#1e3348"/>
+  <ellipse cx="25"  cy="67" rx="32" ry="16" fill="#162640"/>
+</g>
+<!-- Moving cloud layer 3 (fast, foreground) -->
+<g opacity=".6">
+  <animateTransform attributeName="transform" type="translate" values="-120,0;420,0" dur="14s" repeatCount="indefinite"/>
+  <ellipse cx="90"  cy="95" rx="85" ry="24" fill="#203550"/>
+  <ellipse cx="145" cy="86" rx="60" ry="22" fill="#243a56"/>
+  <ellipse cx="60"  cy="90" rx="45" ry="18" fill="#1c3048"/>
+  <ellipse cx="185" cy="92" rx="50" ry="20" fill="#203550"/>
+</g>
+<!-- Foreground dark cloud (static, gives depth) -->
+<ellipse cx="200" cy="108" rx="220" ry="28" fill="#0a1525" opacity=".8"/>
+</svg>`,
 
-    // ── SUNRISE ─────────────────────────────────────────────────────────────
-    sunrise: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="sunriseBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0f172a"/>
-          <stop offset="60%" stop-color="#1e3a5f"/>
-          <stop offset="100%" stop-color="#7c2d12"/>
-        </linearGradient>
-        <radialGradient id="sunriseGlow" cx="50%" cy="90%" r="60%">
-          <stop offset="0%" stop-color="#fbbf24" stop-opacity=".5"/>
-          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
-        </radialGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#sunriseBg)"/>
-      <rect width="400" height="160" fill="url(#sunriseGlow)"/>
-      <!-- Rising sun (half disc at horizon) -->
-      <clipPath id="horizon"><rect x="0" y="108" width="400" height="52"/></clipPath>
-      <circle cx="200" cy="108" r="32" fill="#fef08a" opacity=".85">
-        <animate attributeName="cy" values="115;108;115" dur="5s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values=".85;.95;.85" dur="5s" repeatCount="indefinite"/>
-      </circle>
-      <!-- Horizon line -->
-      <line x1="0" y1="108" x2="400" y2="108" stroke="#fde68a" stroke-width="1" opacity=".3"/>
-      <!-- Birds -->
-      ${Array.from({length:5}, (_,i) => {
-        const bx=60+i*60, by=40+i*8;
-        return `<path d="M${bx},${by} Q${bx+6},${by-4} ${bx+12},${by}" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-linecap="round">
-          <animateTransform attributeName="transform" type="translate" from="0 0" to="${30+i*5} -5" dur="${(4+i*0.5).toFixed(1)}s" repeatCount="indefinite" additive="sum"/>
-        </path>`;
-      }).join('')}
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// SUNRISE — dawn sky gradient, rising sun, birds, horizon mist
+sunrise: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <linearGradient id="srBg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#0f172a"/>
+    <stop offset="40%" stop-color="#1e3a5f"/>
+    <stop offset="70%" stop-color="#7c3d12"/>
+    <stop offset="100%" stop-color="#c2410c"/>
+  </linearGradient>
+  <radialGradient id="srHalo" cx="50%" cy="85%" r="60%">
+    <stop offset="0%" stop-color="#fbbf24" stop-opacity=".6"/>
+    <stop offset="50%" stop-color="#f97316" stop-opacity=".2"/>
+    <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="srGlow"><feGaussianBlur stdDeviation="5"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#srBg)"/>
+<rect width="400" height="200" fill="url(#srHalo)"/>
+<!-- Horizon glow band -->
+<ellipse cx="200" cy="155" rx="280" ry="40" fill="#fbbf24" opacity=".18" filter="url(#srGlow)"/>
+<!-- Sun (rising from horizon) -->
+<circle cx="200" cy="155" r="36" fill="#fef08a" opacity=".9">
+  <animate attributeName="cy" values="158;152;158" dur="5s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values=".9;1;.9" dur="5s" repeatCount="indefinite"/>
+</circle>
+<circle cx="200" cy="155" r="22" fill="#fff" opacity=".7">
+  <animate attributeName="cy" values="158;152;158" dur="5s" repeatCount="indefinite"/>
+</circle>
+<!-- Sun rays (above horizon only) -->
+${Array.from({length:12}, (_,i) => {
+  const a=(i*30-90)*Math.PI/180; if(Math.sin(a)>0.3) return '';
+  const r1=40,r2=58+i%3*6;
+  const x1=(200+r1*Math.cos(a)).toFixed(1),y1=(155+r1*Math.sin(a)).toFixed(1);
+  const x2=(200+r2*Math.cos(a)).toFixed(1),y2=(155+r2*Math.sin(a)).toFixed(1);
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#fde68a" stroke-width="2" stroke-linecap="round" opacity="0.6"><animate attributeName="opacity" values="0.6;0.2;0.6" dur="3s" begin="${(i*0.24).toFixed(2)}s" repeatCount="indefinite"/></line>`;
+}).join('')}
+<!-- Horizon line -->
+<line x1="0" y1="155" x2="400" y2="155" stroke="#fde68a" stroke-width="0.8" opacity=".4"/>
+<!-- Mist layer -->
+<rect x="0" y="148" width="400" height="25" fill="#fbbf24" opacity=".05"/>
+<!-- Hills silhouette -->
+<path d="M0,165 Q60,148 120,158 Q180,168 240,152 Q300,136 360,155 Q385,162 400,158 L400,200 L0,200Z" fill="#0a1a10" opacity=".9"/>
+<!-- Stars (fading out) -->
+${Array.from({length:20}, (_,i) => {
+  const sx=(i*19+30)%380, sy=(i*9+5)%90;
+  return `<circle cx="${sx}" cy="${sy}" r="${i%4===0?1.2:0.7}" fill="#e2e8f0" opacity="${(0.1+i%5*0.06).toFixed(2)}"><animate attributeName="opacity" values="${(0.1+i%5*0.06).toFixed(2)};0.02;${(0.1+i%5*0.06).toFixed(2)}" dur="${(3+i*0.2).toFixed(1)}s" repeatCount="indefinite"/></circle>`;
+}).join('')}
+<!-- Birds (5, animated flying) -->
+${Array.from({length:5}, (_,i) => {
+  const by=55+i*12, spd=(8+i*1.5).toFixed(1);
+  const wing = `M0,0 Q5,-4 10,0 Q15,-4 20,0`;
+  return `<path d="${wing}" fill="none" stroke="#94a3b8" stroke-width="1.3" stroke-linecap="round" opacity="0.7">
+    <animateTransform attributeName="transform" type="translate" values="-30,${by};430,${by-18}" dur="${spd}s" begin="${(i*1.6).toFixed(1)}s" repeatCount="indefinite"/>
+  </path>`;
+}).join('')}
+</svg>`,
 
-    // ── SUNSET ──────────────────────────────────────────────────────────────
-    sunset: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="sunsetBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#1c0a00"/>
-          <stop offset="50%" stop-color="#7c2d12"/>
-          <stop offset="100%" stop-color="#b45309"/>
-        </linearGradient>
-        <radialGradient id="sunsetGlowR" cx="60%" cy="80%" r="50%">
-          <stop offset="0%" stop-color="#fb923c" stop-opacity=".45"/>
-          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
-        </radialGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#sunsetBg)"/>
-      <rect width="400" height="160" fill="url(#sunsetGlowR)"/>
-      <!-- Sun going down -->
-      <circle cx="240" cy="120" r="26" fill="#fef08a" opacity=".7">
-        <animate attributeName="cy" values="118;122;118" dur="4s" repeatCount="indefinite"/>
-      </circle>
-      <!-- Horizon reflection -->
-      <path d="M160,120 Q200,115 240,120 Q280,125 320,120" fill="none" stroke="#fde68a" stroke-width="1.5" opacity=".5"/>
-      <!-- Clouds silhouetted -->
-      <ellipse cx="100" cy="60" rx="60" ry="18" fill="#3b0f00" opacity=".7"/>
-      <ellipse cx="130" cy="52" rx="40" ry="18" fill="#3b0f00" opacity=".6"/>
-      <ellipse cx="320" cy="45" rx="50" ry="16" fill="#3b0f00" opacity=".5"/>
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// SUNSET — orange-red sky, large sun dipping, silhouettes, crepuscular rays
+sunset: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <linearGradient id="ssBg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#1c0800"/>
+    <stop offset="40%" stop-color="#7c2d12"/>
+    <stop offset="75%" stop-color="#c2410c"/>
+    <stop offset="100%" stop-color="#ea580c"/>
+  </linearGradient>
+  <radialGradient id="ssGlow" cx="62%" cy="75%" r="55%">
+    <stop offset="0%" stop-color="#fbbf24" stop-opacity=".55"/>
+    <stop offset="60%" stop-color="#f97316" stop-opacity=".2"/>
+    <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="ssBlur"><feGaussianBlur stdDeviation="6"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#ssBg)"/>
+<rect width="400" height="200" fill="url(#ssGlow)"/>
+<!-- Crepuscular rays (god rays) -->
+${Array.from({length:8}, (_,i) => {
+  const a = (-50+i*18)*Math.PI/180;
+  const x2 = (250+600*Math.cos(a)).toFixed(0), y2 = (148-600*Math.sin(a)).toFixed(0);
+  return `<line x1="250" y1="148" x2="${x2}" y2="${y2}" stroke="#fbbf24" stroke-width="${4+i%3*3}" stroke-linecap="round" opacity="${(0.03+i%3*0.015).toFixed(3)}"/>`;
+}).join('')}
+<!-- Sun glow aura -->
+<circle cx="250" cy="148" r="55" fill="#fef3c7" opacity=".14" filter="url(#ssBlur)"/>
+<!-- Sun disc (partially behind horizon) -->
+<clipPath id="ssHorizonClip"><rect x="0" y="0" width="400" height="148"/></clipPath>
+<circle cx="250" cy="148" r="34" fill="#fef08a" opacity=".88" clip-path="url(#ssHorizonClip)">
+  <animate attributeName="cy" values="146;150;146" dur="6s" repeatCount="indefinite"/>
+</circle>
+<!-- Horizon line -->
+<line x1="0" y1="148" x2="400" y2="148" stroke="#fbbf24" stroke-width="1" opacity=".35"/>
+<!-- Water/ground reflection -->
+<rect x="0" y="148" width="400" height="52" fill="#7c2d12" opacity=".5"/>
+<ellipse cx="250" cy="155" rx="28" ry="7" fill="#fef08a" opacity=".2"/>
+<!-- Cloud silhouettes -->
+<ellipse cx="90"  cy="62"  rx="72" ry="22" fill="#3b0f00" opacity=".85"/>
+<ellipse cx="130" cy="54"  rx="50" ry="20" fill="#2d0900" opacity=".8"/>
+<ellipse cx="68"  cy="60"  rx="38" ry="16" fill="#3b0f00" opacity=".75"/>
+<ellipse cx="330" cy="50"  rx="65" ry="20" fill="#2d0900" opacity=".8"/>
+<ellipse cx="360" cy="42"  rx="44" ry="18" fill="#3b0f00" opacity=".7"/>
+<!-- Ground silhouette with trees -->
+<path d="M0,168 Q30,160 60,168 Q90,175 120,165 Q150,155 180,163 Q210,170 240,162 Q270,154 300,164 Q330,172 360,162 Q385,154 400,160 L400,200 L0,200Z" fill="#1c0800" opacity=".95"/>
+<line x1="340" y1="160" x2="340" y2="140" stroke="#1c0800" stroke-width="3"/>
+<path d="M330,145 Q340,130 350,145Z" fill="#1c0800"/>
+<line x1="360" y1="162" x2="360" y2="136" stroke="#1c0800" stroke-width="3"/>
+<path d="M349,140 Q360,122 371,140Z" fill="#1c0800"/>
+</svg>`,
 
-    // ── NIGHT ────────────────────────────────────────────────────────────────
-    night: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="nightBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#020617"/>
-          <stop offset="100%" stop-color="#0f0a1e"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#nightBg)"/>
-      <!-- Stars -->
-      ${Array.from({length:40}, (_,i) => {
-        const sx = 5+(i*9.7+i*i*0.11)%390, sy = 5+(i*7.3+i*0.4)%90;
-        const r = i%5===0?1.5:i%3===0?1.2:0.8;
-        const dur = (2+i*0.15).toFixed(1);
-        return `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="${r}" fill="#fff" opacity="${(0.3+i%5*0.12).toFixed(2)}">
-          <animate attributeName="opacity" values="${(0.3+i%5*0.12).toFixed(2)};0.05;${(0.3+i%5*0.12).toFixed(2)}" dur="${dur}s" begin="${(i*0.08).toFixed(2)}s" repeatCount="indefinite"/>
-        </circle>`;
-      }).join('')}
-      <!-- Crescent moon -->
-      <circle cx="320" cy="38" r="18" fill="#fef3c7" opacity=".85"/>
-      <circle cx="328" cy="34" r="15" fill="#020617"/>
-      <!-- City skyline silhouette -->
-      <rect x="0"   y="125" width="18"  height="35" fill="#0a0a1a"/>
-      <rect x="22"  y="110" width="22"  height="50" fill="#0a0a1a"/>
-      <rect x="48"  y="118" width="15"  height="42" fill="#0a0a1a"/>
-      <rect x="68"  y="100" width="28"  height="60" fill="#0a0a1a"/>
-      <rect x="100" y="115" width="20"  height="45" fill="#0a0a1a"/>
-      <rect x="125" y="105" width="25"  height="55" fill="#0a0a1a"/>
-      <rect x="155" y="120" width="18"  height="40" fill="#0a0a1a"/>
-      <rect x="178" y="108" width="30"  height="52" fill="#0a0a1a"/>
-      <rect x="215" y="118" width="22"  height="42" fill="#0a0a1a"/>
-      <rect x="245" y="103" width="26"  height="57" fill="#0a0a1a"/>
-      <rect x="278" y="115" width="18"  height="45" fill="#0a0a1a"/>
-      <rect x="300" y="122" width="22"  height="38" fill="#0a0a1a"/>
-      <rect x="328" y="112" width="28"  height="48" fill="#0a0a1a"/>
-      <rect x="360" y="118" width="20"  height="42" fill="#0a0a1a"/>
-      <rect x="382" y="125" width="18"  height="35" fill="#0a0a1a"/>
-      <!-- Lit windows -->
-      ${Array.from({length:18}, (_,i) => {
-        const wx = 25+i*21, wy = 108+Math.floor(i/3)*12;
-        return `<rect x="${wx}" y="${wy}" width="4" height="5" fill="#fef08a" opacity="${i%3===0?'0.7':i%3===1?'0.4':'0'}"/>`;
-      }).join('')}
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// NIGHT — deep sky, stars, crescent moon, city skyline, glowing windows
+night: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <linearGradient id="nBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#01030e"/><stop offset="100%" stop-color="#050a1a"/></linearGradient>
+  <radialGradient id="nMoonGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fef3c7" stop-opacity=".15"/><stop offset="100%" stop-color="#fef3c7" stop-opacity="0"/></radialGradient>
+  <filter id="nStarGlow"><feGaussianBlur stdDeviation="1"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#nBg)"/>
+<!-- Milky way band (subtle) -->
+<ellipse cx="200" cy="60" rx="250" ry="40" fill="#1a2040" opacity=".18" transform="rotate(-25,200,60)"/>
+<!-- Stars — 55 at various sizes -->
+${Array.from({length:55}, (_,i) => {
+  const sx=(i*7.3+i*i*0.13+5)%395, sy=(i*5.7+i*0.4)%105;
+  const r=i%8===0?1.8:i%5===0?1.3:i%3===0?1.0:0.65;
+  const op=(0.25+i%7*0.1).toFixed(2), dur=(1.5+i*0.09).toFixed(1);
+  return `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="${r}" fill="#f0f4ff" opacity="${op}"><animate attributeName="opacity" values="${op};0.04;${op}" dur="${dur}s" begin="${(i*0.07).toFixed(2)}s" repeatCount="indefinite"/></circle>`;
+}).join('')}
+<!-- Moon glow aura -->
+<circle cx="310" cy="40" r="38" fill="url(#nMoonGlow)" filter="url(#nStarGlow)"/>
+<!-- Crescent moon -->
+<circle cx="310" cy="40" r="22" fill="#fef3c7" opacity=".92"/>
+<circle cx="320" cy="35" r="18" fill="#01030e"/>
+<!-- Shooting star -->
+<line x1="100" y1="25" x2="70" y2="40" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0">
+  <animate attributeName="opacity" values="0;0;0;0;0;0;0;0.9;0.5;0;0;0;0;0;0" dur="6s" begin="2s" repeatCount="indefinite"/>
+  <animateTransform attributeName="transform" type="translate" values="0,0;80,-15;80,-15" dur="6s" begin="2s" repeatCount="indefinite"/>
+</line>
+<!-- City skyline — varied heights -->
+<rect x="0"   y="135" width="20" height="65" fill="#080d1c"/>
+<rect x="5"   y="128" width="12" height="72" fill="#0a1020"/>
+<rect x="22"  y="118" width="24" height="82" fill="#080d1c"/>
+<rect x="30"  y="110" width="14" height="90" fill="#0c1220"/>
+<rect x="48"  y="125" width="18" height="75" fill="#080d1c"/>
+<rect x="50"  y="108" width="14" height="92" fill="#0a0f1c"/>
+<rect x="68"  y="98"  width="28" height="102" fill="#080d1c"/>
+<rect x="75"  y="90"  width="16" height="110" fill="#0c1220"/>
+<rect x="100" y="112" width="22" height="88" fill="#080d1c"/>
+<rect x="106" y="104" width="14" height="96" fill="#0a0f1c"/>
+<rect x="126" y="95"  width="26" height="105" fill="#080d1c"/>
+<rect x="133" y="88"  width="16" height="112" fill="#0c1220"/>
+<rect x="156" y="118" width="20" height="82" fill="#080d1c"/>
+<rect x="160" y="108" width="14" height="92" fill="#0a0f1c"/>
+<rect x="180" y="92"  width="30" height="108" fill="#080d1c"/>
+<rect x="188" y="84"  width="18" height="116" fill="#0c1220"/>
+<rect x="215" y="115" width="22" height="85" fill="#080d1c"/>
+<rect x="222" y="105" width="14" height="95" fill="#0a0f1c"/>
+<rect x="242" y="100" width="26" height="100" fill="#080d1c"/>
+<rect x="248" y="92"  width="16" height="108" fill="#0c1220"/>
+<rect x="272" y="112" width="24" height="88" fill="#080d1c"/>
+<rect x="278" y="104" width="16" height="96" fill="#0a0f1c"/>
+<rect x="300" y="120" width="22" height="80" fill="#080d1c"/>
+<rect x="306" y="110" width="14" height="90" fill="#0c1220"/>
+<rect x="328" y="105" width="28" height="95" fill="#080d1c"/>
+<rect x="335" y="96"  width="18" height="104" fill="#0a0f1c"/>
+<rect x="360" y="118" width="20" height="82" fill="#080d1c"/>
+<rect x="365" y="108" width="14" height="92" fill="#0c1220"/>
+<rect x="382" y="130" width="18" height="70" fill="#080d1c"/>
+<!-- Lit windows (golden warm lights) -->
+${Array.from({length:40}, (_,i) => {
+  const bases = [70,79,90,105,130,98,115,122,95,130];
+  const startY = bases[i%10] || 110;
+  const wx = 10+i*9.8, wy = startY + Math.floor(i/3)*12;
+  if(wy > 165) return '';
+  const on = i%5!==0;
+  if(!on) return '';
+  const wc = i%4===0?'#fde68a':i%4===1?'#fed7aa':i%4===2?'#fef9c3':'#fef3c7';
+  const wop = (0.4+i%5*0.1).toFixed(1);
+  return `<rect x="${wx.toFixed(0)}" y="${wy.toFixed(0)}" width="5" height="6" rx="1" fill="${wc}" opacity="${wop}"><animate attributeName="opacity" values="${wop};${(parseFloat(wop)*0.3).toFixed(1)};${wop}" dur="${(4+i*0.3).toFixed(1)}s" begin="${(i*0.15).toFixed(2)}s" repeatCount="indefinite"/></rect>`;
+}).join('')}
+<!-- Street glow (at base) -->
+<rect x="0" y="166" width="400" height="4" fill="#fbbf24" opacity=".04"/>
+</svg>`,
 
-    // ── DIWALI ───────────────────────────────────────────────────────────────
-    diwali: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="diwaliBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#1c0a00"/>
-          <stop offset="100%" stop-color="#431407"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#diwaliBg)"/>
-      <!-- Firework bursts — 6 at different positions and timings -->
-      ${[
-        {cx:80,  cy:45, r:30, color:'#fbbf24', dur:3.0, del:0   },
-        {cx:200, cy:30, r:35, color:'#f472b6', dur:3.2, del:1.1 },
-        {cx:320, cy:55, r:28, color:'#34d399', dur:2.8, del:0.6 },
-        {cx:140, cy:70, r:24, color:'#fb923c', dur:3.4, del:1.8 },
-        {cx:270, cy:80, r:22, color:'#818cf8', dur:3.0, del:2.3 },
-        {cx:60,  cy:90, r:18, color:'#f9a8d4', dur:2.6, del:0.3 },
-      ].map(fw => {
-        const rays = Array.from({length:12}, (_,i) => {
-          const angle = i*30*Math.PI/180;
-          return `<line x1="${fw.cx}" y1="${fw.cy}" x2="${(fw.cx+fw.r*Math.cos(angle)).toFixed(1)}" y2="${(fw.cy+fw.r*Math.sin(angle)).toFixed(1)}" stroke="${fw.color}" stroke-width="2" stroke-linecap="round" opacity="0">
-            <animate attributeName="opacity" values="0;0;0.9;0.6;0;0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
-            <animate attributeName="x2" values="${fw.cx};${(fw.cx+fw.r*Math.cos(angle)).toFixed(1)}" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
-          </line>`;
-        }).join('');
-        return `<g>${rays}</g>`;
-      }).join('')}
-      <!-- Diyas (small oil lamps) at bottom -->
-      ${Array.from({length:7}, (_,i) => {
-        const dx = 28 + i*54;
-        return `<g>
-          <ellipse cx="${dx}" cy="148" rx="12" ry="5" fill="#92400e"/>
-          <ellipse cx="${dx}" cy="146" rx="10" ry="4" fill="#b45309"/>
-          <ellipse cx="${dx}" cy="144" rx="8" ry="3" fill="#fbbf24" opacity=".8"/>
-          <!-- Flame -->
-          <ellipse cx="${dx}" cy="138" rx="3" ry="6" fill="#fef08a" opacity="0.85">
-            <animate attributeName="ry" values="6;8;5;7;6" dur="0.8s" begin="${(i*0.12).toFixed(2)}s" repeatCount="indefinite"/>
-            <animate attributeName="cx" values="${dx};${dx+1};${dx-1};${dx}" dur="0.8s" begin="${(i*0.12).toFixed(2)}s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values="0.85;0.95;0.8;0.9;0.85" dur="0.8s" begin="${(i*0.12).toFixed(2)}s" repeatCount="indefinite"/>
-          </ellipse>
-          <!-- Inner flame -->
-          <ellipse cx="${dx}" cy="140" rx="1.5" ry="3" fill="#fb923c" opacity="0.7">
-            <animate attributeName="ry" values="3;4;2.5;3.5;3" dur="0.8s" begin="${(i*0.12).toFixed(2)}s" repeatCount="indefinite"/>
-          </ellipse>
-        </g>`;
-      }).join('')}
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// DIWALI — deep night, many firework bursts, 8 flickering diyas, sparkle trails
+diwali: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <linearGradient id="dwBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a0400"/><stop offset="100%" stop-color="#2d0a00"/></linearGradient>
+  <filter id="dwGlow"><feGaussianBlur stdDeviation="3"/></filter>
+  <filter id="dwGlow2"><feGaussianBlur stdDeviation="7"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#dwBg)"/>
+<!-- Ambient warm sky glow -->
+<ellipse cx="200" cy="200" rx="300" ry="80" fill="#c2410c" opacity=".12" filter="url(#dwGlow2)"/>
+<!-- Stars -->
+${Array.from({length:30}, (_,i) => {
+  const sx=(i*13+i*i*0.1)%395, sy=(i*8+3)%90;
+  return `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="${i%4===0?1.3:0.7}" fill="#fef3c7" opacity="${(0.15+i%5*0.08).toFixed(2)}"><animate attributeName="opacity" values="${(0.15+i%5*0.08).toFixed(2)};0.03;${(0.15+i%5*0.08).toFixed(2)}" dur="${(2+i*0.14).toFixed(1)}s" repeatCount="indefinite"/></circle>`;
+}).join('')}
+<!-- Firework bursts (8 bursts at staggered times) -->
+${[
+  {cx:60,  cy:55, r:38, c:'#fbbf24', c2:'#fde68a', dur:2.8, del:0.0, rays:14},
+  {cx:180, cy:35, r:44, c:'#f472b6', c2:'#fbcfe8', dur:3.0, del:1.0, rays:16},
+  {cx:310, cy:52, r:36, c:'#34d399', c2:'#a7f3d0', dur:2.7, del:0.5, rays:12},
+  {cx:120, cy:80, r:28, c:'#fb923c', c2:'#fed7aa', dur:2.5, del:1.8, rays:12},
+  {cx:265, cy:78, r:32, c:'#818cf8', c2:'#c7d2fe', dur:2.9, del:2.3, rays:14},
+  {cx:50,  cy:100,r:22, c:'#f9a8d4', c2:'#fce7f3', dur:2.4, del:0.8, rays:10},
+  {cx:360, cy:90, r:26, c:'#67e8f9', c2:'#cffafe', dur:2.6, del:3.1, rays:12},
+  {cx:215, cy:100,r:20, c:'#fbbf24', c2:'#fef08a', dur:2.3, del:1.5, rays:10},
+].map(fw => {
+  const outRays = Array.from({length:fw.rays}, (_,i) => {
+    const a=i*(360/fw.rays)*Math.PI/180;
+    const x2=(fw.cx+fw.r*Math.cos(a)).toFixed(1), y2=(fw.cy+fw.r*Math.sin(a)).toFixed(1);
+    const x3=(fw.cx+(fw.r+12)*Math.cos(a)).toFixed(1), y3=(fw.cy+(fw.r+12)*Math.sin(a)).toFixed(1);
+    return `<line x1="${fw.cx}" y1="${fw.cy}" x2="${x2}" y2="${y2}" stroke="${fw.c}" stroke-width="2.5" stroke-linecap="round" opacity="0">
+      <animate attributeName="opacity" values="0;0;0.95;0.7;0.3;0;0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+    </line>
+    <line x1="${x2}" y1="${y2}" x2="${x3}" y2="${y3}" stroke="${fw.c2}" stroke-width="1.5" stroke-linecap="round" opacity="0">
+      <animate attributeName="opacity" values="0;0;0;0.7;0.9;0.4;0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+    </line>`;
+  }).join('');
+  // glow blob
+  const glow = `<circle cx="${fw.cx}" cy="${fw.cy}" r="${fw.r*0.6}" fill="${fw.c}" opacity="0" filter="url(#dwGlow)">
+    <animate attributeName="opacity" values="0;0;0.4;0.2;0;0;0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="${fw.r*0.3};${fw.r*0.3};${fw.r*0.8};${fw.r*1.1};0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+  </circle>`;
+  return `<g>${glow}${outRays}</g>`;
+}).join('')}
+<!-- Sparkle dots (embers) -->
+${Array.from({length:20}, (_,i) => {
+  const sx=(i*20+10)%380, sy=30+i%7*12;
+  return `<circle cx="${sx}" cy="${sy}" r="1.2" fill="#fbbf24" opacity="0"><animate attributeName="opacity" values="0;0;0;0.8;0.4;0;0;0" dur="${(2+i*0.4).toFixed(1)}s" begin="${(i*0.22).toFixed(2)}s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="translate" from="0,0" to="${(i%3-1)*8},25" dur="${(2+i*0.4).toFixed(1)}s" begin="${(i*0.22).toFixed(2)}s" repeatCount="indefinite"/></circle>`;
+}).join('')}
+<!-- String of lights along top -->
+${Array.from({length:12}, (_,i) => {
+  const lx=16+i*34, colors=['#fbbf24','#f472b6','#34d399','#818cf8','#fb923c','#67e8f9'];
+  return `<circle cx="${lx}" cy="8" r="4.5" fill="${colors[i%6]}" opacity="0.7"><animate attributeName="opacity" values="0.7;0.3;0.7" dur="${(0.8+i*0.12).toFixed(2)}s" repeatCount="indefinite"/></circle>
+  <line x1="${lx-17}" y1="6" x2="${lx}" y2="8" stroke="#555" stroke-width="0.8" opacity=".5"/>`;
+}).join('')}
+<!-- 8 Diyas at bottom -->
+${Array.from({length:8}, (_,i) => {
+  const dx=22+i*52, dy=182, del=(i*0.18).toFixed(2);
+  return `<g>
+    <ellipse cx="${dx}" cy="${dy+6}" rx="14" ry="5" fill="#78350f"/>
+    <ellipse cx="${dx}" cy="${dy+4}" rx="12" ry="4.5" fill="#92400e"/>
+    <ellipse cx="${dx}" cy="${dy+2}" rx="10" ry="3.5" fill="#b45309" opacity=".9"/>
+    <ellipse cx="${dx}" cy="${dy}"   rx="8"  ry="2.5" fill="#d97706" opacity=".8"/>
+    <!-- Outer flame -->
+    <ellipse cx="${dx}" cy="${dy-8}" rx="4" ry="8" fill="#fef08a" opacity="0.85">
+      <animate attributeName="ry" values="8;11;7;9;8" dur="0.9s" begin="${del}s" repeatCount="indefinite"/>
+      <animate attributeName="rx" values="4;3;5;3.5;4" dur="0.9s" begin="${del}s" repeatCount="indefinite"/>
+      <animate attributeName="cx" values="${dx};${dx+1.5};${dx-1};${dx+0.5};${dx}" dur="0.9s" begin="${del}s" repeatCount="indefinite"/>
+    </ellipse>
+    <!-- Inner flame -->
+    <ellipse cx="${dx}" cy="${dy-6}" rx="2" ry="5" fill="#fb923c" opacity="0.8">
+      <animate attributeName="ry" values="5;7;4;6;5" dur="0.9s" begin="${del}s" repeatCount="indefinite"/>
+    </ellipse>
+    <!-- Core -->
+    <ellipse cx="${dx}" cy="${dy-5}" rx="1" ry="2.5" fill="#fff7ed" opacity="0.7"/>
+    <!-- Flame glow -->
+    <ellipse cx="${dx}" cy="${dy-6}" rx="7" ry="10" fill="#fbbf24" opacity="0.12" filter="url(#dwGlow)">
+      <animate attributeName="opacity" values="0.12;0.2;0.1;0.18;0.12" dur="0.9s" begin="${del}s" repeatCount="indefinite"/>
+    </ellipse>
+  </g>`;
+}).join('')}
+</svg>`,
 
-    // ── HOLI ─────────────────────────────────────────────────────────────────
-    holi: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="holiBg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#1e0a2e"/>
-          <stop offset="100%" stop-color="#2e0a1e"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#holiBg)"/>
-      <!-- Colour splashes — watercolour blobs -->
-      ${[
-        {cx:60,  cy:55, rx:40, ry:28, fill:'#f472b6', op:.35, dur:4,   del:0   },
-        {cx:160, cy:35, rx:55, ry:30, fill:'#fb923c', op:.3,  dur:5,   del:1   },
-        {cx:280, cy:60, rx:48, ry:32, fill:'#34d399', op:.35, dur:4.5, del:0.7 },
-        {cx:360, cy:30, rx:38, ry:24, fill:'#818cf8', op:.3,  dur:3.8, del:1.5 },
-        {cx:100, cy:100, rx:50, ry:28, fill:'#fbbf24', op:.3, dur:5.2, del:0.4 },
-        {cx:240, cy:110, rx:55, ry:26, fill:'#e879f9', op:.3, dur:4.2, del:1.2 },
-        {cx:360, cy:120, rx:38, ry:22, fill:'#67e8f9', op:.25,dur:3.5, del:0.9 },
-      ].map(b => `<ellipse cx="${b.cx}" cy="${b.cy}" rx="${b.rx}" ry="${b.ry}" fill="${b.fill}" opacity="${b.op}">
-        <animate attributeName="opacity" values="${b.op};${b.op*1.4};${b.op}" dur="${b.dur}s" begin="${b.del}s" repeatCount="indefinite"/>
-        <animate attributeName="rx" values="${b.rx};${b.rx+6};${b.rx}" dur="${b.dur}s" begin="${b.del}s" repeatCount="indefinite"/>
-      </ellipse>`).join('')}
-      <!-- Water balloon projectiles -->
-      ${Array.from({length:6}, (_,i) => {
-        const startX = i*70, startY = 30+i%3*20;
-        const endX = startX+80, endY = 120+i%2*20;
-        const colors = ['#f472b6','#fb923c','#34d399','#818cf8','#fbbf24','#67e8f9'];
-        return `<g>
-          <circle r="8" fill="${colors[i]}" opacity=".8">
-            <animateMotion path="M${startX},${startY} Q${(startX+endX)/2},${startY-40} ${endX},${endY}" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values=".8;.8;.8;.4;0;0;0;0" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
-          </circle>
-          <!-- Splash on impact -->
-          <circle r="18" fill="${colors[i]}" opacity="0">
-            <animate attributeName="cx" values="${endX};" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
-            <animate attributeName="cy" values="${endY};" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
-            <animate attributeName="r" values="0;0;0;0;0;22;0" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values="0;0;0;0;0;0.5;0" dur="${(1.5+i*0.4).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
-          </circle>
-        </g>`;
-      }).join('')}
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// HOLI — colourful splashes, flying water balloons, powder clouds, vivid
+holi: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <linearGradient id="hlBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a0030"/><stop offset="100%" stop-color="#2e001a"/></linearGradient>
+  <filter id="hlBlur"><feGaussianBlur stdDeviation="8"/></filter>
+  <filter id="hlMed"><feGaussianBlur stdDeviation="4"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#hlBg)"/>
+<!-- Big colour powder cloud splashes (blurred blobs) -->
+<ellipse cx="60"  cy="80"  rx="70" ry="45" fill="#f472b6" opacity=".45" filter="url(#hlBlur)"/>
+<ellipse cx="200" cy="55"  rx="80" ry="50" fill="#fb923c" opacity=".4"  filter="url(#hlBlur)"/>
+<ellipse cx="340" cy="90"  rx="65" ry="42" fill="#34d399" opacity=".45" filter="url(#hlBlur)"/>
+<ellipse cx="100" cy="150" rx="75" ry="40" fill="#fbbf24" opacity=".4"  filter="url(#hlBlur)"/>
+<ellipse cx="280" cy="145" rx="70" ry="38" fill="#818cf8" opacity=".42" filter="url(#hlBlur)"/>
+<ellipse cx="380" cy="150" rx="55" ry="35" fill="#e879f9" opacity=".4"  filter="url(#hlBlur)"/>
+<ellipse cx="180" cy="160" rx="60" ry="35" fill="#67e8f9" opacity=".35" filter="url(#hlBlur)"/>
+<!-- Sharpened colour blobs on top -->
+<ellipse cx="55"  cy="78"  rx="40" ry="28" fill="#f472b6" opacity=".5" filter="url(#hlMed)"/>
+<ellipse cx="195" cy="52"  rx="48" ry="32" fill="#fb923c" opacity=".45" filter="url(#hlMed)"/>
+<ellipse cx="335" cy="88"  rx="38" ry="26" fill="#34d399" opacity=".5" filter="url(#hlMed)"/>
+<ellipse cx="280" cy="142" rx="42" ry="26" fill="#818cf8" opacity=".45" filter="url(#hlMed)"/>
+<ellipse cx="375" cy="148" rx="35" ry="24" fill="#e879f9" opacity=".45" filter="url(#hlMed)"/>
+<!-- Pulsing colour clouds -->
+${[
+  {cx:60, cy:80, fill:'#f472b6'},{cx:200,cy:55,fill:'#fb923c'},{cx:340,cy:90,fill:'#34d399'},
+  {cx:100,cy:150,fill:'#fbbf24'},{cx:280,cy:145,fill:'#818cf8'}
+].map((b,i) => `<ellipse cx="${b.cx}" cy="${b.cy}" rx="20" ry="14" fill="${b.fill}" opacity=".65">
+  <animate attributeName="rx" values="20;28;20" dur="${(3+i*0.5).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values=".65;.9;.65" dur="${(3+i*0.5).toFixed(1)}s" begin="${(i*0.6).toFixed(1)}s" repeatCount="indefinite"/>
+</ellipse>`).join('')}
+<!-- Water balloons (6 flying) -->
+${[
+  {sx:20,  sy:50,  ex:140, ey:140, c:'#f472b6', dur:1.6, del:0   },
+  {sx:350, sy:40,  ex:200, ey:160, c:'#34d399', dur:1.8, del:0.7 },
+  {sx:100, sy:20,  ex:280, ey:130, c:'#fbbf24', dur:2.0, del:1.3 },
+  {sx:260, sy:30,  ex:80,  ey:150, c:'#818cf8', dur:1.7, del:0.4 },
+  {sx:380, sy:60,  ex:160, ey:170, c:'#fb923c', dur:1.9, del:1.0 },
+  {sx:50,  sy:30,  ex:330, ey:145, c:'#67e8f9', dur:2.1, del:1.6 },
+].map((b,i) => {
+  const mx=(b.sx+b.ex)/2, my=Math.min(b.sy,b.ey)-50;
+  const path=`M${b.sx},${b.sy} Q${mx},${my} ${b.ex},${b.ey}`;
+  return `<g>
+    <circle r="9" fill="${b.c}" opacity=".85">
+      <animateMotion path="${path}" dur="${b.dur}s" begin="${b.del}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values=".85;.85;.85;.85;.85;0;0" dur="${b.dur}s" begin="${b.del}s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Knot on balloon -->
+    <circle r="2.5" fill="${b.c}" opacity=".6">
+      <animateMotion path="${path}" dur="${b.dur}s" begin="${b.del}s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="translate" from="0,9" to="0,9" dur="${b.dur}s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Splash on impact -->
+    <circle r="0" fill="${b.c}" opacity="0" cx="${b.ex}" cy="${b.ey}">
+      <animate attributeName="r" values="0;0;0;0;0;22;32;0" dur="${b.dur}s" begin="${b.del}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;0;0;0;0;0.7;0.3;0" dur="${b.dur}s" begin="${b.del}s" repeatCount="indefinite"/>
+    </circle>
+  </g>`;
+}).join('')}
+<!-- Powder dust particles floating -->
+${Array.from({length:22}, (_,i) => {
+  const px=(i*18+5)%390, py=20+i%8*22;
+  const colors=['#f472b6','#fb923c','#34d399','#818cf8','#fbbf24','#67e8f9','#e879f9'];
+  return `<circle cx="${px}" cy="${py}" r="${1+i%3}" fill="${colors[i%7]}" opacity="${(0.4+i%5*0.08).toFixed(1)}">
+    <animate attributeName="cy" values="${py};${py-20};${py}" dur="${(3+i*0.2).toFixed(1)}s" begin="${(i*0.18).toFixed(2)}s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="${(0.4+i%5*0.08).toFixed(1)};0.1;${(0.4+i%5*0.08).toFixed(1)}" dur="${(3+i*0.2).toFixed(1)}s" begin="${(i*0.18).toFixed(2)}s" repeatCount="indefinite"/>
+  </circle>`;
+}).join('')}
+</svg>`,
 
-    // ── EID ──────────────────────────────────────────────────────────────────
-    eid: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="eidBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#020617"/>
-          <stop offset="100%" stop-color="#0c1a2e"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#eidBg)"/>
-      <!-- Stars -->
-      ${Array.from({length:25}, (_,i) => {
-        const sx=(i*16.3)%390, sy=(i*9.7)%80;
-        return `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="${i%4===0?1.5:0.8}" fill="#fef3c7" opacity="${(0.3+i%5*0.1).toFixed(1)}">
-          <animate attributeName="opacity" values="${(0.3+i%5*0.1).toFixed(1)};0.05;${(0.3+i%5*0.1).toFixed(1)}" dur="${(2+i*0.12).toFixed(1)}s" repeatCount="indefinite"/>
-        </circle>`;
-      }).join('')}
-      <!-- Crescent moon large -->
-      <circle cx="70" cy="50" r="30" fill="#fef3c7" opacity=".85"/>
-      <circle cx="83" cy="44" r="25" fill="#020617"/>
-      <!-- Star near moon -->
-      <polygon points="95,30 97,36 103,36 98,40 100,46 95,42 90,46 92,40 87,36 93,36" fill="#fef3c7" opacity=".8"/>
-      <!-- Lanterns -->
-      ${Array.from({length:4}, (_,i) => {
-        const lx = 160+i*65, ly = 40;
-        const colors = ['#f59e0b','#ec4899','#10b981','#8b5cf6'];
-        return `<g>
-          <line x1="${lx}" y1="0" x2="${lx}" y2="${ly-15}" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
-          <rect x="${lx-10}" y="${ly-15}" width="20" height="30" rx="3" fill="${colors[i]}" opacity=".7">
-            <animate attributeName="opacity" values=".7;.9;.7" dur="${(1.5+i*0.3).toFixed(1)}s" repeatCount="indefinite"/>
-          </rect>
-          <!-- Glow -->
-          <ellipse cx="${lx}" cy="${ly}" rx="14" ry="20" fill="${colors[i]}" opacity=".15">
-            <animate attributeName="opacity" values=".15;.25;.15" dur="${(1.5+i*0.3).toFixed(1)}s" repeatCount="indefinite"/>
-          </ellipse>
-          <line x1="${lx}" y1="${ly+15}" x2="${lx}" y2="${ly+25}" stroke="${colors[i]}" stroke-width="1" opacity=".6"/>
-        </g>`;
-      }).join('')}
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// EID — deep night, crescent moon, lanterns, stars, mosque silhouette
+eid: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <linearGradient id="eBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#010511"/><stop offset="100%" stop-color="#060d1e"/></linearGradient>
+  <filter id="eGlow"><feGaussianBlur stdDeviation="5"/></filter>
+  <filter id="eMoonGlow"><feGaussianBlur stdDeviation="8"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#eBg)"/>
+<!-- Stars — many -->
+${Array.from({length:45}, (_,i) => {
+  const sx=(i*9.1+i*i*0.12+4)%394, sy=(i*6.3+i*0.5)%100;
+  const r=i%7===0?1.8:i%4===0?1.3:0.8, op=(0.2+i%7*0.08).toFixed(2), dur=(1.8+i*0.1).toFixed(1);
+  return `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="${r}" fill="#fef3c7" opacity="${op}"><animate attributeName="opacity" values="${op};0.04;${op}" dur="${dur}s" begin="${(i*0.08).toFixed(2)}s" repeatCount="indefinite"/></circle>`;
+}).join('')}
+<!-- Moon glow aura -->
+<circle cx="80" cy="45" r="50" fill="#fef3c7" opacity=".1" filter="url(#eMoonGlow)"/>
+<!-- Crescent moon (large, detailed) -->
+<circle cx="80" cy="45" r="28" fill="#fef3c7" opacity=".92"/>
+<circle cx="93" cy="39" r="22" fill="#010511"/>
+<!-- Moon surface detail -->
+<circle cx="70" cy="38" r="3" fill="#fde68a" opacity=".15"/>
+<circle cx="75" cy="52" r="2" fill="#fde68a" opacity=".12"/>
+<!-- Star near moon -->
+<polygon points="118,28 120,35 127,35 122,40 124,47 118,43 112,47 114,40 109,35 116,35" fill="#fef3c7" opacity=".85">
+  <animate attributeName="opacity" values=".85;.4;.85" dur="2s" repeatCount="indefinite"/>
+</polygon>
+<!-- Hanging lanterns (5) -->
+${Array.from({length:5}, (_,i) => {
+  const lx=170+i*50, colors=['#f59e0b','#ec4899','#10b981','#8b5cf6','#f97316'];
+  const c=colors[i], swing=(i%2===0?1:-1);
+  return `<g>
+    <!-- String -->
+    <line x1="${lx}" y1="0" x2="${lx}" y2="22" stroke="#444" stroke-width="0.8" opacity=".6"/>
+    <!-- Lantern body -->
+    <g transform="translate(${lx}, 22)">
+      <animateTransform attributeName="transform" type="rotate" values="0 0 0;${swing*3} 0 -22;0 0 0;${-swing*2} 0 -22;0 0 0" dur="${(2.5+i*0.4).toFixed(1)}s" additive="sum" repeatCount="indefinite"/>
+      <ellipse cx="0" cy="0" rx="2" ry="2" fill="#888"/>
+      <path d="M-9,2 Q-11,16 0,20 Q11,16 9,2 Z" fill="${c}" opacity=".85"/>
+      <path d="M-9,2 Q-6,-4 0,-5 Q6,-4 9,2" fill="${c}" opacity=".7"/>
+      <ellipse cx="0" cy="18" rx="5" ry="2" fill="${c}" opacity=".6"/>
+      <!-- Glow -->
+      <ellipse cx="0" cy="10" rx="12" ry="16" fill="${c}" opacity=".18" filter="url(#eGlow)">
+        <animate attributeName="opacity" values=".18;.28;.18" dur="${(1.6+i*0.3).toFixed(1)}s" repeatCount="indefinite"/>
+      </ellipse>
+      <!-- Tassel -->
+      <line x1="0" y1="20" x2="-2" y2="28" stroke="${c}" stroke-width="1" opacity=".6"/>
+      <line x1="0" y1="20" x2="0"  y2="29" stroke="${c}" stroke-width="1" opacity=".6"/>
+      <line x1="0" y1="20" x2="2"  y2="28" stroke="${c}" stroke-width="1" opacity=".6"/>
+    </g>
+  </g>`;
+}).join('')}
+<!-- Mosque silhouette -->
+<g fill="#0a1020">
+  <!-- Main dome -->
+  <path d="M140,160 Q140,128 175,125 Q210,122 210,160Z"/>
+  <!-- Minaret left -->
+  <rect x="125" y="138" width="12" height="22"/>
+  <path d="M125,138 Q131,128 137,138Z"/>
+  <rect x="128" y="125" width="6" height="14"/>
+  <circle cx="131" cy="124" r="3"/>
+  <!-- Minaret right -->
+  <rect x="213" y="138" width="12" height="22"/>
+  <path d="M213,138 Q219,128 225,138Z"/>
+  <rect x="216" y="125" width="6" height="14"/>
+  <circle cx="219" cy="124" r="3"/>
+  <!-- Base -->
+  <rect x="118" y="158" width="114" height="42"/>
+  <!-- Arched windows -->
+  <path d="M148,158 Q155,148 162,158Z" fill="#0d1628"/>
+  <path d="M168,158 Q175,148 182,158Z" fill="#0d1628"/>
+  <path d="M188,158 Q195,148 202,158Z" fill="#0d1628"/>
+</g>
+</svg>`,
 
-    // ── CHRISTMAS ────────────────────────────────────────────────────────────
-    christmas: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="xmasBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#020617"/>
-          <stop offset="100%" stop-color="#052e16"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#xmasBg)"/>
-      <!-- Snow falling -->
-      ${Array.from({length:25}, (_,i) => {
-        const sx=(i*16+i*i*0.2)%390, dur=(3+i*0.22).toFixed(1), del=-(i*0.35).toFixed(1);
-        const r=i%3===0?2.5:i%3===1?1.8:1.2;
-        return `<circle cx="${sx.toFixed(0)}" cy="0" r="${r}" fill="white" opacity="${(0.5+i%4*0.1).toFixed(1)}">
-          <animateTransform attributeName="transform" type="translate" from="${(i%5-2)*0.4},0" to="${(i%5-2)*0.4*5},170" dur="${dur}s" begin="${del}s" repeatCount="indefinite" additive="sum"/>
-        </circle>`;
-      }).join('')}
-      <!-- Christmas tree -->
-      <polygon points="200,20 230,70 170,70" fill="#15803d" opacity=".9"/>
-      <polygon points="200,45 238,105 162,105" fill="#166534" opacity=".9"/>
-      <polygon points="200,70 248,140 152,140" fill="#14532d" opacity=".9"/>
-      <rect x="193" y="140" width="14" height="15" fill="#78350f"/>
-      <!-- Star on top -->
-      <polygon points="200,12 202,19 209,19 203,23 205,30 200,26 195,30 197,23 191,19 198,19" fill="#fef08a" opacity=".9">
-        <animate attributeName="opacity" values=".9;.5;.9" dur="1.5s" repeatCount="indefinite"/>
-      </polygon>
-      <!-- Baubles -->
-      <circle cx="185" cy="78" r="5" fill="#ef4444" opacity=".85"/>
-      <circle cx="215" cy="82" r="5" fill="#fbbf24" opacity=".85"/>
-      <circle cx="200" cy="95" r="5" fill="#60a5fa" opacity=".85"/>
-      <circle cx="175" cy="112" r="5" fill="#a78bfa" opacity=".85"/>
-      <circle cx="225" cy="108" r="5" fill="#34d399" opacity=".85"/>
-      <circle cx="200" cy="125" r="5" fill="#f472b6" opacity=".85"/>
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// CHRISTMAS — snowy scene, tree, falling snow, glowing lights, cabin
+christmas: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <linearGradient id="cxBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#020b18"/><stop offset="100%" stop-color="#04111f"/></linearGradient>
+  <linearGradient id="cxSnow" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e2e8f0"/><stop offset="100%" stop-color="#cbd5e1"/></linearGradient>
+  <filter id="cxGlow"><feGaussianBlur stdDeviation="4"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#cxBg)"/>
+<!-- Stars -->
+${Array.from({length:30}, (_,i) => {
+  const sx=(i*13+i*i*0.1)%395, sy=(i*7+4)%75;
+  return `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="${i%5===0?1.5:0.8}" fill="#e2e8f0" opacity="${(0.2+i%5*0.08).toFixed(2)}"><animate attributeName="opacity" values="${(0.2+i%5*0.08).toFixed(2)};0.04;${(0.2+i%5*0.08).toFixed(2)}" dur="${(2+i*0.12).toFixed(1)}s" repeatCount="indefinite"/></circle>`;
+}).join('')}
+<!-- Snowy ground -->
+<ellipse cx="200" cy="185" rx="220" ry="28" fill="url(#cxSnow)" opacity=".75"/>
+<rect x="0" y="180" width="400" height="20" fill="#e2e8f0" opacity=".6"/>
+<!-- Snow hills -->
+<path d="M0,178 Q60,165 120,174 Q180,182 240,170 Q300,158 360,172 Q385,178 400,174 L400,200 L0,200Z" fill="#cbd5e1" opacity=".7"/>
+<!-- Christmas tree (large, centered right) -->
+<g transform="translate(260,0)">
+  <polygon points="0,45 35,110 -35,110" fill="#15803d"/>
+  <polygon points="0,80 42,160 -42,160" fill="#166534"/>
+  <polygon points="0,120 50,200 -50,200" fill="#14532d"/>
+  <rect x="-9" y="200" width="18" height="16" fill="#78350f"/>
+  <!-- Star -->
+  <polygon points="0,38 2.5,46 10,46 4,51 6,59 0,54 -6,59 -4,51 -10,46 -2.5,46" fill="#fef08a" opacity=".95">
+    <animate attributeName="opacity" values=".95;.4;.95" dur="1.5s" repeatCount="indefinite"/>
+  </polygon>
+  <!-- Baubles -->
+  <circle cx="-22" cy="97"  r="6" fill="#ef4444" opacity=".9"/>
+  <circle cx="20"  cy="102" r="6" fill="#fbbf24" opacity=".9"/>
+  <circle cx="-8"  cy="120" r="6" fill="#60a5fa" opacity=".9"/>
+  <circle cx="28"  cy="128" r="6" fill="#a78bfa" opacity=".9"/>
+  <circle cx="-28" cy="130" r="6" fill="#34d399" opacity=".9"/>
+  <circle cx="10"  cy="145" r="6" fill="#f472b6" opacity=".9"/>
+  <circle cx="-18" cy="155" r="6" fill="#fbbf24" opacity=".9"/>
+  <circle cx="30"  cy="158" r="6" fill="#ef4444" opacity=".9"/>
+  <!-- Light string -->
+  ${Array.from({length:8}, (_,i) => {
+    const lx=-25+i*7, ly=90+i*9;
+    const colors=['#ef4444','#fbbf24','#34d399','#60a5fa'];
+    return `<circle cx="${lx}" cy="${ly}" r="3" fill="${colors[i%4]}" opacity=".8"><animate attributeName="opacity" values=".8;.2;.8" dur="${(0.6+i*0.1).toFixed(1)}s" repeatCount="indefinite"/></circle>`;
+  }).join('')}
+</g>
+<!-- Cabin/house -->
+<g transform="translate(60,0)">
+  <rect x="-38" y="155" width="76" height="45" fill="#1e3a5f"/>
+  <polygon points="-44,155 0,120 44,155" fill="#1e2d4a"/>
+  <!-- Snow on roof -->
+  <polygon points="-44,155 0,120 44,155" fill="#e2e8f0" opacity=".35"/>
+  <path d="M-44,155 Q-22,140 0,133 Q22,140 44,155" fill="#e2e8f0" opacity=".5"/>
+  <!-- Window (warm glow) -->
+  <rect x="-28" y="163" width="20" height="20" rx="2" fill="#fde68a" opacity=".8">
+    <animate attributeName="opacity" values=".8;.6;.8" dur="3s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="8"  y="163" width="20" height="20" rx="2" fill="#fde68a" opacity=".7">
+    <animate attributeName="opacity" values=".7;.5;.7" dur="4s" begin=".5s" repeatCount="indefinite"/>
+  </rect>
+  <!-- Door -->
+  <rect x="-8" y="175" width="16" height="25" rx="8 8 0 0" fill="#2d1810"/>
+  <!-- Chimney smoke -->
+  <path d="M10,120 Q8,110 12,100 Q16,90 10,78" fill="none" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" opacity=".3">
+    <animate attributeName="d" values="M10,120 Q8,110 12,100 Q16,90 10,78;M10,120 Q14,108 10,98 Q6,88 12,76;M10,120 Q8,110 12,100 Q16,90 10,78" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values=".3;.15;.3" dur="3s" repeatCount="indefinite"/>
+  </path>
+  <rect x="8" y="115" width="10" height="10" fill="#1e3a5f"/>
+</g>
+<!-- Falling snow (40 flakes) -->
+${Array.from({length:40}, (_,i) => {
+  const sx=(i*10.2+i*i*0.15)%396, dur=(4+i*0.18).toFixed(1), del=-(i*0.28).toFixed(1);
+  const r=i%4===0?2.8:i%4===1?2.0:i%4===2?1.4:0.9, drift=(i%5-2)*0.6;
+  return `<circle cx="${sx.toFixed(0)}" cy="-8" r="${r}" fill="white" opacity="${(0.5+i%4*0.1).toFixed(1)}">
+    <animateTransform attributeName="transform" type="translate" values="${drift*2},-10;${drift*8},210" dur="${dur}s" begin="${del}s" repeatCount="indefinite" additive="sum"/>
+  </circle>`;
+}).join('')}
+</svg>`,
 
-    // ── NEW YEAR ─────────────────────────────────────────────────────────────
-    newyear: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="nyBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#020617"/>
-          <stop offset="100%" stop-color="#0f0a1e"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#nyBg)"/>
-      <!-- Big firework bursts -->
-      ${[
-        {cx:80,  cy:50, r:38, c:'#f472b6', dur:2.5, del:0   },
-        {cx:200, cy:35, r:45, c:'#fbbf24', dur:2.8, del:0.9 },
-        {cx:330, cy:55, r:36, c:'#34d399', dur:2.6, del:1.6 },
-        {cx:140, cy:80, r:28, c:'#818cf8', dur:2.4, del:2.1 },
-        {cx:290, cy:90, r:26, c:'#fb923c', dur:2.7, del:0.5 },
-      ].map(fw => {
-        const count = 16;
-        return Array.from({length:count}, (_,i) => {
-          const angle = (i*360/count)*Math.PI/180;
-          const x2 = (fw.cx+fw.r*Math.cos(angle)).toFixed(1);
-          const y2 = (fw.cy+fw.r*Math.sin(angle)).toFixed(1);
-          return `<line x1="${fw.cx}" y1="${fw.cy}" x2="${x2}" y2="${y2}" stroke="${fw.c}" stroke-width="2.5" stroke-linecap="round" opacity="0">
-            <animate attributeName="opacity" values="0;0;1;0.6;0;0;0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
-          </line>`;
-        }).join('');
-      }).join('')}
-      <!-- Confetti -->
-      ${Array.from({length:20}, (_,i) => {
-        const cx2=(i*22)%380, sw=4, sh=10;
-        const colors=['#f472b6','#fbbf24','#34d399','#818cf8','#fb923c','#67e8f9'];
-        return `<rect x="${cx2}" y="-${sh}" width="${sw}" height="${sh}" fill="${colors[i%6]}" opacity=".7" rx="1">
-          <animateTransform attributeName="transform" type="translate" from="${(i%3-1)*2},0" to="${(i%3-1)*10},180" dur="${(2.5+i*0.15).toFixed(1)}s" begin="${-(i*0.2).toFixed(1)}s" repeatCount="indefinite" additive="sum"/>
-          <animateTransform attributeName="transform" type="rotate" from="0 ${cx2} 0" to="720 ${cx2} 180" dur="${(2.5+i*0.15).toFixed(1)}s" begin="${-(i*0.2).toFixed(1)}s" repeatCount="indefinite" additive="sum"/>
-        </rect>`;
-      }).join('')}
-    </svg>`,
+// ──────────────────────────────────────────────────────────────────────────────
+// NEW YEAR — massive fireworks, confetti rain, city skyline
+newyear: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs>
+  <linearGradient id="nyBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#020617"/><stop offset="100%" stop-color="#0f0a1e"/></linearGradient>
+  <filter id="nyGlow"><feGaussianBlur stdDeviation="4"/></filter>
+</defs>
+<rect width="400" height="200" fill="url(#nyBg)"/>
+<!-- Stars -->
+${Array.from({length:30}, (_,i) => {
+  const sx=(i*13+8)%394, sy=(i*8+3)%80;
+  return `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="${i%5===0?1.5:0.8}" fill="#f0f4ff" opacity="${(0.2+i%5*0.08).toFixed(2)}"><animate attributeName="opacity" values="${(0.2+i%5*0.08).toFixed(2)};0.04;${(0.2+i%5*0.08).toFixed(2)}" dur="${(2+i*0.12).toFixed(1)}s" repeatCount="indefinite"/></circle>`;
+}).join('')}
+<!-- 6 large firework bursts -->
+${[
+  {cx:70,  cy:50, r:44, c:'#f472b6', c2:'#fbcfe8', rays:16, dur:2.6, del:0.0},
+  {cx:200, cy:35, r:50, c:'#fbbf24', c2:'#fef08a', rays:18, dur:2.8, del:0.9},
+  {cx:330, cy:55, r:42, c:'#34d399', c2:'#a7f3d0', rays:16, dur:2.7, del:1.6},
+  {cx:135, cy:85, r:32, c:'#818cf8', c2:'#c7d2fe', rays:14, dur:2.5, del:2.2},
+  {cx:285, cy:88, r:36, c:'#fb923c', c2:'#fed7aa', rays:14, dur:2.6, del:0.5},
+  {cx:190, cy:100,r:28, c:'#67e8f9', c2:'#cffafe', rays:12, dur:2.4, del:3.0},
+].map(fw => {
+  const rays = Array.from({length:fw.rays}, (_,ri) => {
+    const a=ri*(360/fw.rays)*Math.PI/180;
+    const x2=(fw.cx+fw.r*Math.cos(a)).toFixed(1), y2=(fw.cy+fw.r*Math.sin(a)).toFixed(1);
+    const x3=(fw.cx+(fw.r+14)*Math.cos(a)).toFixed(1), y3=(fw.cy+(fw.r+14)*Math.sin(a)).toFixed(1);
+    return `<line x1="${fw.cx}" y1="${fw.cy}" x2="${x2}" y2="${y2}" stroke="${fw.c}" stroke-width="3" stroke-linecap="round" opacity="0">
+      <animate attributeName="opacity" values="0;0;1;0.7;0.2;0;0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+    </line>
+    <line x1="${x2}" y1="${y2}" x2="${x3}" y2="${y3}" stroke="${fw.c2}" stroke-width="1.8" stroke-linecap="round" opacity="0">
+      <animate attributeName="opacity" values="0;0;0;0.8;1;0.4;0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+    </line>`;
+  }).join('');
+  return `<g>
+    <circle cx="${fw.cx}" cy="${fw.cy}" r="${fw.r*0.5}" fill="${fw.c}" opacity="0" filter="url(#nyGlow)">
+      <animate attributeName="opacity" values="0;0;0.5;0.2;0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="0;0;${fw.r*0.6};${fw.r};0;0;0" dur="${fw.dur}s" begin="${fw.del}s" repeatCount="indefinite"/>
+    </circle>
+    ${rays}
+  </g>`;
+}).join('')}
+<!-- Confetti (25 pieces, various shapes) -->
+${Array.from({length:25}, (_,i) => {
+  const cx2=(i*16+5)%388, colors=['#f472b6','#fbbf24','#34d399','#818cf8','#fb923c','#67e8f9','#ef4444'];
+  const dur=(3.5+i*0.14).toFixed(1), del=-(i*0.22).toFixed(1);
+  const w=i%3===0?6:4, h=i%3===0?3:8;
+  return `<rect x="${cx2}" y="-12" width="${w}" height="${h}" rx="1" fill="${colors[i%7]}" opacity=".8">
+    <animateTransform attributeName="transform" type="translate" values="${(i%5-2)*1},0;${(i%5-2)*12},215" dur="${dur}s" begin="${del}s" repeatCount="indefinite" additive="sum"/>
+    <animateTransform attributeName="transform" type="rotate" from="0 ${cx2} 0" to="${i%2===0?540:-540} ${cx2} 215" dur="${dur}s" begin="${del}s" repeatCount="indefinite" additive="sum"/>
+  </rect>`;
+}).join('')}
+<!-- City silhouette bottom -->
+<path d="M0,158 L0,145 L18,145 L18,135 L30,135 L30,128 L45,128 L45,120 L60,120 L60,130 L75,130 L75,118 L88,118 L88,108 L100,108 L100,118 L115,118 L115,125 L130,125 L130,115 L145,115 L145,105 L158,105 L158,115 L172,115 L172,122 L188,122 L188,112 L200,112 L200,102 L215,102 L215,112 L228,112 L228,120 L245,120 L245,110 L258,110 L258,100 L272,100 L272,112 L285,112 L285,120 L300,120 L300,110 L315,110 L315,118 L330,118 L330,128 L345,128 L345,118 L360,118 L360,130 L375,130 L375,140 L390,140 L390,150 L400,150 L400,200 L0,200Z" fill="#0a0d1a"/>
+<!-- Building lights -->
+${Array.from({length:30}, (_,i) => {
+  const bx=15+i*12.5, by=118+Math.floor(i/6)*12;
+  if(by>155) return '';
+  const colors=['#fde68a','#fed7aa','#fef9c3'];
+  return `<rect x="${bx.toFixed(0)}" y="${by.toFixed(0)}" width="4" height="5" rx="1" fill="${colors[i%3]}" opacity="${(0.3+i%5*0.1).toFixed(1)}"/>`;
+}).join('')}
+</svg>`,
 
-    // ── DEFAULT (no specific scene) ───────────────────────────────────────────
-    default: `<svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
-      <defs>
-        <linearGradient id="defBg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#0a0a0a"/>
-          <stop offset="100%" stop-color="#141414"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="160" fill="url(#defBg)"/>
-    </svg>`,
+// DEFAULT
+default: `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;display:block">
+<defs><linearGradient id="dfBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a0a0a"/><stop offset="100%" stop-color="#111"/></linearGradient></defs>
+<rect width="400" height="200" fill="url(#dfBg)"/>
+</svg>`,
   };
   return scenes[sceneId] || scenes.default;
 }
 
-// ── COMING SOON FESTIVAL BANNER ────────────────────────────────────────────────
+
+// ── COMING SOON FESTIVAL BANNER ──────────────────────────────────────────────
 function _festComingHtml(fest) {
-  const daysMap = {
-    'Diwali':'🪔','Holi':'🎨','Eid':'🌙','Christmas':'🎄','New Year':'🎆',
-    'Raksha Bandhan':'🎀','Ganesh Chaturthi':'🙏','Independence Day':'🇮🇳',
-  };
-  // Days remaining
-  const now = new Date(), n = new Date(now.getFullYear(), fest.m-1, fest.d1);
-  const days = Math.ceil((n-now)/(1000*60*60*24));
-  const daysStr = days===1?'Tomorrow':`In ${days} days`;
+  const now = new Date(); now.setHours(0,0,0,0);
+  const days = Math.ceil((fest.festDay - now) / (1000*60*60*24));
+  const daysStr = days <= 0 ? 'Today!' : days === 1 ? 'Tomorrow' : `In ${days} days`;
   return `<div class="fest-coming" style="background:${fest.grad};margin-top:10px">
     <div class="fest-coming-emoji">${fest.emoji}</div>
     <div class="fest-coming-text">
@@ -1610,8 +1947,13 @@ function _sceneBannerHtml(sec) {
   </div>`;
 }
 
-function _ctxSecHd(title) {
-  return `<div class="ctx-sec-hd"><span class="ctx-sec-title">${title}</span></div>`;
+// ctxKey = unique string for this section's product set (passed to openCtxPage)
+function _ctxSecHd(title, kw, sectionId) {
+  const kwJson = JSON.stringify(kw || []);
+  const viewAll = kw && kw.length
+    ? `<span class="see-all" onclick="openCtxPage(${JSON.stringify(title)},${JSON.stringify(kwJson)},${JSON.stringify(sectionId||'')})">View all →</span>`
+    : '';
+  return `<div class="ctx-sec-hd"><span class="ctx-sec-title">${title}</span>${viewAll}</div>`;
 }
 
 // ── MAIN: Build personalised HTML ─────────────────────────────────────────────
@@ -1641,8 +1983,11 @@ async function buildPersonalisedHome() {
     // Animated scene banner
     h += _sceneBannerHtml(hero);
 
-    // Primary contextual section
-    h += `<div class="sec">${_ctxSecHd(hero.title)}<div class="pstrip">${heroProd.map(pCard).join('')}</div></div>`;
+    // Store current context so ctxPage can use it
+    window._persCtx = { hero, sections };
+
+    // Primary contextual section (show 5 cards, View All to see rest)
+    h += `<div class="sec">${_ctxSecHd(hero.title, hero.kw, hero.id)}<div class="pstrip">${heroProd.slice(0,5).map(pCard).join('')}</div></div>`;
 
     // "Order Again" — from local history
     const reorderIds = _getTopReorderedIds(6);
@@ -1650,9 +1995,11 @@ async function buildPersonalisedHome() {
       const rp = reorderIds
         .map(id => prods.find(p=>p.id===id))
         .filter(p => p && !p.disabled && p.variants?.[0]?.inStock !== false)
-        .slice(0, 6);
+        .slice(0, 5);
       if (rp.length >= 2) {
-        h += `<div class="sec">${_ctxSecHd('🔁 Order Again')}<div class="pstrip">${rp.map(pCard).join('')}</div></div>`;
+        // For reorder section pass ids as special kw
+        const reorderKw = reorderIds.map(id => { const p=prods.find(x=>x.id===id); return p?(p.name||'').split(' ')[0].toLowerCase():''; }).filter(Boolean);
+        h += `<div class="sec">${_ctxSecHd('🔁 Order Again', reorderKw, 'reorder')}<div class="pstrip">${rp.map(pCard).join('')}</div></div>`;
       }
     }
 
@@ -1661,9 +2008,9 @@ async function buildPersonalisedHome() {
       const sec2 = sections[1];
       const sec2Prods = _matchByKeywords(sec2.kw, 8)
         .filter(p => !heroProd.some(x=>x.id===p.id))
-        .slice(0, 6);
+        .slice(0, 5);
       if (sec2Prods.length >= 2) {
-        h += `<div class="sec">${_ctxSecHd(sec2.title)}<div class="pstrip">${sec2Prods.map(pCard).join('')}</div></div>`;
+        h += `<div class="sec">${_ctxSecHd(sec2.title, sec2.kw, sec2.id)}<div class="pstrip">${sec2Prods.map(pCard).join('')}</div></div>`;
       }
     }
 
@@ -1671,6 +2018,142 @@ async function buildPersonalisedHome() {
   } catch {
     return '';
   }
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── CONTEXT FULL PAGE ─────────────────────────────────────────────────────────
+// Opened when user taps "View all →" on any personalised section.
+// Shows all matching products in a 2-col grid with sort chips + scene banner.
+// ══════════════════════════════════════════════════════════════════════════════
+
+let _ctxPageData = { title:'', kw:[], sectionId:'', allProds:[], filtered:[] };
+
+function openCtxPage(title, kwJson, sectionId) {
+  try {
+    const kw = typeof kwJson === 'string' ? JSON.parse(kwJson) : kwJson;
+
+    // Get ALL matching products (no limit)
+    let allProds;
+    if (sectionId === 'reorder') {
+      const ids = _getTopReorderedIds(30);
+      allProds = ids.map(id=>prods.find(p=>p.id===id)).filter(p=>p&&!p.disabled);
+      if (allProds.length < 3) allProds = [...allProds, ..._matchByKeywords(kw, 40)];
+    } else {
+      allProds = _matchByKeywords(kw, 60);
+    }
+
+    _ctxPageData = { title, kw, sectionId, allProds, filtered: [...allProds] };
+
+    // Set title
+    document.getElementById('ctxPageTitle').textContent = title;
+
+    // Scene banner — find scene from current persCtx
+    const scene = _ctxPageSceneForSection(sectionId);
+    document.getElementById('ctxPageScene').innerHTML = scene;
+
+    // Reset sort chips
+    document.querySelectorAll('#ctxFilterBar .filter-chip').forEach(c=>c.classList.remove('active'));
+    document.getElementById('ctxFilterAll').classList.add('active');
+
+    // Render grid
+    _renderCtxGrid(_ctxPageData.allProds);
+
+    // Open page
+    document.getElementById('ctxPage').classList.add('open');
+    document.getElementById('searchPage').classList.remove('open');
+    document.getElementById('fpage').classList.remove('open');
+    setNav('bn0');
+  } catch(e) { console.error('openCtxPage error', e); }
+}
+
+function _ctxPageSceneForSection(sectionId) {
+  // Find the scene SVG for this section
+  try {
+    const ctx = window._persCtx;
+    if (!ctx) return '';
+    const sec = ctx.sections.find(s=>s.id===sectionId) || ctx.hero;
+    if (!sec) return '';
+    return _buildScene(sec.scene || 'default');
+  } catch { return ''; }
+}
+
+function closeCtxPage() {
+  document.getElementById('ctxPage').classList.remove('open');
+}
+
+function ctxSort(type) {
+  document.querySelectorAll('#ctxFilterBar .filter-chip').forEach(c=>c.classList.remove('active'));
+  document.getElementById({all:'ctxFilterAll',low:'ctxFilterLow',high:'ctxFilterHigh',stock:'ctxFilterInStock'}[type]).classList.add('active');
+
+  let list = [..._ctxPageData.allProds];
+  if (type === 'low') {
+    list.sort((a,b) => {
+      const pa = a.variants?.[0] ? (a.variants[0].priceTiers?.[0]?.price ?? 9999) : 9999;
+      const pb = b.variants?.[0] ? (b.variants[0].priceTiers?.[0]?.price ?? 9999) : 9999;
+      return pa - pb;
+    });
+  } else if (type === 'high') {
+    list.sort((a,b) => {
+      const pa = a.variants?.[0] ? (a.variants[0].priceTiers?.[0]?.price ?? 0) : 0;
+      const pb = b.variants?.[0] ? (b.variants[0].priceTiers?.[0]?.price ?? 0) : 0;
+      return pb - pa;
+    });
+  } else if (type === 'stock') {
+    list = list.filter(p => p.variants?.[0]?.inStock !== false);
+  }
+  _ctxPageData.filtered = list;
+  _renderCtxGrid(list);
+}
+
+function _renderCtxGrid(list) {
+  const grid = document.getElementById('ctxGrid');
+  if (!grid) return;
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;margin-top:3rem"><div class="ei">🛍️</div><p>No products found</p></div>';
+    return;
+  }
+  // Use wide pCard (same as split panel right side)
+  grid.innerHTML = list.map(p => {
+    const selVid = window._selVariant?.[p.id] || defaultVariant(p)?.id;
+    const v = getVariant(p, selVid);
+    if (!v) return '';
+    const qty = cart[cartKey(p.id, selVid)] || 0;
+    const price = getPrice(v.priceTiers, qty || 1);
+    const mrp = v.mrp && v.mrp > price ? v.mrp : null;
+    const off = offPct(price, mrp);
+    const isOOS = v.inStock === false;
+    const imgUrl = p.imageUrl || v.imageUrl || '';
+    const variantBlock = p.variants?.length > 1
+      ? `<button class="pc-variant-btn" onclick="event.stopPropagation();openVariantDropdown(${p.id},this)">${v.label} <span style="color:var(--text3)">▾</span></button>`
+      : `<div class="pc-label">${v.label}</div>`;
+    const bulkBadge = v.priceTiers?.length > 1
+      ? `<div class="pc-bulk-hint">📦 Bulk deal</div>` : '';
+    const addCtrl = qty > 0
+      ? `<div class="qty-ctrl"><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button><span>${qty}</span><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button></div>`
+      : isOOS
+      ? `<button class="add-btn" style="opacity:.45;cursor:default" disabled>ADD</button>`
+      : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
+    return `<div class="pcard${isOOS?' oos':''}" style="width:100%;flex-shrink:1;" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
+      <div class="pc-img-wrap">
+        ${imgUrl?`<img src="${imgUrl}" loading="lazy">`:'<span style="font-size:2.2rem">📦</span>'}
+        ${off>0&&!isOOS?`<span class="pc-discount-badge">${off}% OFF`:''}
+        ${p.isNew&&off===0&&!isOOS?`<span class="pc-new-badge">NEW</span>`:''}
+        ${isOOS?`<span class="pc-oos-badge">OUT OF STOCK</span>`:''}
+        <div class="pc-add-overlay">${addCtrl}</div>
+      </div>
+      <div class="pc-body">
+        ${variantBlock}
+        <div class="pc-name">${p.name}</div>
+        <div class="pc-price-row">
+          <span class="pc-price">₹${price}</span>
+          ${mrp?`<span class="pc-mrp">₹${mrp}</span>`:''}
+          ${off>0?`<span class="pc-off">${off}% off</span>`:''}
+        </div>
+        ${bulkBadge}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 
