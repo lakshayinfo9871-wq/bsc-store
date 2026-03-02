@@ -2706,34 +2706,29 @@ async function renderSettings() {
             <button class="btn btn-blue" onclick="runMigration()">Run Migration</button>
           </div>
         </div>
-
         <div class="card">
-          <div class="card-header"><h2>📍 Store Location & Weather</h2></div>
+          <div class="card-header"><h2>📍 Store Location & Live Weather</h2></div>
           <div class="card-body">
             <p style="font-size:.82rem;color:var(--text2);margin-bottom:14px;line-height:1.6">
-              Share your location <strong>once</strong>. All customers will automatically get
-              live weather-based banners — ☔ Rainy Day, 🌡️ Hot Day, ❄️ Cold Day —
-              based on your store's actual real-time weather. No API key, completely free.
+              Share your location <strong>once</strong> — all customers automatically get
+              live weather banners (☔ Rain, 🌡️ Hot, ❄️ Cold) based on your store's
+              real weather. No API key. Completely free.
             </p>
             <div id="locStatusBox" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:.82rem">
               ${s.storeLocation
-                ? \`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                     <span style="color:var(--green);font-weight:800">✅ Location saved</span>
-                     <span style="color:var(--text3)">Lat \${s.storeLocation.lat.toFixed(4)}, Lon \${s.storeLocation.lon.toFixed(4)}</span>
-                     <span style="color:var(--text3);font-size:.75rem">· Weather banners are LIVE</span>
-                   </div>\`
-                : \`<span style="color:var(--yellow);font-weight:700">⚠️ No location set</span>
-                   <span style="color:var(--text3);margin-left:8px">Weather banners use month/season only</span>\`}
+                ? `<span style="color:var(--green);font-weight:800">✅ Location saved</span>
+                   <span style="color:var(--text3);margin-left:8px">${s.storeLocation.lat.toFixed(4)}°N, ${s.storeLocation.lon.toFixed(4)}°E · Weather banners are LIVE</span>`
+                : `<span style="color:var(--yellow);font-weight:700">⚠️ No location set</span>
+                   <span style="color:var(--text3);margin-left:8px">Banners use month/season only</span>`}
             </div>
-            <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:10px">
               <button class="btn btn-blue" id="locShareBtn" onclick="shareAdminLocation()">
                 📍 ${s.storeLocation ? 'Update Location' : 'Share My Location'}
               </button>
-              ${s.storeLocation ? \`<button class="btn btn-gray" onclick="clearAdminLocation()">✕ Remove</button>\` : ''}
+              ${s.storeLocation ? '<button class="btn btn-gray" onclick="clearAdminLocation()">✕ Remove</button>' : ''}
             </div>
-            <div style="font-size:.75rem;color:var(--text3);margin-top:10px;line-height:1.5">
-              Your browser will ask permission. This is your device's GPS — only you do this.
-              Customers never get asked for location.
+            <div style="font-size:.75rem;color:var(--text3);line-height:1.5">
+              Your browser will ask permission once. Only you share location — customers are never asked.
             </div>
           </div>
         </div>
@@ -2772,56 +2767,39 @@ async function saveSettings() {
   toast('✅ Settings saved!');
 }
 
-// ── STORE LOCATION (for live weather banners) ─────────────────────────────────
+// ── STORE LOCATION ───────────────────────────────────────────────────────────
 async function shareAdminLocation() {
   const btn = document.getElementById('locShareBtn');
+  if (!navigator.geolocation) return toast('Geolocation not supported in this browser');
   if (btn) { btn.textContent = '⏳ Getting location...'; btn.disabled = true; }
-
-  if (!navigator.geolocation) {
-    toast('Geolocation not supported by this browser');
-    if (btn) { btn.textContent = '📍 Share My Location'; btn.disabled = false; }
-    return;
-  }
 
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       const lat = parseFloat(pos.coords.latitude.toFixed(6));
       const lon = parseFloat(pos.coords.longitude.toFixed(6));
-
-      try {
-        const r = await fetch('/api/admin/settings', {
-          method: 'PUT', headers: ah(),
-          body: JSON.stringify({ storeLocation: { lat, lon } })
-        });
-        if (!r.ok) throw new Error('Save failed');
-
-        toast(`✅ Location saved! (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
-        // Refresh the settings page to show updated status
-        setTimeout(renderSettings, 600);
-      } catch (e) {
+      const r = await fetch('/api/admin/settings', {
+        method:'PUT', headers:ah(), body:JSON.stringify({ storeLocation:{ lat, lon } })
+      });
+      if (r.ok) {
+        toast(`✅ Location saved — (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+        setTimeout(renderSettings, 500);
+      } else {
         toast('Failed to save location');
         if (btn) { btn.textContent = '📍 Share My Location'; btn.disabled = false; }
       }
     },
     (err) => {
-      const msgs = {
-        1: 'Location permission denied. Please allow in browser settings.',
-        2: 'Location unavailable. Try again.',
-        3: 'Location request timed out. Try again.',
-      };
+      const msgs = { 1:'Permission denied — allow location in browser settings', 2:'Location unavailable, try again', 3:'Timed out, try again' };
       toast(msgs[err.code] || 'Could not get location');
       if (btn) { btn.textContent = '📍 Share My Location'; btn.disabled = false; }
     },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
   );
 }
 
 async function clearAdminLocation() {
-  await fetch('/api/admin/settings', {
-    method: 'PUT', headers: ah(),
-    body: JSON.stringify({ storeLocation: null })
-  });
-  toast('Location cleared — weather banners will use season only');
+  await fetch('/api/admin/settings', { method:'PUT', headers:ah(), body:JSON.stringify({ storeLocation:null }) });
+  toast('Location cleared — banners will use season only');
   setTimeout(renderSettings, 400);
 }
 

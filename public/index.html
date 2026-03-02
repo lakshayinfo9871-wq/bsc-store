@@ -836,68 +836,50 @@ function offPct(price, mrp) {
   return Math.round((mrp - price) / mrp * 100);
 }
 
-// ── LIVE WEATHER (Open-Meteo, no API key) ─────────────────────────────────────
-// Fetches once per session and caches in sessionStorage for speed.
-// Falls back to null silently — banners just use season if unavailable.
+// ── LIVE WEATHER ──────────────────────────────────────────────────────────────
+// Uses admin's stored store location + Open-Meteo (free, no key needed).
+// Fetched once per session, cached 30 mins. Falls back silently if unavailable.
 let _liveWeather = null;
 
-async function fetchLiveWeather(lat, lon) {
-  const cacheKey = `bsc_wx_${lat.toFixed(2)}_${lon.toFixed(2)}`;
+async function _fetchLiveWeather(lat, lon) {
+  const key = `bsc_wx_${lat.toFixed(2)}_${lon.toFixed(2)}`;
   try {
-    const cached = sessionStorage.getItem(cacheKey);
+    const cached = sessionStorage.getItem(key);
     if (cached) {
-      const { data, ts } = JSON.parse(cached);
-      if (Date.now() - ts < 30 * 60 * 1000) { // 30-min cache
-        _liveWeather = data; return;
-      }
+      const p = JSON.parse(cached);
+      if (Date.now() - p.ts < 30 * 60 * 1000) { _liveWeather = p.data; return; }
     }
   } catch(_) {}
-
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weathercode,temperature_2m,apparent_temperature&timezone=auto&forecast_days=1`;
-    const r = await fetch(url);
-    if (!r.ok) return;
-    const d = await r.json();
-    const wc = d.current?.weathercode ?? -1;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weathercode,temperature_2m&timezone=auto&forecast_days=1`;
+    const d = await fetch(url).then(r => r.json());
+    const wc   = d.current?.weathercode ?? -1;
     const temp = d.current?.temperature_2m ?? null;
-    const apparent = d.current?.apparent_temperature ?? null;
-
     _liveWeather = {
-      // WMO weather codes: 0=clear, 1-3=partly cloudy, 45-48=fog,
-      // 51-67=drizzle/rain, 71-77=snow, 80-82=showers, 95-99=thunderstorm
-      isRaining   : wc >= 51 && wc <= 99,
-      isThunder   : wc >= 95,
-      isFog       : wc >= 45 && wc <= 48,
-      isCloudy    : wc >= 1  && wc <= 3,
-      isClear     : wc === 0,
-      temp,
-      apparent,
-      isCold      : temp !== null && temp < 12,
-      isChilly    : temp !== null && temp >= 12 && temp < 20,
-      isHot       : temp !== null && temp > 35,
-      isVeryHot   : temp !== null && temp > 40,
-      wc,
+      wc, temp,
+      isRaining : wc >= 51 && wc <= 99,   // drizzle, rain, showers, thunderstorm
+      isThunder : wc >= 95,
+      isCold    : temp !== null && temp < 12,
+      isChilly  : temp !== null && temp >= 12 && temp < 20,
+      isHot     : temp !== null && temp > 35,
+      isVeryHot : temp !== null && temp > 40,
     };
-
-    try { sessionStorage.setItem(cacheKey, JSON.stringify({ data: _liveWeather, ts: Date.now() })); } catch(_) {}
-  } catch(_) {
-    // Network failure or CORS — silently fall back to season-based
-  }
+    try { sessionStorage.setItem(key, JSON.stringify({ data:_liveWeather, ts:Date.now() })); } catch(_) {}
+  } catch(_) {} // network failure → stay null, banners use season
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
-  loadCart(); // restore cart from localStorage
+  loadCart(); // #9: restore cart from localStorage
   try {
     const d = await fetch('/api/store').then(r=>r.json());
     prods=d.products||[]; cats=d.categories||[]; banners=d.banners||[]; settings=d.settings||{}; subcats=d.subcategories||[];
 
-    // Kick off live weather fetch in background (don't block render)
+    // Fetch live weather in background using admin's saved store location
     const loc = settings.storeLocation;
     if (loc?.lat && loc?.lon) {
-      fetchLiveWeather(loc.lat, loc.lon).then(() => {
-        // Re-render home once weather arrives so personalised banners update
-        if (_liveWeather) renderHome();
+      _fetchLiveWeather(loc.lat, loc.lon).then(() => {
+        if (_liveWeather) renderHome(); // re-render once weather data arrives
       });
     }
 
@@ -1996,9 +1978,9 @@ function _festComingHtml(fest) {
 // ── SCENE BANNER (replaces pers-hero) ─────────────────────────────────────────
 function _sceneBannerHtml(sec, liveTag) {
   const svg = _buildScene(sec.scene || 'default', sec.grad, sec.glow);
-  // If we have a real-time weather tag, show it alongside the default tag
+  // If live weather tag exists, replace the default tag chip with temperature info
   const tagHtml = liveTag
-    ? `<div class="scene-tag" style="background:rgba(0,0,0,.5)">${liveTag}</div>`
+    ? `<div class="scene-tag" style="background:rgba(0,0,0,.55)">${liveTag}</div>`
     : `<div class="scene-tag">${sec.tag}</div>`;
   return `<div class="scene-banner" style="background:${sec.grad}">
     ${svg}
@@ -2022,40 +2004,38 @@ function _ctxSecHd(title, kw, sectionId) {
 // ── MAIN: Build personalised HTML ─────────────────────────────────────────────
 async function buildPersonalisedHome() {
   try {
-    const baseSeason = _getSeason();
-
-    // ── LIVE WEATHER OVERRIDE ────────────────────────────────────────────────
-    // If admin has shared store location and we have real weather data,
-    // override the season-based guess with actual current conditions.
-    let weatherSeason = baseSeason;
-    let liveWeatherTag = null;
+    // Determine season — use live weather if available, else fall back to month
+    let season = _getSeason();
+    let liveTag = null; // shown on the banner tag chip instead of the default
 
     if (_liveWeather) {
       if (_liveWeather.isRaining || _liveWeather.isThunder) {
-        weatherSeason = 'monsoon';   // triggers Rain banner regardless of month
-        liveWeatherTag = _liveWeather.isThunder ? '⛈️ Thunderstorm outside' : '🌧️ It\'s raining now';
+        season  = 'monsoon';
+        liveTag = _liveWeather.isThunder
+          ? `⛈️ Thunderstorm · ${Math.round(_liveWeather.temp)}°C`
+          : `🌧️ Raining now · ${Math.round(_liveWeather.temp)}°C`;
       } else if (_liveWeather.isVeryHot) {
-        weatherSeason = 'summer';
-        liveWeatherTag = `🌡️ ${Math.round(_liveWeather.temp)}°C outside`;
-      } else if (_liveWeather.isCold) {
-        weatherSeason = 'winter';
-        liveWeatherTag = `❄️ ${Math.round(_liveWeather.temp)}°C outside`;
-      } else if (_liveWeather.isChilly) {
-        weatherSeason = 'winter';
-        liveWeatherTag = `🧥 ${Math.round(_liveWeather.temp)}°C — a bit chilly`;
+        season  = 'summer';
+        liveTag = `🌡️ ${Math.round(_liveWeather.temp)}°C outside`;
       } else if (_liveWeather.isHot) {
-        weatherSeason = 'summer';
-        liveWeatherTag = `☀️ ${Math.round(_liveWeather.temp)}°C — stay cool`;
+        season  = 'summer';
+        liveTag = `☀️ ${Math.round(_liveWeather.temp)}°C — stay cool`;
+      } else if (_liveWeather.isCold) {
+        season  = 'winter';
+        liveTag = `❄️ ${Math.round(_liveWeather.temp)}°C outside`;
+      } else if (_liveWeather.isChilly) {
+        season  = 'winter';
+        liveTag = `🧥 ${Math.round(_liveWeather.temp)}°C — a bit chilly`;
       }
-      // Clear/cloudy → keep month-based season as-is
+      // Clear/mild → keep month-based season, liveTag stays null
     }
 
     const ctx = {
-      timeSlot      : _getTimeSlot(),
-      season        : weatherSeason,   // real weather if available, else month
-      dayType       : _getDayType(),
-      festivals     : _getFestivals(),
-      liveWeatherTag,                  // shown on banner tag if present
+      timeSlot  : _getTimeSlot(),
+      season,
+      dayType   : _getDayType(),
+      festivals : _getFestivals(),
+      liveTag,
     };
 
     const sections = _getActiveSections(ctx);
@@ -2073,7 +2053,7 @@ async function buildPersonalisedHome() {
     }
 
     // Animated scene banner
-    h += _sceneBannerHtml(hero, ctx.liveWeatherTag);
+    h += _sceneBannerHtml(hero, ctx.liveTag);
 
     // Store current context so ctxPage can use it
     window._persCtx = { hero, sections };

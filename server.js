@@ -10,8 +10,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ── SECURITY: Secrets from env vars (#1, #18) ─────────────────────────────────
-const ADMIN_SECRET   = process.env.ADMIN_JWT_SECRET  || 'bsc-admin-fallback-change-in-prod';
-const CUSTOMER_SECRET = process.env.CUSTOMER_JWT_SECRET || 'bsc-customer-fallback-change-in-prod';
+// Fallback = original secret so existing saved tokens keep working.
+// In production set ADMIN_JWT_SECRET + CUSTOMER_JWT_SECRET as env vars.
+const ADMIN_SECRET    = process.env.ADMIN_JWT_SECRET    || 'bsc-store-v2-secret';
+const CUSTOMER_SECRET = process.env.CUSTOMER_JWT_SECRET || 'bsc-store-v2-secret';
 const MONGO_URI = process.env.MONGO_URI;
 
 // ── SECURITY: Rate limiting on login (#2) ─────────────────────────────────────
@@ -81,7 +83,7 @@ async function connectDB() {
       milkPrice: 60, freeDeliveryMin: 99,
       freeGift: { threshold: 100, productId: null, qty: 1, autoAdd: false, label: '', discountPrice: 0 },
       upsellProductIds: [],
-      storeLocation: null  // { lat, lon } — set by admin, used for live weather banners
+      storeLocation: null
     });
   }
 }
