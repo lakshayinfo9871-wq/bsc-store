@@ -127,7 +127,7 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 /* ══════════ PERSONALISED HOME ══════════ */
 /* Animated scene banner */
 .scene-banner{margin:14px 14px 0;border-radius:20px;height:160px;position:relative;overflow:hidden;cursor:default;}
-.scene-banner-sm{height:100px;margin-top:20px;}
+.scene-banner-sm{height:100px !important;margin-top:18px;}
 .scene-canvas{width:100%;height:100%;position:absolute;inset:0;}
 /* Text overlay on scene */
 .scene-text{position:absolute;bottom:0;left:0;right:0;padding:14px 18px;background:linear-gradient(to top,rgba(0,0,0,.55) 0%,transparent 100%);pointer-events:none;}
@@ -859,7 +859,7 @@ async function init() {
 // Architecture: tracks scroll velocity & direction via rAF for 60fps, no jank.
 // Only collapses after 60px threshold — prevents collapse on tiny flicks.
 // Re-expands instantly on upward scroll. At top (≤10px) always fully expanded.
-(function initCollapsingHeader() {
+function initCollapsingHeader() {
   const scroller  = document.getElementById('scroll');
   const collapse  = document.getElementById('topbarCollapse');
   const tabs      = document.getElementById('topbarTabs');
@@ -912,7 +912,7 @@ async function init() {
   }
 
   scroller.addEventListener('scroll', onScroll, { passive: true });
-})();
+}
 
 // Call this to force-expand (e.g. when search input is focused)
 function expandHeader() {
@@ -1960,14 +1960,11 @@ function _ctxSecHd(title, kw, sectionId) {
 // ── MAIN: Build personalised HTML ─────────────────────────────────────────────
 async function buildPersonalisedHome() {
   try {
-    // ── Build context ─────────────────────────────────────────────────────────
     const festivals = _getFestivals();
     const season    = _getSeason();
     const timeSlot  = _getTimeSlot();
-    const dayType   = _getDayType();
 
-    // ── Define the 3 category "buckets" ──────────────────────────────────────
-    // BUCKET 1: Festival (active within 7 days)
+    // ── FESTIVAL SLOT ─────────────────────────────────────────────────────────
     let festivalSec = null;
     if (festivals.active) {
       const f = festivals.active;
@@ -1983,102 +1980,101 @@ async function buildPersonalisedHome() {
       };
     }
 
-    // BUCKET 2: Weather (live weather overrides season)
-    const weatherMap = {
-      monsoon: { id:'rain',   title:'🌧 Rainy Day Essentials', tag:'rainy day',      greeting:'Stay cosy inside',   sub:'Everything for a rainy day, delivered fast.',    grad:'linear-gradient(135deg,#0c1a2e,#0a1322)', glow:'#60a5fa', scene:'rain',  kw:['maggi','noodles','chai','tea','coffee','bread','butter','biscuit','instant','soup','snacks','chips','ginger','curd'] },
-      summer:  { id:'summer', title:'🥤 Beat the Heat',        tag:'hot outside',    greeting:'Hot day!',           sub:'Cool drinks and quick bites, delivered cold.',    grad:'linear-gradient(135deg,#7c1d1d,#450a0a)', glow:'#fca5a5', scene:'sun',   kw:['cold drink','soda','juice','lemon','cola','lassi','buttermilk','coconut water','cold coffee','sprite'] },
-      winter:  { id:'winter', title:'🧣 Cosy Winter Picks',    tag:'chilly outside', greeting:'Chilly outside!',    sub:'Warm up with hot drinks and essentials.',         grad:'linear-gradient(135deg,#1e3a5f,#0c1a2e)', glow:'#93c5fd', scene:'cloud', kw:['chai','tea','coffee','milk','ginger','turmeric','soup','biscuit','bread','ghee','butter'] },
-      autumn:  { id:'autumn', title:'🍂 Autumn Picks',         tag:'autumn season',  greeting:'Pleasant weather!',  sub:'Fresh picks for a lovely day.',                  grad:'linear-gradient(135deg,#3d1a00,#200e00)', glow:'#fb923c', scene:'sunset',kw:['chai','tea','snacks','biscuit','bread','juice','fruit'] },
+    // ── WEATHER SLOT ──────────────────────────────────────────────────────────
+    const weatherDefs = {
+      monsoon: { id:'rain',   title:'🌧 Rainy Day Essentials', tag:'rainy day',      greeting:'Stay cosy inside',   sub:'Everything for a rainy day, delivered fast.',  grad:'linear-gradient(135deg,#0c1a2e,#0a1322)', glow:'#60a5fa', scene:'rain',  kw:['maggi','noodles','chai','tea','coffee','bread','butter','biscuit','instant','soup','snacks','chips','ginger','curd'] },
+      summer:  { id:'summer', title:'🥤 Beat the Heat',        tag:'hot outside',    greeting:'Hot day!',           sub:'Cool drinks and quick bites, delivered cold.',  grad:'linear-gradient(135deg,#7c1d1d,#450a0a)', glow:'#fca5a5', scene:'sun',   kw:['cold drink','soda','juice','lemon','cola','lassi','buttermilk','coconut water','cold coffee','sprite'] },
+      winter:  { id:'winter', title:'🧣 Cosy Winter Picks',    tag:'chilly outside', greeting:'Chilly outside!',    sub:'Warm up with hot drinks and essentials.',       grad:'linear-gradient(135deg,#1e3a5f,#0c1a2e)', glow:'#93c5fd', scene:'cloud', kw:['chai','tea','coffee','milk','ginger','turmeric','soup','biscuit','bread','ghee','butter'] },
+      autumn:  { id:'autumn', title:'🍂 Autumn Picks',         tag:'autumn season',  greeting:'Pleasant weather!',  sub:'Fresh picks for a lovely day.',                grad:'linear-gradient(135deg,#3d1a00,#200e00)', glow:'#fb923c', scene:'sunset',kw:['chai','tea','snacks','biscuit','bread','juice','fruit'] },
     };
 
-    // Live weather can override the season (if admin set store location)
+    // Live weather overrides month-based season
     let effectiveSeason = season;
-    let weatherTag = null;
+    let liveTag = null;
     if (typeof _liveWeather !== 'undefined' && _liveWeather) {
       if (_liveWeather.isRaining || _liveWeather.isThunder) {
         effectiveSeason = 'monsoon';
-        weatherTag = _liveWeather.isThunder ? `⛈️ ${Math.round(_liveWeather.temp)}°C` : `🌧️ ${Math.round(_liveWeather.temp)}°C`;
-      } else if (_liveWeather.isVeryHot || _liveWeather.isHot) {
+        liveTag = _liveWeather.isThunder ? `⛈️ ${Math.round(_liveWeather.temp)}°C` : `🌧️ ${Math.round(_liveWeather.temp)}°C`;
+      } else if (_liveWeather.isHot || _liveWeather.isVeryHot) {
         effectiveSeason = 'summer';
-        weatherTag = `🌡️ ${Math.round(_liveWeather.temp)}°C`;
+        liveTag = `🌡️ ${Math.round(_liveWeather.temp)}°C`;
       } else if (_liveWeather.isCold || _liveWeather.isChilly) {
         effectiveSeason = 'winter';
-        weatherTag = `❄️ ${Math.round(_liveWeather.temp)}°C`;
+        liveTag = `❄️ ${Math.round(_liveWeather.temp)}°C`;
       }
     }
-    let weatherSec = weatherMap[effectiveSeason] ? { ...weatherMap[effectiveSeason] } : null;
-    if (weatherSec && weatherTag) weatherSec.tag = weatherTag;
+    let weatherSec = weatherDefs[effectiveSeason] ? { ...weatherDefs[effectiveSeason] } : null;
+    if (weatherSec && liveTag) weatherSec.tag = liveTag;
 
-    // BUCKET 3: Time of day
-    const timeMap = {
-      earlyMorning:{ id:'earlyMorning', title:'🌅 Rise & Shine',       tag:'early morning', greeting:'Good morning!',  sub:'Fresh essentials for a great start.',        grad:'linear-gradient(135deg,#14290a,#0c1a06)', glow:'#86efac', scene:'sunrise', kw:['milk','bread','eggs','butter','chai','tea','curd','banana','fruit','juice','dahi'] },
-      morning:     { id:'morning',      title:'☀️ Morning Essentials', tag:'morning',       greeting:'Good morning!',  sub:'Delivered before your day begins.',          grad:'linear-gradient(135deg,#14290a,#0c1a06)', glow:'#86efac', scene:'sun',     kw:['milk','bread','eggs','butter','chai','tea','curd','paneer','fruit','juice','dahi','oats'] },
-      lunch:       { id:'lunch',        title:'🍛 Lunch Time',          tag:'lunchtime',     greeting:'Lunchtime!',     sub:'Fresh ingredients delivered to your door.',  grad:'linear-gradient(135deg,#1a2e0a,#0e1a05)', glow:'#a3e635', scene:'sun',     kw:['rice','dal','vegetables','curd','roti','paneer','tomato','onion','potato','ghee','oil'] },
-      afternoon:   { id:'afternoon',    title:'☕ Afternoon Break',     tag:'afternoon',     greeting:'Need a break?',  sub:'Chai and snacks on their way.',              grad:'linear-gradient(135deg,#1c1207,#120c04)', glow:'#fbbf24', scene:'cloud',   kw:['biscuit','chai','tea','coffee','snacks','namkeen','chips','bread','butter','chocolate'] },
-      evening:     { id:'evening',      title:'🌆 Evening Cravings',    tag:'evening',       greeting:'Good evening!',  sub:'Chai time essentials delivered fast.',       grad:'linear-gradient(135deg,#3d1a00,#200e00)', glow:'#fb923c', scene:'sunset',  kw:['chai','tea','snacks','biscuit','namkeen','chips','bread','eggs','instant','maggi','noodles'] },
-      night:       { id:'night',        title:'🌙 Night Picks',         tag:'tonight',       greeting:'Good night!',    sub:'Late night cravings sorted.',                grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#818cf8', scene:'night',   kw:['chips','biscuit','chocolate','bread','eggs','cold coffee','cola','juice','instant','maggi','snacks'] },
-      lateNight:   { id:'lateNight',    title:'🦉 Night Owl Picks',     tag:'late night',    greeting:'Still up?',      sub:'Midnight cravings delivered.',               grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#818cf8', scene:'night',   kw:['chips','biscuit','chocolate','bread','instant','maggi','cola','juice','snacks','cold coffee'] },
+    // ── TIME SLOT ─────────────────────────────────────────────────────────────
+    const timeDefs = {
+      earlyMorning:{ id:'earlyMorning', title:'🌅 Rise & Shine',        tag:'early morning', greeting:'Good morning!',  sub:'Fresh essentials for a great start.',       grad:'linear-gradient(135deg,#14290a,#0c1a06)', glow:'#86efac', scene:'sunrise', kw:['milk','bread','eggs','butter','chai','tea','curd','banana','fruit','juice','dahi'] },
+      morning:     { id:'morning',      title:'☀️ Morning Essentials',  tag:'morning',       greeting:'Good morning!',  sub:'Delivered before your day begins.',         grad:'linear-gradient(135deg,#14290a,#0c1a06)', glow:'#86efac', scene:'sun',     kw:['milk','bread','eggs','butter','chai','tea','curd','paneer','fruit','juice','dahi','oats'] },
+      lunch:       { id:'lunch',        title:'🍛 Lunch Time',           tag:'lunchtime',     greeting:'Lunchtime!',     sub:'Fresh ingredients delivered to your door.', grad:'linear-gradient(135deg,#1a2e0a,#0e1a05)', glow:'#a3e635', scene:'sun',     kw:['rice','dal','vegetables','curd','roti','paneer','tomato','onion','potato','ghee','oil'] },
+      afternoon:   { id:'afternoon',    title:'☕ Afternoon Break',      tag:'afternoon',     greeting:'Need a break?',  sub:'Chai and snacks on their way.',             grad:'linear-gradient(135deg,#1c1207,#120c04)', glow:'#fbbf24', scene:'cloud',   kw:['biscuit','chai','tea','coffee','snacks','namkeen','chips','bread','butter','chocolate'] },
+      evening:     { id:'evening',      title:'🌆 Evening Cravings',     tag:'evening',       greeting:'Good evening!',  sub:'Chai time essentials delivered fast.',      grad:'linear-gradient(135deg,#3d1a00,#200e00)', glow:'#fb923c', scene:'sunset',  kw:['chai','tea','snacks','biscuit','namkeen','chips','bread','eggs','instant','maggi','noodles'] },
+      night:       { id:'night',        title:'🌙 Night Picks',          tag:'tonight',       greeting:'Good night!',    sub:'Late night cravings sorted.',               grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#818cf8', scene:'night',   kw:['chips','biscuit','chocolate','bread','eggs','cold coffee','cola','juice','instant','maggi','snacks'] },
+      lateNight:   { id:'lateNight',    title:'🦉 Night Owl Picks',      tag:'late night',    greeting:'Still up?',      sub:'Midnight cravings delivered.',              grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#818cf8', scene:'night',   kw:['chips','biscuit','chocolate','bread','instant','maggi','cola','juice','snacks','cold coffee'] },
     };
-    const timeSec = timeMap[timeSlot] || timeMap['morning'];
+    const timeSec = timeDefs[timeSlot] || timeDefs['morning'];
 
     // ── SLOT ASSIGNMENT ───────────────────────────────────────────────────────
-    // Slot 1 (hero banner): Festival > Weather > Time
-    // Slot 2 (secondary strip + small banner): if Slot1=Festival→Weather, if Slot1=Weather→Time, if Slot1=Time→null
-    // The upcoming teaser (7-14 days before) only shows when hero is NOT already a festival
+    // Slot 1: Festival → Weather → Time (whichever is first available)
+    // Slot 2: if Slot1=Festival → Weather; if Slot1=Weather → Time; if Slot1=Time → null
+    // Upcoming teaser only shows if hero is NOT already a festival
     let slot1, slot2;
-
     if (festivalSec) {
       slot1 = festivalSec;
-      slot2 = weatherSec;  // below festival → show weather essentials
+      slot2 = weatherSec;
     } else if (weatherSec) {
       slot1 = weatherSec;
-      slot2 = timeSec;     // below weather → show time-of-day
+      slot2 = timeSec;
     } else {
       slot1 = timeSec;
-      slot2 = null;        // time alone (autumn/clear day)
+      slot2 = null;
     }
 
     // ── BUILD HTML ────────────────────────────────────────────────────────────
     let h = '';
 
-    // Upcoming festival teaser (small strip) — only if hero is NOT a festival
+    // Upcoming festival teaser (small strip) — only if hero is NOT already festival
     if (!festivalSec && festivals.upcoming) {
       h += _festComingHtml(festivals.upcoming);
     }
 
-    // SLOT 1: Full animated banner + product strip
+    // SLOT 1 — Full tall banner + product strip
     const slot1Prods = _matchByKeywords(slot1.kw, 8);
     if (!slot1Prods.length) return '';
     h += _sceneBannerHtml(slot1);
     window._persCtx = { hero: slot1, sections: [slot1, slot2].filter(Boolean) };
     h += `<div class="sec">${_ctxSecHd(slot1.title, slot1.kw, slot1.id)}<div class="pstrip">${slot1Prods.slice(0,5).map(pCard).join('')}</div></div>`;
 
-    // "Order Again" — from local order history
+    // Order Again — from local history
     const reorderIds = _getTopReorderedIds(6);
     if (reorderIds.length >= 2) {
       const rp = reorderIds
-        .map(id => prods.find(p=>p.id===id))
+        .map(id => prods.find(p => p.id === id))
         .filter(p => p && !p.disabled && p.variants?.[0]?.inStock !== false)
         .slice(0, 5);
       if (rp.length >= 2) {
-        const reorderKw = reorderIds.map(id => { const p=prods.find(x=>x.id===id); return p?(p.name||'').split(' ')[0].toLowerCase():''; }).filter(Boolean);
+        const reorderKw = reorderIds.map(id => { const p = prods.find(x => x.id === id); return p ? (p.name||'').split(' ')[0].toLowerCase() : ''; }).filter(Boolean);
         h += `<div class="sec">${_ctxSecHd('🔁 Order Again', reorderKw, 'reorder')}<div class="pstrip">${rp.map(pCard).join('')}</div></div>`;
       }
     }
 
-    // SLOT 2: Smaller banner header + product strip (no duplicate full scene banner)
+    // SLOT 2 — Compact banner + product strip (different products from slot1)
     if (slot2) {
       const slot2Prods = _matchByKeywords(slot2.kw, 8)
-        .filter(p => !slot1Prods.some(x=>x.id===p.id))
+        .filter(p => !slot1Prods.some(x => x.id === p.id))
         .slice(0, 5);
-      if (slot2Prods.length >= 2) {
-        // Compact banner — same visual style but smaller height
+      if (slot2Prods.length >= 1) {
+        const svg2 = _buildScene(slot2.scene || 'default', slot2.grad, slot2.glow);
         h += `<div class="scene-banner scene-banner-sm" style="background:${slot2.grad}">
-          ${_buildScene(slot2.scene || 'default', slot2.grad, slot2.glow)}
+          ${svg2}
           <div class="scene-tag">${slot2.tag}</div>
           <div class="scene-text">
-            <div class="scene-greeting" style="font-size:.95rem">${slot2.greeting}</div>
-            <div class="scene-sub">${slot2.sub}</div>
+            <div class="scene-greeting" style="font-size:.9rem">${slot2.greeting}</div>
+            <div class="scene-sub" style="font-size:.7rem">${slot2.sub}</div>
           </div>
         </div>`;
         h += `<div class="sec">${_ctxSecHd(slot2.title, slot2.kw, slot2.id)}<div class="pstrip">${slot2Prods.map(pCard).join('')}</div></div>`;
@@ -2087,7 +2083,7 @@ async function buildPersonalisedHome() {
 
     return h;
   } catch(e) {
-    console.error('buildPersonalisedHome error:', e);
+    console.error('buildPersonalisedHome:', e);
     return '';
   }
 }

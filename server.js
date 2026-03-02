@@ -10,10 +10,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ── SECURITY: Secrets from env vars (#1, #18) ─────────────────────────────────
-// Fallback = original secret so existing saved tokens keep working.
-// In production set ADMIN_JWT_SECRET + CUSTOMER_JWT_SECRET as env vars.
-const ADMIN_SECRET    = process.env.ADMIN_JWT_SECRET    || 'bsc-store-v2-secret';
-const CUSTOMER_SECRET = process.env.CUSTOMER_JWT_SECRET || 'bsc-store-v2-secret';
+const ADMIN_SECRET   = process.env.ADMIN_JWT_SECRET  || 'bsc-admin-fallback-change-in-prod';
+const CUSTOMER_SECRET = process.env.CUSTOMER_JWT_SECRET || 'bsc-customer-fallback-change-in-prod';
 const MONGO_URI = process.env.MONGO_URI;
 
 // ── SECURITY: Rate limiting on login (#2) ─────────────────────────────────────
@@ -82,8 +80,7 @@ async function connectDB() {
       whatsapp: '', upiId: '', minOrder: 99, storeName: 'BSC Store',
       milkPrice: 60, freeDeliveryMin: 99,
       freeGift: { threshold: 100, productId: null, qty: 1, autoAdd: false, label: '', discountPrice: 0 },
-      upsellProductIds: [],
-      storeLocation: null
+      upsellProductIds: []
     });
   }
 }
@@ -284,7 +281,6 @@ app.get('/api/store', async (req, res) => {
         upiId: settings.upiId, whatsapp: settings.whatsapp,
         freeDeliveryMin: settings.freeDeliveryMin || 99,
         upsellProductIds: settings.upsellProductIds || [],
-        storeLocation: settings.storeLocation || null,
         freeGift: {
           threshold: fg.threshold || 0, productId: fg.productId || null,
           variantId: fg.variantId || null, qty: fg.qty || 1,
@@ -1639,6 +1635,7 @@ app.get('/api/customer/ledger/months', customerAuth, async (req, res) => {
 });
 
 // ── SERVE PAGES ───────────────────────────────────────────────────────────────
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'public', 'manifest.json')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
