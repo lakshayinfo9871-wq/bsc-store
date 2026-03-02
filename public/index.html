@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>BSC Store</title>
+<!-- #19: PWA Meta Tags -->
+<meta name="theme-color" content="#2dd36f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BSC Store">
+<link rel="manifest" href="/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -226,8 +233,10 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .cat-right::-webkit-scrollbar{display:none;}
 .cat-right-section{margin-bottom:16px;}
 .cat-right-section-title{font-size:.8rem;font-weight:900;color:var(--text);padding:8px 4px 10px;letter-spacing:-.2px;}
-/* Category grid — uniform height cards */
-.cat-right-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+/* ── OUT OF STOCK overlay on card image ── */
+.pc-oos-badge{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.72);color:#fff;font-size:.58rem;font-weight:800;padding:3px 8px;border-radius:6px;letter-spacing:.04em;z-index:3;backdrop-filter:blur(4px);}
+.pcard.oos{opacity:.6;}
+.pcard.oos .pc-add-overlay{pointer-events:none;}
 
 /* All-cats grid page uses blinkit cat cards */
 .cats-grid-page{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px;}
@@ -744,6 +753,9 @@ select.ck-inp option{background:var(--bg2);}
 let prods=[], cats=[], banners=[], settings={}, subcats=[];
 // cart: { "productId_variantId": qty, ... }
 let cart = {};
+const CART_KEY = 'bsc_cart_v2';
+function saveCart() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch(e){} }
+function loadCart() { try { const s = localStorage.getItem(CART_KEY); if(s) cart = JSON.parse(s)||{}; } catch(e){} }
 let giftState = { injected:false, claimed:false, prevUnlocked:false };
 let bIdx=0, bTimer=null;
 
@@ -778,10 +790,11 @@ function offPct(price, mrp) {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
+  loadCart(); // #9: restore cart from localStorage
   try {
     const d = await fetch('/api/store').then(r=>r.json());
     prods=d.products||[]; cats=d.categories||[]; banners=d.banners||[]; settings=d.settings||{}; subcats=d.subcategories||[];
-    buildTabs(); renderHome();
+    buildTabs(); renderHome(); updateCart(); // re-render with restored cart
   } catch(e) {
     document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
   }
@@ -939,8 +952,8 @@ function renderHome() {
     startBanner();
   }
   // Featured & New
-  const feat = prods.filter(p => p.featured && p.variants?.some(v=>v.inStock));
-  const newP  = prods.filter(p => p.isNew   && p.variants?.some(v=>v.inStock));
+  const feat = prods.filter(p => p.featured); // #7: include OOS, card shows grey badge
+  const newP  = prods.filter(p => p.isNew);  // #7: include OOS
   if (feat.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">⭐ Featured</span></div><div class="pstrip">${feat.map(pCard).join('')}</div></div>`;
   if (newP.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">✨ New Arrivals</span></div><div class="pstrip">${newP.map(pCard).join('')}</div></div>`;
 
@@ -957,7 +970,7 @@ function renderHome() {
 
   // Per-category strips
   cats.forEach(c => {
-    const ps = prods.filter(p => p.catId===c.id && p.variants?.some(v=>v.inStock));
+    const ps = prods.filter(p => p.catId===c.id); // #7: include OOS
     if (!ps.length) return;
     h += `<div class="sec"><div class="sec-hd"><span class="sec-title">${c.name}</span><span class="see-all" onclick="openFP(${c.id})">See all →</span></div>
       <div class="pstrip">${ps.slice(0,8).map(pCard).join('')}</div></div>`;
@@ -999,19 +1012,24 @@ function pCard(p) {
       </div>`
     : `<div class="pc-variant-label">${v.label}</div>`;
 
+  const isOOS = !v?.inStock || (typeof p.stockQuantity === 'number' && p.stockQuantity === 0);
+
   const addCtrl = qty > 0
     ? `<div class="qty-ctrl">
         <button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button>
         <span>${qty}</span>
         <button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button>
        </div>`
+    : isOOS
+    ? `<button class="add-btn" style="opacity:.45;cursor:default" disabled>ADD</button>`
     : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
 
-  return `<div class="pcard" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
+  return `<div class="pcard${isOOS?' oos':''}" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
     <div class="pc-img-wrap">
       ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : '<span style="font-size:2.5rem">📦</span>'}
-      ${off > 0 ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
-      ${p.isNew && off === 0 ? `<span class="pc-new-badge">NEW</span>` : ''}
+      ${off > 0 && !isOOS ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
+      ${p.isNew && off === 0 && !isOOS ? `<span class="pc-new-badge">NEW</span>` : ''}
+      ${isOOS ? `<span class="pc-oos-badge">OUT OF STOCK</span>` : ''}
       <div class="pc-add-overlay">${addCtrl}</div>
     </div>
     <div class="pc-body">
@@ -1194,19 +1212,24 @@ function pCardBlinkit(p) {
       </div>`
     : `<div class="pc-variant-label">${v.label}</div>`;
 
+  const isOOS = !v?.inStock || (typeof p.stockQuantity === 'number' && p.stockQuantity === 0);
+
   const addCtrl = qty > 0
     ? `<div class="qty-ctrl">
         <button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button>
         <span>${qty}</span>
         <button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button>
        </div>`
+    : isOOS
+    ? `<button class="add-btn" style="opacity:.45;cursor:default" disabled>ADD</button>`
     : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
 
-  return `<div class="pcard" style="width:100%;flex-shrink:1;" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
+  return `<div class="pcard${isOOS?' oos':''}" style="width:100%;flex-shrink:1;" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
     <div class="pc-img-wrap">
       ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : '<span style="font-size:2.2rem">📦</span>'}
-      ${off > 0 ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
-      ${p.isNew && off === 0 ? `<span class="pc-new-badge">NEW</span>` : ''}
+      ${off > 0 && !isOOS ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
+      ${p.isNew && off === 0 && !isOOS ? `<span class="pc-new-badge">NEW</span>` : ''}
+      ${isOOS ? `<span class="pc-oos-badge">OUT OF STOCK</span>` : ''}
       <div class="pc-add-overlay">${addCtrl}</div>
     </div>
     <div class="pc-body">
@@ -1309,7 +1332,7 @@ function renderSplitRight(catId, subCatId) {
     ps = ps.filter(p => p.subCatId === subCatId);
   }
   const filter = window._fpFilter || 'all';
-  ps = ps.filter(p => p.variants?.some(v => v.inStock));
+  // #7: keep OOS in listing, card shows greyed badge
   if (filter === 'bulk') ps = ps.filter(p => {
     const v = defaultVariant(p);
     return v?.priceTiers?.length > 1;
@@ -1418,10 +1441,18 @@ function clientSmartSearch(q) {
 function renderSearchResults(results, query, expandedTerms) {
   const grid = document.getElementById('searchGrid');
   if (!results.length) {
+    // #8: Show popular search suggestions using synonym keys
+    const suggestions = Object.keys(CLIENT_SYNONYMS).slice(0, 8)
+      .concat(['milk','bread','rice','sugar','oil','eggs','paneer','butter'])
+      .filter((s,i,a) => a.indexOf(s)===i)
+      .slice(0, 8);
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
       <div class="ei">🔍</div>
       <p>No results for "<strong>${query}</strong>"</p>
       <p style="font-size:.75rem;color:var(--text3);margin-top:6px">Try different keywords or check spelling</p>
+      <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:7px;justify-content:center">
+        ${suggestions.map(s=>`<button onclick="document.getElementById('searchInput').value='${s}';onSearch('${s}')" style="background:var(--bg2);border:1px solid var(--border);color:var(--text2);border-radius:20px;padding:5px 14px;font-size:.75rem;font-weight:600;cursor:pointer">${s}</button>`).join('')}
+      </div>
     </div>`;
     return;
   }
@@ -1595,6 +1626,7 @@ function chQty(pid, vid, delta) {
   const cur = cart[key] || 0;
   const nw = Math.max(0, cur + delta);
   if (nw === 0) delete cart[key]; else cart[key] = nw;
+  saveCart(); // #9: persist cart
   updateCart();
 
   // Update card in-place (no scroll, no full re-render)
@@ -1823,6 +1855,7 @@ function chQtyCart(key, delta) {
   const cur = cart[key] || 0;
   const nw = Math.max(0, cur + delta);
   if (nw===0) delete cart[key]; else cart[key]=nw;
+  saveCart(); // #9: persist cart
   updateCart(); renderCart();
   const { pid, vid } = parseKey(key);
   const fpOpen = document.getElementById('fpage')?.classList.contains('open');
@@ -2092,7 +2125,7 @@ function _doPlaceOrder(method) {
   fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:d.name,phone:d.phone,block:d.block,villa:d.villa,note:d.note,items,total:t,freeGift:freeGiftLabel,paymentMethod:method})})
   .then(r=>r.json())
   .then(resp=>{
-    cart={}; giftState={injected:false,claimed:false,prevUnlocked:false}; window._fdUnlocked=false;
+    cart={}; giftState={injected:false,claimed:false,prevUnlocked:false}; window._fdUnlocked=false; saveCart();
     closeCkoPage();
     // Refresh account data if logged in (so passbook is up to date)
     if (method==='account') { _accData=null; }
@@ -2360,35 +2393,71 @@ function logoutAccount() {
 // ── ORDERS SECTION ────────────────────────────────────────────────────────────
 function openOrdersSection() {
   if (!_accData) return;
-  const orders = _accData.orders || [];
+  const orders = (_accData.orders || []).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  const active = orders.filter(o=>!['delivered','cancelled'].includes(o.status));
   document.getElementById('accTopTitle').textContent = 'Your Orders';
   document.getElementById('accTopSub').textContent = orders.length + ' orders';
+
+  const statusSteps = ['pending','accepted','packed','delivered'];
+  function orderTimeline(o) {
+    const step = statusSteps.indexOf(o.status);
+    const labels = {pending:'Placed',accepted:'Confirmed',packed:'Packed',delivered:'Delivered'};
+    return `<div style="display:flex;align-items:center;margin:10px 0 4px">
+      ${statusSteps.map((s,i) => {
+        const done = i <= step;
+        const isLast = i === statusSteps.length - 1;
+        return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;position:relative">
+          ${!isLast ? `<div style="position:absolute;top:9px;left:50%;width:100%;height:2px;background:${i<step?'var(--green)':'var(--border)'}"></div>` : ''}
+          <div style="width:20px;height:20px;border-radius:50%;background:${done?'var(--green)':'var(--bg3)'};border:2px solid ${done?'var(--green)':'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:.55rem;color:${done?'#000':'var(--text3)'};position:relative;z-index:1;flex-shrink:0">
+            ${done ? '✓' : ''}
+          </div>
+          <div style="font-size:.52rem;color:${done?'var(--green)':'var(--text3)'};font-weight:${done?'700':'500'};margin-top:3px;text-align:center;white-space:nowrap">${labels[s]}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
   document.getElementById('milkBody').innerHTML = `
     <div style="overflow-y:auto;height:100%;padding:16px 16px 80px">
       <button onclick="renderAccountHome(_accData)" style="display:flex;align-items:center;gap:6px;color:var(--text2);font-size:.82rem;font-weight:600;margin-bottom:14px;background:none;border:none;cursor:pointer">&#8592; Back</button>
-      ${orders.length ? orders.map(o => {
-        const statusColor = {delivered:'var(--green)',pending:'#f59e0b',cancelled:'var(--red)'}[o.status]||'var(--text3)';
-        const statusBg = {delivered:'rgba(45,211,111,.08)',pending:'rgba(245,158,11,.08)',cancelled:'rgba(255,71,87,.08)'}[o.status]||'var(--bg3)';
-        const statusEmoji = {delivered:'✅',pending:'⏳',cancelled:'❌'}[o.status]||'📦';
+      ${active.length ? `
+        <div style="font-size:.7rem;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Active Orders</div>
+        ${active.map(o => {
+          const borderColor = o.status==='pending'?'rgba(245,158,11,.35)':'rgba(45,211,111,.3)';
+          return `<div style="background:var(--bg2);border:1.5px solid ${borderColor};border-radius:16px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="font-size:.8rem;font-weight:700">Order #${o.id}</div>
+              <span style="font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px;background:rgba(45,211,111,.1);color:var(--green)">● ${o.status}</span>
+            </div>
+            ${orderTimeline(o)}
+            <div style="font-size:.76rem;color:var(--text3);margin-top:8px">${(o.items||[]).slice(0,2).map(i=>i.name+' ×'+i.qty).join(', ')}${(o.items||[]).length>2?'…':''}</div>
+            <div style="font-size:.9rem;font-weight:900;margin-top:6px;text-align:right">₹${o.total}</div>
+          </div>`;
+        }).join('')}
+        <div style="font-size:.7rem;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 10px">Past Orders</div>
+      ` : ''}
+      ${orders.filter(o=>['delivered','cancelled'].includes(o.status)).map(o => {
+        const sc = {delivered:'var(--green)',cancelled:'var(--red)'}[o.status]||'var(--text3)';
+        const sb = {delivered:'rgba(45,211,111,.08)',cancelled:'rgba(255,71,87,.08)'}[o.status]||'var(--bg3)';
+        const se = {delivered:'✅',cancelled:'❌'}[o.status]||'📦';
         return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="font-size:.72rem;color:var(--text3);font-weight:600">Order #${o.id} · ${new Date(o.createdAt).toLocaleDateString('default',{day:'numeric',month:'short',year:'numeric'})}</div>
-            <span style="font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px;background:${statusBg};color:${statusColor}">${statusEmoji} ${o.status}</span>
+            <div style="font-size:.72rem;color:var(--text3);font-weight:600">Order #${o.id} · ${new Date(o.createdAt).toLocaleDateString('default',{day:'numeric',month:'short'})}</div>
+            <span style="font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px;background:${sb};color:${sc}">${se} ${o.status}</span>
           </div>
           ${(o.items||[]).map(item => `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
             <div style="font-size:.8rem;font-weight:600">${item.name} <span style="color:var(--text3)">×${item.qty}</span></div>
             <div style="font-size:.8rem;font-weight:700">₹${(item.price*item.qty).toFixed(0)}</div>
           </div>`).join('')}
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-            <div style="font-size:.7rem;color:var(--text3)">${o.paymentMethod==='account'?'📒 Account (Khata)':'💳 UPI'}</div>
+            <div style="font-size:.7rem;color:var(--text3)">${o.paymentMethod==='account'?'📒 Account':'💳 UPI'}</div>
             <div style="font-size:.95rem;font-weight:900">₹${o.total}</div>
           </div>
         </div>`;
-      }).join('') : '<div class="empty-state"><div class="ei">🛒</div><p>No orders yet</p></div>'}
+      }).join('')}
+      ${!orders.length ? '<div class="empty-state"><div class="ei">🛒</div><p>No orders yet</p></div>' : ''}
     </div>`;
 }
-
-// ── MILK LOG SECTION ──────────────────────────────────────────────────────────
 function openMilkSection() {
   if (!_accData) return;
   const { log, totalLitres, milkAmt, milkPaid, pricePerLitre, month } = _accData;

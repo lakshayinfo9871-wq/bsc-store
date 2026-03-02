@@ -130,6 +130,15 @@ tr:hover td{background:#fafafa;}
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--sidebar);color:#fff;padding:.7rem 1.2rem;border-radius:10px;font-size:.84rem;font-weight:500;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s;box-shadow:0 4px 20px rgba(0,0,0,.3);}
 .toast.show{opacity:1;}
 
+/* ── MINI MODAL (replaces browser prompt()) ─────────────────────────────── */
+.mini-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:5000;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
+.mini-modal{background:#fff;border-radius:18px;width:min(420px,100%);box-shadow:0 24px 64px rgba(0,0,0,.28);overflow:hidden;}
+.mini-modal-head{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);font-weight:700;font-size:.97rem;display:flex;align-items:center;justify-content:space-between;}
+.mini-modal-body{padding:1.3rem 1.4rem;display:flex;flex-direction:column;gap:.8rem;}
+.mini-modal-foot{padding:.9rem 1.4rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end;}
+.mini-modal input,.mini-modal select{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:.6rem .9rem;font-size:.9rem;font-family:inherit;color:var(--text);background:#fff;transition:border-color .2s;}
+.mini-modal input:focus,.mini-modal select:focus{outline:none;border-color:var(--green);}
+
 .empty-state{text-align:center;padding:3rem 1rem;color:var(--text2);}
 .empty-state .ei{font-size:2.5rem;margin-bottom:.5rem;}
 .empty-state p{font-size:.88rem;line-height:1.6;}
@@ -467,7 +476,6 @@ tr:hover td{background:#fafafa;}
 let token = localStorage.getItem('bsc_token');
 let allProducts = [], allCategories = [], allBanners = [], allSubcategories = [];
 let currentPage = 'dashboard';
-let productSearch = '';
 
 window.onload = function() {
   if (token) { startApp(); }
@@ -497,7 +505,10 @@ async function startApp() {
 
 function logout() { localStorage.removeItem('bsc_token'); token=null; location.reload(); }
 
-async function loadAll() {
+async function loadAll(force = false) {
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  const now = Date.now();
+  if (!force && loadAll._cachedAt && (now - loadAll._cachedAt) < CACHE_TTL) return;
   const [pR,cR,bR,scR] = await Promise.all([
     fetch('/api/admin/products',{headers:ah()}),
     fetch('/api/admin/categories',{headers:ah()}),
@@ -508,7 +519,9 @@ async function loadAll() {
   allCategories = await cR.json();
   allBanners = await bR.json();
   allSubcategories = scR.ok ? await scR.json() : [];
+  loadAll._cachedAt = Date.now();
 }
+function invalidateCache() { loadAll._cachedAt = 0; }
 
 const ah = () => ({Authorization:'Bearer '+token,'Content-Type':'application/json'});
 
@@ -541,22 +554,59 @@ function wrapTables() {
 // ═══════════════════════════════════════
 async function renderDashboard() {
   try {
-    const [ordersR, custR, lowStockR] = await Promise.all([
+    const today = new Date().toISOString().slice(0,10);
+    const [ordersR, pendingR, custR, lowStockR, milkSubsR, udharSumR] = await Promise.all([
+      fetch('/api/admin/orders?date=today',{headers:ah()}),
       fetch('/api/admin/orders?status=pending',{headers:ah()}),
       fetch('/api/admin/customers',{headers:ah()}),
       fetch('/api/admin/products/low-stock',{headers:ah()}),
+      fetch('/api/admin/milk/customers',{headers:ah()}),
+      fetch('/api/admin/udhar-summary',{headers:ah()}),
     ]);
-    const pendingOrders = ordersR.ok ? await ordersR.json() : [];
-    const customers = custR.ok ? await custR.json() : [];
+    const todayOrders   = ordersR.ok   ? await ordersR.json()   : [];
+    const pendingOrders = pendingR.ok  ? await pendingR.json()  : [];
+    const customers     = custR.ok     ? await custR.json()     : [];
     const lowStockProducts = lowStockR.ok ? await lowStockR.json() : [];
-    const milkCount = customers.filter(c=>c.milkSubscription).length;
+    const milkSubs      = milkSubsR.ok ? await milkSubsR.json() : [];
+    const udharSummary  = udharSumR.ok ? await udharSumR.json() : [];
+    const milkCount     = customers.filter(c=>c.milkSubscription).length;
+    const todayRevenue  = todayOrders.filter(o=>o.status==='delivered').reduce((s,o)=>s+(parseFloat(o.total)||0),0);
+    const milkActive    = milkSubs.filter(c=>c.active);
+    // Count how many active milk customers already have a log entry today
+    const milkMarked    = milkActive.filter(c=>milkLogs&&milkLogs.find&&milkLogs.find(l=>l.customerId===c.id&&l.date===today)).length;
+    const milkTotal     = milkActive.length;
+    const milkPct       = milkTotal ? Math.round(milkMarked/milkTotal*100) : 0;
+    const milkColor     = milkPct===100?'var(--green)':milkPct>60?'var(--yellow)':'var(--red)';
+    const overdueCount  = udharSummary.filter(s=>(s.balance||0)>0).length;
 
     document.getElementById('content').innerHTML = `
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-val">${customers.length}</div><div class="stat-lbl">Total Customers</div></div>
+        <div class="stat-card"><div class="stat-val">${customers.length}</div><div class="stat-lbl">Customers</div></div>
         <div class="stat-card"><div class="stat-val" style="color:var(--yellow)">${pendingOrders.length}</div><div class="stat-lbl">Pending Orders</div></div>
-        <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${milkCount}</div><div class="stat-lbl">Milk Subscribers</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--green)">₹${todayRevenue.toFixed(0)}</div><div class="stat-lbl">Today's Revenue</div></div>
         <div class="stat-card"><div class="stat-val">${allProducts.length}</div><div class="stat-lbl">Products</div></div>
+      </div>
+      <div class="stats-grid" style="margin-top:-.4rem">
+        <div class="stat-card" style="grid-column:span 2">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div>
+              <div class="stat-val" style="color:${milkColor};font-size:1.4rem">${milkMarked}/${milkTotal}</div>
+              <div class="stat-lbl">🥛 Milk Delivered Today</div>
+            </div>
+            <div style="font-size:1.3rem;font-weight:900;color:${milkColor}">${milkPct}%</div>
+          </div>
+          <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${milkPct}%;background:${milkColor};border-radius:3px"></div>
+          </div>
+        </div>
+        <div class="stat-card" onclick="goTo('udhar')" style="cursor:pointer" title="View udhar">
+          <div class="stat-val" style="color:${overdueCount>0?'var(--red)':'var(--green)'}">${overdueCount}</div>
+          <div class="stat-lbl">📒 Overdue Udhar</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--blue)">${milkCount}</div>
+          <div class="stat-lbl">Milk Subscribers</div>
+        </div>
       </div>
       ${lowStockProducts.length > 0 ? `
       <div class="low-stock-alert">
@@ -1050,37 +1100,76 @@ async function refreshProfile(customerId) {
   if (r.ok) { _profileData = await r.json(); renderProfileUI(customerId,'ledger'); }
 }
 
+// ── UNDO TOAST helper ────────────────────────────────────────────────────────
+function undoToast(message, onConfirm, onUndo) {
+  document.getElementById('_undoToast')?.remove();
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="_undoToast" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:.65rem 1rem .65rem 1.2rem;border-radius:12px;font-size:.83rem;font-weight:500;z-index:9999;display:flex;align-items:center;gap:.8rem;box-shadow:0 6px 24px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08)">
+      <span>${message}</span>
+      <button onclick="undoAction()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:7px;padding:4px 10px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">↩ Undo</button>
+      <div id="_undoBar" style="position:absolute;bottom:0;left:0;height:3px;background:var(--green);border-radius:0 0 0 12px;animation:undoShrink 5s linear forwards"></div>
+    </div>
+    <style>@keyframes undoShrink{from{width:100%}to{width:0%}}</style>`);
+  window._undoAction = onUndo;
+  window._undoTimer = setTimeout(() => {
+    document.getElementById('_undoToast')?.remove();
+    onConfirm();
+  }, 5000);
+}
+function undoAction() {
+  clearTimeout(window._undoTimer);
+  document.getElementById('_undoToast')?.remove();
+  if (window._undoAction) window._undoAction();
+  toast('Deletion cancelled');
+}
+
 // ── LEDGER ACTIONS ────────────────────────────────────────────────────────────
 async function delLedgerEntry(id, customerId) {
-  if (!confirm('Delete this ledger entry?')) return;
-  await fetch('/api/admin/ledger/'+id,{method:'DELETE',headers:ah()});
-  toast('Entry deleted');
-  await refreshProfile(customerId);
+  undoToast('Ledger entry deleted',
+    async () => { // confirmed after 5s — actually delete
+      await fetch('/api/admin/ledger/'+id,{method:'DELETE',headers:ah()});
+      await refreshProfile(customerId);
+    },
+    () => {} // undo — do nothing (entry not deleted yet)
+  );
 }
 
 async function delUdharEntry(id, customerId) {
-  if (!confirm('Delete this udhar entry?')) return;
-  await fetch('/api/admin/udhar/'+id,{method:'DELETE',headers:ah()});
-  toast('Entry deleted');
-  await refreshProfile(customerId);
+  undoToast('Udhar entry deleted',
+    async () => {
+      await fetch('/api/admin/udhar/'+id,{method:'DELETE',headers:ah()});
+      await refreshProfile(customerId);
+    },
+    () => {}
+  );
 }
 
 async function editUdharEntry(id, customerId) {
   const e = (_profileData.udharEntries||[]).find(x=>x.id===id);
   if (!e) return;
-  const newAmt = prompt('Edit amount (₹):',e.amount);
-  if (newAmt===null) return;
-  const newNote = prompt('Note:',e.note||'');
-  await fetch('/api/admin/udhar/'+id,{method:'PUT',headers:ah(),body:JSON.stringify({amount:parseFloat(newAmt)||e.amount,note:newNote||''})});
-  toast('Updated!');
-  await refreshProfile(customerId);
+  miniModal({
+    title: '✏️ Edit Udhar Entry',
+    fields: [
+      { id: 'amount', label: 'Amount (₹)', type: 'number', value: e.amount, min: 0 },
+      { id: 'note', label: 'Note', value: e.note||'' },
+    ],
+    confirmLabel: 'Update', confirmClass: 'btn-blue',
+    onConfirm: async ({ amount, note }) => {
+      await fetch('/api/admin/udhar/'+id,{method:'PUT',headers:ah(),body:JSON.stringify({amount:parseFloat(amount)||e.amount,note:note||''})});
+      toast('Updated!');
+      await refreshProfile(customerId);
+    }
+  });
 }
 
 async function delUdharPayment(id, customerId) {
-  if (!confirm('Delete this payment record?')) return;
-  await fetch('/api/admin/udhar-payments/'+id,{method:'DELETE',headers:ah()});
-  toast('Payment deleted');
-  await refreshProfile(customerId);
+  undoToast('Payment record deleted',
+    async () => {
+      await fetch('/api/admin/udhar-payments/'+id,{method:'DELETE',headers:ah()});
+      await refreshProfile(customerId);
+    },
+    () => {}
+  );
 }
 
 function addUdharItemRow() {
@@ -1339,38 +1428,92 @@ async function editMilkLogFromProfile(customerId, date) {
 }
 
 // ── QUICK MODALS ──────────────────────────────────────────────────────────────
+// ── MINI MODAL HELPER (replaces browser prompt()) ─────────────────────────────
+function miniModal({ title, fields, confirmLabel='Save', confirmClass='btn-green', onConfirm }) {
+  document.getElementById('_miniModal')?.remove();
+  const fieldsHtml = fields.map(f => `
+    <div>
+      <label style="font-size:.77rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.35rem">${f.label}</label>
+      ${f.type === 'select'
+        ? `<select id="mmf_${f.id}">${f.options.map(o=>`<option value="${o.value}" ${o.selected?'selected':''}>${o.label}</option>`).join('')}</select>`
+        : `<input id="mmf_${f.id}" type="${f.type||'text'}" value="${f.value??''}" placeholder="${f.placeholder||''}" ${f.min!==undefined?`min="${f.min}"`:''}>`
+      }
+      ${f.hint ? `<div style="font-size:.74rem;color:var(--text3);margin-top:.3rem">${f.hint}</div>` : ''}
+    </div>`).join('');
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="_miniModal" class="mini-modal-overlay" onclick="if(event.target===this)this.remove()">
+      <div class="mini-modal">
+        <div class="mini-modal-head">${title}<button onclick="document.getElementById('_miniModal').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text2)">✕</button></div>
+        <div class="mini-modal-body">${fieldsHtml}</div>
+        <div class="mini-modal-foot">
+          <button class="btn btn-gray" onclick="document.getElementById('_miniModal').remove()">Cancel</button>
+          <button class="btn ${confirmClass}" id="_mmConfirm">${confirmLabel}</button>
+        </div>
+      </div>
+    </div>`);
+  document.getElementById('_mmConfirm').onclick = () => {
+    const vals = {};
+    fields.forEach(f => { vals[f.id] = document.getElementById('mmf_'+f.id)?.value; });
+    document.getElementById('_miniModal').remove();
+    onConfirm(vals);
+  };
+  // Focus first input
+  setTimeout(() => document.querySelector('#_miniModal input, #_miniModal select')?.focus(), 80);
+}
+
 async function quickAddCredit(customerId, name) {
-  const amount = prompt(`Add udhar for ${name} (₹):`);
-  if (!amount || isNaN(amount)) return;
-  const note = prompt('Note / item (optional):','');
-  await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId,type:'credit',amount:parseFloat(amount),note:note||''})});
-  // Legacy compat
-  await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId,items:[],amount:parseFloat(amount),note:note||''})});
-  toast('Udhar ₹'+amount+' added!');
-  if (accountSelectedId===customerId) await refreshProfile(customerId);
-  else { await loadCustomersData(); renderCustomersPage(); }
+  miniModal({
+    title: `➕ Add Udhar — ${name}`,
+    fields: [
+      { id: 'amount', label: 'Amount (₹)', type: 'number', placeholder: 'e.g. 150', min: 0 },
+      { id: 'note', label: 'Note / Item', placeholder: 'e.g. Milk, Bread...' },
+    ],
+    confirmLabel: 'Save Udhar', confirmClass: 'btn-red',
+    onConfirm: async ({ amount, note }) => {
+      if (!amount || isNaN(amount)) return toast('Enter a valid amount');
+      await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId,type:'credit',amount:parseFloat(amount),note:note||''})});
+      await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId,items:[],amount:parseFloat(amount),note:note||''})});
+      toast('Udhar ₹'+amount+' added!');
+      if (accountSelectedId===customerId) await refreshProfile(customerId);
+      else { await loadCustomersData(); renderCustomersPage(); }
+    }
+  });
 }
 
 async function quickPayment(customerId, name, currentBalance) {
-  const amount = prompt(`Record payment for ${name} (₹):`, currentBalance>0?currentBalance:'');
-  if (!amount || isNaN(amount)) return;
-  const method = prompt('Method (cash/UPI/bank):', 'cash');
-  await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId,type:'payment',amount:parseFloat(amount),note:method||'cash'})});
-  // Legacy compat
-  await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId,amount:parseFloat(amount),method:method||'cash'})});
-  toast('Payment ₹'+amount+' recorded!');
-  if (accountSelectedId===customerId) await refreshProfile(customerId);
-  else { await loadCustomersData(); renderCustomersPage(); }
+  miniModal({
+    title: `💰 Record Payment — ${name}`,
+    fields: [
+      { id: 'amount', label: 'Amount (₹)', type: 'number', placeholder: 'Amount received', min: 0, value: currentBalance > 0 ? currentBalance : '' },
+      { id: 'method', label: 'Payment Method', type: 'select', options: [
+        { value: 'cash', label: '💵 Cash', selected: true },
+        { value: 'upi', label: '📱 UPI' },
+        { value: 'bank', label: '🏦 Bank Transfer' },
+        { value: 'other', label: 'Other' },
+      ]},
+    ],
+    confirmLabel: 'Record Payment', confirmClass: 'btn-green',
+    onConfirm: async ({ amount, method }) => {
+      if (!amount || isNaN(amount)) return toast('Enter a valid amount');
+      await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId,type:'payment',amount:parseFloat(amount),note:method||'cash'})});
+      await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId,amount:parseFloat(amount),method:method||'cash'})});
+      toast('Payment ₹'+amount+' recorded!');
+      if (accountSelectedId===customerId) await refreshProfile(customerId);
+      else { await loadCustomersData(); renderCustomersPage(); }
+    }
+  });
 }
 
 // ═══════════════════════════════════════
 // ORDERS
 // ═══════════════════════════════════════
 let ordersData = [];
+let ordersDateFilter = 'today'; // 'today' | 'all'
 
 async function renderOrders() {
   try {
-    const r = await fetch('/api/admin/orders',{headers:ah()});
+    const qs = ordersDateFilter === 'today' ? '?date=today' : '';
+    const r = await fetch('/api/admin/orders'+qs,{headers:ah()});
     ordersData = r.ok ? await r.json() : [];
     renderOrdersPage();
   } catch { toast('Failed to load orders'); }
@@ -1387,11 +1530,16 @@ function renderOrdersPage(filterStatus='') {
       <div class="stat-card"><div class="stat-val" style="color:var(--yellow)">${counts.pending||0}</div><div class="stat-lbl">Pending</div></div>
       <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${counts.accepted||0}</div><div class="stat-lbl">Accepted</div></div>
       <div class="stat-card"><div class="stat-val" style="color:var(--green)">${counts.delivered||0}</div><div class="stat-lbl">Delivered</div></div>
-      <div class="stat-card"><div class="stat-val">${ordersData.length}</div><div class="stat-lbl">Total Today</div></div>
+      <div class="stat-card"><div class="stat-val">${ordersData.length}</div><div class="stat-lbl">${ordersDateFilter==='today'?'Today':'All Time'}</div></div>
+    </div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:center">
+      <span style="font-size:.78rem;color:var(--text3);font-weight:600;margin-right:.2rem">Date:</span>
+      <button class="btn ${ordersDateFilter==='today'?'btn-green':'btn-gray'}" onclick="ordersDateFilter='today';renderOrders()">📅 Today</button>
+      <button class="btn ${ordersDateFilter==='all'?'btn-green':'btn-gray'}" onclick="ordersDateFilter='all';renderOrders()">All Orders</button>
     </div>
     <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem">
-      <button class="btn ${!filterStatus?'btn-green':'btn-gray'}" onclick="renderOrdersPage('')">All (${ordersData.length})</button>
-      ${statuses.map(s=>`<button class="btn ${filterStatus===s?'btn-green':'btn-gray'}" onclick="renderOrdersPage('${s}')">${s} (${counts[s]||0})</button>`).join('')}
+      <button class="btn ${!filterStatus?'btn-blue':'btn-gray'}" onclick="renderOrdersPage('')">All (${ordersData.length})</button>
+      ${statuses.map(s=>`<button class="btn ${filterStatus===s?'btn-blue':'btn-gray'}" onclick="renderOrdersPage('${s}')">${s} (${counts[s]||0})</button>`).join('')}
     </div>
     <div class="card">
       <div class="card-header"><h2>📦 Orders (${filtered.length})</h2></div>
@@ -1432,11 +1580,21 @@ function renderOrdersPage(filterStatus='') {
 }
 
 async function quickUpdateOrder(id, status) {
-  await fetch('/api/admin/orders/'+id,{method:'PUT',headers:ah(),body:JSON.stringify({status})});
+  const r = await fetch('/api/admin/orders/'+id,{method:'PUT',headers:ah(),body:JSON.stringify({status})});
+  const result = r.ok ? await r.json() : null;
   toast('Order → '+status);
-  // refresh
-  const r = await fetch('/api/admin/orders',{headers:ah()});
-  ordersData = r.ok ? await r.json() : ordersData;
+  // #5: If server returns a WhatsApp notify URL (order delivered), open it
+  if (result?._waNotifyUrl) {
+    setTimeout(() => {
+      if (confirm('Order marked delivered! Send WhatsApp notification to customer?')) {
+        window.open(result._waNotifyUrl, '_blank');
+      }
+    }, 300);
+  }
+  // Refresh with current date filter
+  const qs = ordersDateFilter === 'today' ? '?date=today' : '';
+  const r2 = await fetch('/api/admin/orders'+qs,{headers:ah()});
+  ordersData = r2.ok ? await r2.json() : ordersData;
   renderOrdersPage();
 }
 
@@ -1445,7 +1603,8 @@ async function convertOrderToUdharFromList(orderId) {
   const d = await r.json();
   if (!r.ok) return toast(d.error||'Failed: '+d.error);
   toast('Added to udhar!');
-  const r2 = await fetch('/api/admin/orders',{headers:ah()});
+  const qs = ordersDateFilter === 'today' ? '?date=today' : '';
+  const r2 = await fetch('/api/admin/orders'+qs,{headers:ah()});
   ordersData = r2.ok ? await r2.json() : ordersData;
   renderOrdersPage();
 }
@@ -1647,13 +1806,19 @@ function renderMilkBilling() {
     },0);
     const paid = milkPayments.filter(p=>p.customerId===c.id).reduce((s,p)=>s+p.amount,0);
     const due = billed-paid;
+    const waMsg = encodeURIComponent(`Hi ${c.name}, your milk bill for this month is ₹${due.toFixed(0)}. Please make the payment at your earliest convenience. Thank you!`);
+    const waUrl = `https://wa.me/${(c.phone||'').replace(/\D/g,'')}?text=${waMsg}`;
     return `<tr>
       <td><div style="font-weight:600">${c.name}</div><div style="font-size:.73rem;color:var(--text2)">${c.phone}</div></td>
       <td>${totalL.toFixed(1)}L</td>
       <td style="font-weight:700">₹${billed.toFixed(0)}</td>
       <td style="color:var(--green);font-weight:600">₹${paid.toFixed(0)}</td>
       <td style="font-weight:800;color:${due>0?'var(--red)':'var(--green)'}">₹${due.toFixed(0)}</td>
-      <td>${due>0?`<button class="btn btn-green" style="font-size:.75rem" onclick="recordMilkPayment(${c.id},'${milkMonth}',${due.toFixed(0)})">Paid ₹${due.toFixed(0)}</button>`:'<span class="badge badge-green">Settled</span>'}</td>
+      <td style="display:flex;gap:.4rem;flex-wrap:wrap">
+        ${due>0?`<button class="btn btn-green" style="font-size:.75rem" onclick="recordMilkPayment(${c.id},'${milkMonth}',${due.toFixed(0)})">Paid ₹${due.toFixed(0)}</button>
+        <a href="${waUrl}" target="_blank"><button class="btn btn-gray" style="font-size:.75rem" title="Send WhatsApp reminder">📱 Remind</button></a>`
+        :'<span class="badge badge-green">Settled</span>'}
+      </td>
     </tr>`;
   }).join('');
 
@@ -1692,11 +1857,40 @@ async function bulkMark(date) {
   const active = milkCustomers.filter(c=>c.active);
   const unmarked = active.filter(c=>!milkLogs.find(l=>l.customerId===c.id&&l.date===date));
   if (!unmarked.length) return toast('All customers already marked for today!');
-  if (!confirm(`Mark ${unmarked.length} customer(s) as delivered for ${date}?
-This uses each customer's default subscription quantities.`)) return;
-  const r = await fetch('/api/admin/milk/bulk-mark',{method:'POST',headers:ah(),body:JSON.stringify({date})});
-  const d = await r.json();
-  await loadMilkData(); renderMilkPage(); toast('Marked '+d.marked+' customers delivered');
+
+  document.getElementById('_miniModal')?.remove();
+  const listHtml = unmarked.slice(0,20).map(c =>
+    `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:.84rem">
+      <span style="font-weight:600">${c.name}</span>
+      <span style="color:var(--text3);font-size:.76rem">${c.phone} &middot; ${c.defaultQty||1}L</span>
+    </div>`
+  ).join('') + (unmarked.length>20?`<div style="font-size:.8rem;color:var(--text3);padding:8px 0">...and ${unmarked.length-20} more</div>`:'');
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="_miniModal" class="mini-modal-overlay" onclick="if(event.target===this)this.remove()">
+      <div class="mini-modal" style="max-width:480px">
+        <div class="mini-modal-head">
+          Milk Bulk Mark
+          <button onclick="document.getElementById('_miniModal').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text2)">x</button>
+        </div>
+        <div class="mini-modal-body" style="max-height:55vh;overflow-y:auto">
+          <div style="font-size:.78rem;color:var(--text3);margin-bottom:10px">
+            Will mark <strong>${unmarked.length} customers</strong> as delivered for <strong>${date}</strong>:
+          </div>
+          ${listHtml}
+        </div>
+        <div class="mini-modal-foot">
+          <button class="btn btn-gray" onclick="document.getElementById('_miniModal').remove()">Cancel</button>
+          <button class="btn btn-green" id="_mmConfirm">Mark All ${unmarked.length} Delivered</button>
+        </div>
+      </div>
+    </div>\`);
+  document.getElementById('_mmConfirm').onclick = async () => {
+    document.getElementById('_miniModal').remove();
+    const r = await fetch('/api/admin/milk/bulk-mark',{method:'POST',headers:ah(),body:JSON.stringify({date})});
+    const d = await r.json();
+    await loadMilkData(); renderMilkPage(); toast('Marked '+d.marked+' customers delivered');
+  };
 }
 
 async function toggleMilkCustomer(id, active) {
@@ -1900,22 +2094,49 @@ function stockBadge(p) {
   return `<span class="stock-in">✓ ${p.stockQuantity} in stock</span>`;
 }
 
+let productSearch = '';
+let _productSearchTimer = null;
+
+async function searchProductsAndRender() {
+  const q = productSearch.trim();
+  if (!q) {
+    renderProducts(); return;
+  }
+  // Use the scanner search endpoint which searches name, SKU, barcode, brand
+  try {
+    const r = await fetch('/api/admin/products/search?q='+encodeURIComponent(q)+'&limit=100',{headers:ah()});
+    const results = r.ok ? await r.json() : [];
+    _renderProductTable(results, q);
+  } catch {
+    // Fallback to client-side
+    const filtered = allProducts.filter(p => {
+      const s = q.toLowerCase();
+      return p.name?.toLowerCase().includes(s) || p.sku?.toLowerCase().includes(s) ||
+             p.barcode?.includes(s) || p.brand?.toLowerCase().includes(s);
+    });
+    _renderProductTable(filtered, q);
+  }
+}
+
 function renderProducts() {
-  const filtered = allProducts.filter(p=>p.name.toLowerCase().includes(productSearch));
+  _renderProductTable(allProducts, '');
+}
+
+function _renderProductTable(products, searchTerm) {
   document.getElementById('content').innerHTML = `
     <div class="card">
       <div class="card-header">
-        <h2>Products (${allProducts.length})</h2>
+        <h2>Products (${products.length}${searchTerm?' found':''}${!searchTerm?' total':''})</h2>
         <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-          <input class="search-input" placeholder="Search..." value="${productSearch}" oninput="productSearch=this.value.toLowerCase();renderProducts()">
+          <input class="search-input" placeholder="Search name, SKU, barcode, brand..." value="${productSearch}" oninput="productSearch=this.value;clearTimeout(_productSearchTimer);_productSearchTimer=setTimeout(searchProductsAndRender,300)">
           <button class="btn btn-purple" onclick="goTo('scanner')">📷 Scan</button>
           <button class="btn btn-green" onclick="openProductModal()">+ Add Product</button>
         </div>
       </div>
-      ${filtered.length===0?`<div class="empty-state"><div class="ei">🛍️</div><p>No products yet.</p></div>`:`
+      ${products.length===0?`<div class="empty-state"><div class="ei">🛍️</div><p>${searchTerm?'No products match "'+searchTerm+'"':'No products yet.'}</p></div>`:`
       <table>
         <thead><tr><th>Image</th><th>Name / SKU</th><th>Category</th><th>Variants</th><th>Price Range</th><th>Stock Status</th><th>Actions</th></tr></thead>
-        <tbody>${filtered.map(p=>{
+        <tbody>${products.map(p=>{
           const cat = allCategories.find(c=>c.id===p.catId);
           const variants = p.variants||[];
           const allPrices = variants.flatMap(v=>(v.priceTiers||[]).map(t=>t.price));
@@ -2053,27 +2274,35 @@ async function saveProduct() {
   };
   const r = await fetch(id?`/api/admin/products/${id}`:'/api/admin/products',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
   if (!r.ok) { const err=await r.json(); return toast(err.error||'Save failed'); }
-  await loadAll(); closeModal('productModal'); renderProducts();
+  await loadAll(true); closeModal('productModal'); renderProducts();
   toast(id?'Product updated!':'Product added!');
 }
 
 async function deleteProduct(id) {
   if (!confirm('Delete this product?')) return;
   await fetch(`/api/admin/products/${id}`,{method:'DELETE',headers:ah()});
-  await loadAll(); renderProducts(); toast('Product deleted');
+  await loadAll(true); renderProducts(); toast('Product deleted');
 }
 
 async function quickStockUpdate(id) {
   const p = allProducts.find(x=>x.id===id);
   if (!p) return;
   const current = typeof p.stockQuantity === 'number' ? p.stockQuantity : '';
-  const val = prompt(`Update stock for "${p.name}"\nCurrent: ${current !== '' ? current : 'Not tracked'}\nEnter new quantity (or leave blank to cancel):`, current);
-  if (val === null || val === '') return;
-  const qty = parseInt(val);
-  if (isNaN(qty) || qty < 0) return toast('Invalid quantity');
-  const r = await fetch(`/api/admin/products/${id}/stock`, {method:'PATCH', headers:ah(), body:JSON.stringify({stockQuantity:qty})});
-  if (r.ok) { await loadAll(); if(currentPage==='products') renderProducts(); toast('Stock updated!'); }
-  else { const e=await r.json(); toast(e.error||'Failed to update'); }
+  miniModal({
+    title: `📦 Update Stock — ${p.name}`,
+    fields: [
+      { id: 'qty', label: 'New Quantity', type: 'number', value: current, placeholder: 'Enter stock count', min: 0,
+        hint: current !== '' ? `Current: ${current} units` : 'Currently: Not tracked' },
+    ],
+    confirmLabel: 'Update Stock', confirmClass: 'btn-green',
+    onConfirm: async ({ qty }) => {
+      const q = parseInt(qty);
+      if (isNaN(q) || q < 0) return toast('Invalid quantity');
+      const r = await fetch(`/api/admin/products/${id}/stock`, {method:'PATCH', headers:ah(), body:JSON.stringify({stockQuantity:q})});
+      if (r.ok) { await loadAll(true); if(currentPage==='products') renderProducts(); toast('Stock updated!'); }
+      else { const e=await r.json(); toast(e.error||'Failed to update'); }
+    }
+  });
 }
 
 // ═══════════════════════════════════════
@@ -2206,7 +2435,7 @@ async function updateStockFromScan(productId) {
   if (isNaN(qty) || qty < 0) return toast('Invalid quantity');
   const r = await fetch(`/api/admin/products/${productId}/stock`, {method:'PATCH', headers:ah(), body:JSON.stringify({stockQuantity:qty})});
   if (r.ok) {
-    await loadAll();
+    await loadAll(true);
     toast('✅ Stock updated!');
     const updated = allProducts.find(x=>x.id===productId);
     if (updated) {
@@ -2286,7 +2515,7 @@ async function saveCat() {
   if (!document.getElementById('cName').value.trim()) return toast('Category name required');
   const body = {name:document.getElementById('cName').value.trim(),imageUrl:document.getElementById('cImgUrl').value};
   await fetch(id?`/api/admin/categories/${id}`:'/api/admin/categories',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
-  await loadAll(); closeModal('categoryModal'); renderCategories();
+  await loadAll(true); closeModal('categoryModal'); renderCategories();
   toast(id?'Category updated!':'Category added!');
 }
 
@@ -2294,7 +2523,7 @@ async function deleteCat(id) {
   const count = allProducts.filter(p=>p.catId===id).length;
   if (count>0&&!confirm(`Has ${count} product(s). Delete anyway?`)) return;
   await fetch(`/api/admin/categories/${id}`,{method:'DELETE',headers:ah()});
-  await loadAll(); renderCategories(); toast('Category deleted');
+  await loadAll(true); renderCategories(); toast('Category deleted');
 }
 
 // ═══════════════════════════════════════
@@ -2373,14 +2602,14 @@ async function saveBanner() {
   }
   const body = {imageUrl:document.getElementById('bImgUrl').value,title:document.getElementById('bTitle').value.trim(),subtitle:document.getElementById('bSub').value.trim(),bgColor:document.getElementById('bBgColor').value,action};
   await fetch(id?`/api/admin/banners/${id}`:'/api/admin/banners',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
-  await loadAll(); closeModal('bannerModal'); renderBanners();
+  await loadAll(true); closeModal('bannerModal'); renderBanners();
   toast(id?'Banner updated!':'Banner added!');
 }
 
 async function deleteBanner(id) {
   if (!confirm('Delete this banner?')) return;
   await fetch(`/api/admin/banners/${id}`,{method:'DELETE',headers:ah()});
-  await loadAll(); renderBanners(); toast('Banner deleted');
+  await loadAll(true); renderBanners(); toast('Banner deleted');
 }
 
 // ═══════════════════════════════════════
@@ -2575,7 +2804,7 @@ async function saveSubcat() {
   if (!catId) return toast('Please select a parent category');
   const body = { name, catId, imageUrl: document.getElementById('scImgUrl').value.trim() };
   await fetch(id ? `/api/admin/subcategories/${id}` : '/api/admin/subcategories', { method: id ? 'PUT' : 'POST', headers: ah(), body: JSON.stringify(body) });
-  await loadAll(); closeModal('subcategoryModal'); renderSubcategories();
+  await loadAll(true); closeModal('subcategoryModal'); renderSubcategories();
   toast(id ? 'Subcategory updated!' : 'Subcategory added!');
 }
 
@@ -2583,7 +2812,7 @@ async function deleteSubcat(id) {
   const count = allProducts.filter(p => p.subCatId === id).length;
   if (count > 0 && !confirm(`${count} product(s) use this subcategory. Delete anyway?`)) return;
   await fetch(`/api/admin/subcategories/${id}`, { method: 'DELETE', headers: ah() });
-  await loadAll(); renderSubcategories(); toast('Subcategory deleted');
+  await loadAll(true); renderSubcategories(); toast('Subcategory deleted');
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }

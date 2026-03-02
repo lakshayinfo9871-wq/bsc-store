@@ -8,10 +8,37 @@ const { MongoClient } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SECRET = 'bsc-store-v2-secret';
+
+// ── SECURITY: Secrets from env vars (#1, #18) ─────────────────────────────────
+const ADMIN_SECRET   = process.env.ADMIN_JWT_SECRET  || 'bsc-admin-fallback-change-in-prod';
+const CUSTOMER_SECRET = process.env.CUSTOMER_JWT_SECRET || 'bsc-customer-fallback-change-in-prod';
 const MONGO_URI = process.env.MONGO_URI;
 
-app.use(express.json({ limit: '10mb' }));
+// ── SECURITY: Rate limiting on login (#2) ─────────────────────────────────────
+// Simple in-memory rate limiter (no extra package needed)
+const loginAttempts = new Map();
+function loginRateLimit(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000; // 15 minutes
+  const maxAttempts = 10;
+  const entry = loginAttempts.get(ip) || { count: 0, resetAt: now + windowMs };
+  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + windowMs; }
+  entry.count++;
+  loginAttempts.set(ip, entry);
+  if (entry.count > maxAttempts) {
+    const retryAfter = Math.ceil((entry.resetAt - now) / 1000 / 60);
+    return res.status(429).json({ error: `Too many login attempts. Try again in ${retryAfter} min.` });
+  }
+  next();
+}
+// Clean up old entries every 30 min
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of loginAttempts) { if (now > entry.resetAt) loginAttempts.delete(ip); }
+}, 30 * 60 * 1000);
+
+app.use(express.json({ limit: '500kb' })); // #4: reduced from 10mb
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── MONGODB ───────────────────────────────────────────────────────────────────
@@ -218,14 +245,14 @@ async function getCustomerBalance(customerId) {
 function adminAuth(req, res, next) {
   const h = req.headers.authorization;
   if (!h) return res.status(401).json({ error: 'No token' });
-  try { jwt.verify(h.replace('Bearer ', ''), SECRET); next(); }
+  try { jwt.verify(h.replace('Bearer ', ''), ADMIN_SECRET); next(); }
   catch { res.status(401).json({ error: 'Invalid token' }); }
 }
 
 function customerAuth(req, res, next) {
   const h = req.headers.authorization;
   if (!h) return res.status(401).json({ error: 'No token' });
-  try { req.user = jwt.verify(h.replace('Bearer ', ''), SECRET); next(); }
+  try { req.user = jwt.verify(h.replace('Bearer ', ''), CUSTOMER_SECRET); next(); }
   catch { res.status(401).json({ error: 'Invalid token' }); }
 }
 
@@ -266,12 +293,12 @@ app.get('/api/store', async (req, res) => {
 });
 
 // ── ADMIN AUTH ────────────────────────────────────────────────────────────────
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', loginRateLimit, async (req, res) => {
   try {
     const settings = await db.collection('settings').findOne({ _id: 'main' });
     if (sha256(req.body.password) !== settings.adminPassword)
       return res.status(401).json({ error: 'Wrong password' });
-    res.json({ token: jwt.sign({ admin: true }, SECRET, { expiresIn: '30d' }) });
+    res.json({ token: jwt.sign({ admin: true }, ADMIN_SECRET, { expiresIn: '30d' }) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.get('/api/admin/verify', adminAuth, (req, res) => res.json({ ok: true }));
@@ -917,6 +944,16 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
     if (req.query.customerId) filter.customerId = parseInt(req.query.customerId);
+    // #12: Date filtering — today, or custom date range
+    if (req.query.date === 'today') {
+      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+      const todayEnd   = new Date(); todayEnd.setHours(23,59,59,999);
+      filter.createdAt = { $gte: todayStart.toISOString(), $lte: todayEnd.toISOString() };
+    } else if (req.query.from || req.query.to) {
+      filter.createdAt = {};
+      if (req.query.from) filter.createdAt.$gte = new Date(req.query.from + 'T00:00:00.000Z').toISOString();
+      if (req.query.to)   filter.createdAt.$lte = new Date(req.query.to   + 'T23:59:59.999Z').toISOString();
+    }
     res.json(await db.collection('orders').find(filter).sort({ createdAt: -1 }).toArray());
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -947,6 +984,21 @@ app.put('/api/admin/orders/:id', adminAuth, async (req, res) => {
       { id: orderId }, { $set: req.body }, { returnDocument: 'after' }
     );
     if (!result) return res.status(404).json({ error: 'Not found' });
+
+    // #5: WhatsApp notification when order is delivered
+    if (newStatus === 'delivered' && existing.status !== 'delivered') {
+      try {
+        const storeSettings = await db.collection('settings').findOne({ _id: 'main' });
+        const wa = storeSettings?.whatsapp;
+        // Return notification URL in response so admin frontend can open it
+        const customerPhone = existing.phone?.replace(/\D/g, '');
+        if (wa && customerPhone) {
+          const msg = encodeURIComponent(`Hi ${existing.customerName}, your order #${orderId} of ₹${existing.total} has been delivered! Thank you for shopping with ${storeSettings.storeName || 'us'} 🛒`);
+          result._waNotifyUrl = `https://wa.me/${customerPhone}?text=${msg}`;
+        }
+      } catch (_) { /* non-critical — don't fail the order update */ }
+    }
+
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1028,11 +1080,14 @@ app.post('/api/admin/orders/:id/mark-paid', adminAuth, async (req, res) => {
 // PUBLIC: Place order
 app.post('/api/orders', async (req, res) => {
   try {
-    const { customerName, phone, block, villa, note, items, total, freeGift, paymentMethod } = req.body;
+    const { customerName, phone, block, villa, note, items, freeGift, paymentMethod } = req.body;
     if (!customerName || !phone || !items?.length) return res.status(400).json({ error: 'Missing fields' });
 
-    // ── STOCK VALIDATION & ATOMIC DEDUCTION ──────────────────────────────────
+    // ── SERVER-SIDE PRICE RECALCULATION (#3) ─────────────────────────────────
+    // Never trust client-submitted prices — recalculate from DB
     const regularItems = items.filter(i => !i.isFreeGift);
+    let recalcTotal = 0;
+    const validatedItems = [];
     for (const item of regularItems) {
       const product = await db.collection('products').findOne({ id: item.productId });
       if (!product) continue;
@@ -1040,7 +1095,6 @@ app.post('/api/orders', async (req, res) => {
       if (typeof product.stockQuantity === 'number') {
         if (product.stockQuantity === 0) return res.status(400).json({ error: `"${product.name}" is Out of Stock.` });
         if (product.stockQuantity < item.qty) return res.status(400).json({ error: `Only ${product.stockQuantity} unit(s) of "${product.name}" available.` });
-        // Atomic decrement — uses findOneAndUpdate with a condition to prevent race conditions
         const updateResult = await db.collection('products').findOneAndUpdate(
           { id: item.productId, stockQuantity: { $gte: item.qty } },
           { $inc: { stockQuantity: -item.qty } },
@@ -1050,27 +1104,42 @@ app.post('/api/orders', async (req, res) => {
           return res.status(400).json({ error: `"${product.name}" stock changed during checkout. Please try again.` });
         }
       }
+      // Find the matching variant and tier to get the real server-side price
+      const migrated = migrateProduct(product);
+      const variant = migrated.variants.find(v => v.id === item.variantId) || migrated.variants[0];
+      const tiers = [...(variant?.priceTiers || [])].sort((a, b) => a.minQty - b.minQty);
+      let serverPrice = tiers[0]?.price || 0;
+      for (const tier of tiers) { if (item.qty >= tier.minQty) serverPrice = tier.price; }
+      recalcTotal += serverPrice * item.qty;
+      validatedItems.push({ ...item, price: serverPrice });
     }
+    // Handle free gift pricing from settings
+    const settings = await db.collection('settings').findOne({ _id: 'main' });
+    if (freeGift) {
+      const giftPrice = settings?.freeGift?.discountPrice ?? 0;
+      recalcTotal += giftPrice;
+    }
+    const total = parseFloat(recalcTotal.toFixed(2));
     // ─────────────────────────────────────────────────────────────────────────
 
     const id = await getNextId('orderId');
     const customer = await db.collection('customers').findOne({ phone });
     const order = {
       id, customerName, phone, block, villa: villa || '', note: note || '',
-      items, total, freeGift: freeGift || null, paymentMethod: paymentMethod || 'cod',
+      items: [...validatedItems, ...(items.filter(i => i.isFreeGift))],
+      total, freeGift: freeGift || null, paymentMethod: paymentMethod || 'cod',
       customerId: customer ? customer.customerId : null,
       status: 'pending', addedToUdhar: false, createdAt: new Date().toISOString()
     };
     if (paymentMethod === 'account' && customer) {
-      const udharItems = (items || []).filter(i => !i.isFreeGift).map(i => ({
+      const udharItems = validatedItems.map(i => ({
         name: i.name + (i.variant ? ` (${i.variant})` : ''), qty: i.qty, price: i.price
       }));
-      // Add to unified ledger
       await db.collection('ledger').insertOne({
         id: await getNextId('ledgerId'),
         customerId: customer.customerId,
         type: 'credit',
-        amount: parseFloat(total),
+        amount: total,
         note: `App Order #${id}`,
         date: new Date().toISOString().slice(0, 10),
         source: 'app_order',
@@ -1078,10 +1147,9 @@ app.post('/api/orders', async (req, res) => {
         items: udharItems,
         createdAt: new Date().toISOString()
       });
-      // Legacy
       await db.collection('udharEntries').insertOne({
         id: await getNextId('udharId'), customerId: customer.customerId,
-        items: udharItems, amount: parseFloat(total),
+        items: udharItems, amount: total,
         date: new Date().toISOString().slice(0, 10),
         note: `App Order #${id}`, type: 'app_order',
         orderId: id, createdAt: new Date().toISOString()
@@ -1453,7 +1521,7 @@ app.post('/api/milk/login', async (req, res) => {
       return res.status(401).json({ error: 'Wrong phone or PIN' });
     if (c.deleted)
       return res.status(401).json({ error: 'Account not found. Please register again.' });
-    const token = jwt.sign({ cid: c.customerId, phone: c.phone }, SECRET, { expiresIn: '90d' });
+    const token = jwt.sign({ cid: c.customerId, phone: c.phone }, CUSTOMER_SECRET, { expiresIn: '90d' });
     res.json({ token, customer: { id: c.customerId, name: c.name, phone: c.phone, address: c.address } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
