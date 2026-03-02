@@ -124,6 +124,24 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .sec-title{font-size:15px;font-weight:800;letter-spacing:-.3px;}
 .see-all{font-size:11px;font-weight:700;color:var(--green);cursor:pointer;}
 
+/* ══════════ PERSONALISED HOME ══════════ */
+/* Hero card */
+.pers-hero{margin:14px 14px 0;border-radius:20px;padding:18px 18px 58px;position:relative;overflow:hidden;}
+.pers-hero-glow{position:absolute;top:-50px;right:-50px;width:200px;height:200px;border-radius:50%;opacity:.25;pointer-events:none;}
+.pers-hero-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:3px 10px 3px 7px;font-size:.58rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:rgba(255,255,255,.8);margin-bottom:10px;}
+.pers-hero-greeting{font-size:1.18rem;font-weight:900;color:#fff;line-height:1.3;margin-bottom:5px;}
+.pers-hero-sub{font-size:.75rem;color:rgba(255,255,255,.5);line-height:1.5;}
+.pers-hero-emoji{position:absolute;right:18px;bottom:14px;font-size:3rem;opacity:.6;line-height:1;pointer-events:none;}
+/* AI section header */
+.ai-sec-hd{display:flex;align-items:center;gap:7px;margin-bottom:12px;}
+.ai-sec-title{font-size:15px;font-weight:800;letter-spacing:-.3px;}
+.ai-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,rgba(139,92,246,.18),rgba(99,102,241,.12));border:1px solid rgba(139,92,246,.3);border-radius:20px;padding:2px 8px;font-size:.58rem;font-weight:800;color:#c4b5fd;letter-spacing:.04em;white-space:nowrap;}
+@keyframes aiPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.ai-dot{width:5px;height:5px;border-radius:50%;background:#a78bfa;display:inline-block;animation:aiPulse 1.8s ease-in-out infinite;}
+/* Fade-in for pers block */
+@keyframes persFadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.pers-block{animation:persFadeIn .45s cubic-bezier(.22,.61,.36,1) both;}
+
 /* ══════════════════════ CATEGORY GRID (Blinkit style) ══════════════════════ */
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 
@@ -940,6 +958,427 @@ function closeSearch() { document.getElementById('searchPage')?.classList.remove
 // ── HOME ──────────────────────────────────────────────────────────────────────
 function getCcBg(i) { return 'cc-bg-' + (i % 8); }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── PERSONALISED HOME ENGINE ──────────────────────────────────────────────────
+// Signals used: time-of-day · day-of-week · season · weather · past orders
+// Weather: free Open-Meteo API — no key required, GDPR-safe, cached 2 hours.
+// Past orders: tracked locally in localStorage after every successful order.
+// Everything is a soft enhancement — if anything fails, the normal home shows.
+// ══════════════════════════════════════════════════════════════════════════════
+
+const PERS_WEATHER_KEY = 'bsc_wx_v1';   // localStorage: {signal,temp,at,lat,lon}
+const PERS_ORDERS_KEY  = 'bsc_ordhist_v1'; // localStorage: {productId: count, ...}
+
+// ── SIGNAL: TIME ──────────────────────────────────────────────────────────────
+function _getTimeSlot() {
+  const h = new Date().getHours();
+  if (h >= 5  && h < 9)  return 'earlyMorning';
+  if (h >= 9  && h < 12) return 'morning';
+  if (h >= 12 && h < 15) return 'lunch';
+  if (h >= 15 && h < 17) return 'afternoon';
+  if (h >= 17 && h < 21) return 'evening';
+  if (h >= 21 && h < 24) return 'night';
+  return 'lateNight'; // 0-4am
+}
+
+// ── SIGNAL: SEASON (India-centric) ────────────────────────────────────────────
+function _getSeason() {
+  const m = new Date().getMonth() + 1; // 1-12
+  if (m >= 3 && m <= 5)  return 'summer';   // Mar-May: hot
+  if (m >= 6 && m <= 9)  return 'monsoon';  // Jun-Sep: rains
+  if (m >= 10 && m <= 11) return 'autumn';  // Oct-Nov: pleasant
+  return 'winter'; // Dec-Feb
+}
+
+// ── SIGNAL: DAY TYPE ──────────────────────────────────────────────────────────
+function _getDayType() {
+  const d = new Date().getDay();
+  return (d === 0 || d === 6) ? 'weekend' : 'weekday';
+}
+
+// ── SIGNAL: FESTIVAL (hardcoded major Indian festivals, approximate dates) ─────
+function _getFestival() {
+  const n = new Date(), m = n.getMonth()+1, d = n.getDate();
+  const fests = [
+    { name:'Diwali',             emoji:'🪔', m:10, d1:20, d2:31 },
+    { name:'Diwali',             emoji:'🪔', m:11, d1:1,  d2:5  },
+    { name:'Holi',               emoji:'🎨', m:3,  d1:8,  d2:16 },
+    { name:'Eid',                emoji:'🌙', m:3,  d1:27, d2:31 },
+    { name:'Eid',                emoji:'🌙', m:4,  d1:1,  d2:3  },
+    { name:'Raksha Bandhan',     emoji:'🎀', m:8,  d1:15, d2:22 },
+    { name:'Ganesh Chaturthi',   emoji:'🙏', m:8,  d1:25, d2:31 },
+    { name:'Ganesh Chaturthi',   emoji:'🙏', m:9,  d1:1,  d2:5  },
+    { name:'Christmas',          emoji:'🎄', m:12, d1:20, d2:26 },
+    { name:'New Year',           emoji:'🎆', m:12, d1:27, d2:31 },
+    { name:'New Year',           emoji:'🎆', m:1,  d1:1,  d2:3  },
+    { name:'Independence Day',   emoji:'🇮🇳', m:8,  d1:13, d2:16 },
+  ];
+  return fests.find(f => f.m === m && d >= f.d1 && d <= f.d2) || null;
+}
+
+// ── SIGNAL: WEATHER (Open-Meteo, cached 2h) ────────────────────────────────────
+async function _getWeather() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(PERS_WEATHER_KEY)||'null');
+    if (cached && (Date.now() - cached.at) < 2 * 3600 * 1000) return cached;
+
+    // Get geolocation — user may deny, we catch and fallback
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation
+        ? navigator.geolocation.getCurrentPosition(res, rej, { timeout: 4000 })
+        : rej('no-geo')
+    );
+    const { latitude: lat, longitude: lon } = pos.coords;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current_weather=true&forecast_days=1`;
+    const data = await fetch(url, { signal: AbortSignal.timeout(5000) }).then(r => r.json());
+    const wc  = data.current_weather?.weathercode ?? 0;
+    const temp = data.current_weather?.temperature ?? 28;
+    // WMO codes: 0=clear, 1-3=cloudy, 45-48=fog, 51-67=rain, 71-77=snow, 80-99=storm
+    let signal = 'clear';
+    if (wc >= 51 && wc <= 99) signal = 'rain';
+    else if (wc >= 1  && wc <= 3)  signal = 'cloudy';
+    else if (wc >= 45 && wc <= 48) signal = 'fog';
+    const wx = { signal, temp: Math.round(temp), wc, at: Date.now(), lat, lon };
+    localStorage.setItem(PERS_WEATHER_KEY, JSON.stringify(wx));
+    return wx;
+  } catch {
+    return { signal: 'unknown', temp: 28 };
+  }
+}
+
+// ── ORDER HISTORY TRACKER ─────────────────────────────────────────────────────
+// Called from _doPlaceOrder after a successful order.
+function _trackOrderedItems(items) {
+  try {
+    const hist = JSON.parse(localStorage.getItem(PERS_ORDERS_KEY)||'{}');
+    items.filter(i => !i.isFreeGift).forEach(i => {
+      hist[i.productId] = (hist[i.productId]||0) + (i.qty||1);
+    });
+    hist._ts = Date.now();
+    localStorage.setItem(PERS_ORDERS_KEY, JSON.stringify(hist));
+  } catch {}
+}
+
+function _getTopReorderedIds(n=6) {
+  try {
+    const hist = JSON.parse(localStorage.getItem(PERS_ORDERS_KEY)||'{}');
+    return Object.entries(hist)
+      .filter(([k]) => k !== '_ts')
+      .sort((a,b) => b[1]-a[1])
+      .slice(0, n)
+      .map(([id]) => parseInt(id));
+  } catch { return []; }
+}
+
+// ── KEYWORD → PRODUCT MATCHER ─────────────────────────────────────────────────
+// Matches products against a keyword list using name + brand + category + keywords
+// Returns best N in-stock products sorted by match score.
+function _matchByKeywords(keywords, maxN=8) {
+  const kw = keywords.map(k => k.toLowerCase());
+  const scored = prods
+    .filter(p => !p.disabled)
+    .map(p => {
+      const dv = p.variants?.[0];
+      const name = (p.name||'').toLowerCase();
+      const brand = (p.brand||'').toLowerCase();
+      const catName = (cats.find(c=>c.id===p.catId)?.name||'').toLowerCase();
+      const pkws = (p.keywords||[]).map(k=>k.toLowerCase());
+      let score = 0;
+      kw.forEach(k => {
+        if (name.includes(k))           score += 10;
+        if (brand.includes(k))          score += 6;
+        if (catName.includes(k))        score += 5;
+        if (pkws.some(pk => pk.includes(k)||k.includes(pk))) score += 8;
+      });
+      // Prefer in-stock
+      if (dv?.inStock !== false)        score += 2;
+      return { p, score };
+    })
+    .filter(x => x.score > 0)
+    .sort((a,b) => b.score - a.score)
+    .slice(0, maxN)
+    .map(x => x.p);
+
+  // Fallback: pad with featured if too few results
+  if (scored.length < 3) {
+    const extras = prods
+      .filter(p => (p.featured||p.isNew) && !scored.includes(p))
+      .slice(0, maxN - scored.length);
+    return [...scored, ...extras];
+  }
+  return scored;
+}
+
+// ── SECTION DEFINITIONS ────────────────────────────────────────────────────────
+// Each section: { id, priority, title, subtitle, emoji, gradient, glowColor,
+//                 greeting, sub, aiLabel, keywords }
+// Higher priority = shown first / used as hero card.
+function _getActiveSections(ctx) {
+  const secs = [];
+
+  // FESTIVAL — always highest priority when active
+  if (ctx.festival) {
+    const f = ctx.festival;
+    const kwMap = {
+      'Diwali':           ['snacks','namkeen','chips','drinks','juice','sweets','dry fruit'],
+      'Holi':             ['drinks','juice','cold drink','milk','thandai','colours','sweets','snacks'],
+      'Eid':              ['sweets','milk','bread','juice','drinks','sevai','biryani'],
+      'Raksha Bandhan':   ['sweets','chocolate','juice','snacks','biscuit'],
+      'Ganesh Chaturthi': ['modak','milk','coconut','fruits','sweets','juice'],
+      'Christmas':        ['juice','drinks','cake','bread','butter','chocolate','snacks'],
+      'New Year':         ['drinks','juice','snacks','chips','soda','cold drink'],
+      'Independence Day': ['drinks','snacks','juice','chips','namkeen'],
+    };
+    secs.push({
+      id:'festival', priority:100,
+      title:`${f.emoji} ${f.name} Picks`,
+      greeting:`${f.name} is here!`,
+      sub:`Stock up for the celebrations 🎉`,
+      emoji: f.emoji,
+      aiLabel:`${f.name} edition`,
+      gradient:'linear-gradient(135deg,#78350f 0%,#451a03 100%)',
+      glowColor:'#fbbf24',
+      keywords: kwMap[f.name] || ['snacks','drinks','sweets'],
+    });
+  }
+
+  // RAIN — highest non-festival priority
+  if (ctx.weather.signal === 'rain') {
+    secs.push({
+      id:'rain', priority:90,
+      title:'🌧 Rainy Day Essentials',
+      greeting:'It\'s raining outside!',
+      sub:'Stay cosy. We\'ll deliver to your door.',
+      emoji:'☔',
+      aiLabel:'weather: rain',
+      gradient:'linear-gradient(135deg,#0c1a2e 0%,#0a1628 100%)',
+      glowColor:'#60a5fa',
+      keywords:['maggi','noodles','chai','tea','coffee','bread','butter','biscuit','instant','soup','snacks','chips','pakoda','ginger','curd'],
+    });
+  }
+
+  // HOT SUMMER
+  if (ctx.season === 'summer' && ctx.weather.temp > 30) {
+    secs.push({
+      id:'summer', priority:88,
+      title:'🌡 Beat the Heat',
+      greeting:`${ctx.weather.temp}°C today`,
+      sub:'Cool down — we\'ll bring it fast.',
+      emoji:'🥤',
+      aiLabel:`${ctx.weather.temp}°C · summer`,
+      gradient:'linear-gradient(135deg,#7c1d1d 0%,#450a0a 100%)',
+      glowColor:'#fca5a5',
+      keywords:['cold drink','soda','juice','lemon','nimbu','cola','lassi','buttermilk','coconut water','ice cream','cold coffee','cooling','sprite','cold'],
+    });
+  }
+
+  // WINTER COLD
+  if (ctx.season === 'winter' && ctx.weather.temp < 18) {
+    secs.push({
+      id:'winter', priority:85,
+      title:'🧣 Cosy Winter Picks',
+      greeting:`${ctx.weather.temp}°C — chilly!`,
+      sub:'Warm up with these essentials.',
+      emoji:'☕',
+      aiLabel:`${ctx.weather.temp}°C · winter`,
+      gradient:'linear-gradient(135deg,#1e3a5f 0%,#0c1a2e 100%)',
+      glowColor:'#93c5fd',
+      keywords:['chai','tea','coffee','milk','ginger','turmeric','haldi','soup','biscuit','bread','ghee','butter','blanket','warm','sarson'],
+    });
+  }
+
+  // MONSOON SEASON (but not actually raining right now)
+  if (ctx.season === 'monsoon' && ctx.weather.signal !== 'rain') {
+    secs.push({
+      id:'monsoon', priority:70,
+      title:'🌿 Monsoon Season Picks',
+      greeting:'Monsoon vibes!',
+      sub:'Our picks for the rainy season.',
+      emoji:'🌦',
+      aiLabel:'monsoon season',
+      gradient:'linear-gradient(135deg,#0a2416 0%,#061510 100%)',
+      glowColor:'#34d399',
+      keywords:['chai','tea','instant','biscuit','snacks','bread','maggi','ginger','turmeric','coffee'],
+    });
+  }
+
+  // WEEKEND
+  if (ctx.dayType === 'weekend') {
+    secs.push({
+      id:'weekend', priority:75,
+      title:'🎉 Weekend Favourites',
+      greeting:'Happy Weekend!',
+      sub:'Snack up, chill out.',
+      emoji:'🎮',
+      aiLabel:'weekend picks',
+      gradient:'linear-gradient(135deg,#2e1065 0%,#1a0847 100%)',
+      glowColor:'#c4b5fd',
+      keywords:['chips','snacks','cold drink','soda','juice','biscuit','chocolate','namkeen','ice cream','noodles','frozen'],
+    });
+  }
+
+  // TIME-BASED SECTIONS
+  const timeMap = {
+    earlyMorning: {
+      title:'🌅 Good Morning!',
+      greeting:'Rise and shine!',
+      sub:'Fresh morning essentials delivered.',
+      emoji:'🌞',
+      aiLabel:'early morning',
+      priority:78,
+      gradient:'linear-gradient(135deg,#14290a 0%,#0c1a06 100%)',
+      glowColor:'#86efac',
+      keywords:['milk','bread','eggs','butter','chai','tea','curd','yogurt','banana','fruit','juice','dahi'],
+    },
+    morning: {
+      title:'☀️ Morning Essentials',
+      greeting:'Good morning!',
+      sub:'Everything for a fresh start.',
+      emoji:'🥛',
+      aiLabel:'morning',
+      priority:77,
+      gradient:'linear-gradient(135deg,#14290a 0%,#0c1a06 100%)',
+      glowColor:'#86efac',
+      keywords:['milk','bread','eggs','butter','chai','tea','curd','paneer','fruit','juice','dahi','oats'],
+    },
+    lunch: {
+      title:'🍛 Lunch Time',
+      greeting:'Lunchtime!',
+      sub:'Fresh ingredients, delivered fast.',
+      emoji:'🥗',
+      aiLabel:'lunchtime',
+      priority:76,
+      gradient:'linear-gradient(135deg,#1a2e0a 0%,#0e1a05 100%)',
+      glowColor:'#a3e635',
+      keywords:['rice','dal','vegetables','curd','roti','paneer','tomato','onion','potato','ghee','oil','coriander','spice'],
+    },
+    afternoon: {
+      title:'☕ Afternoon Snacks',
+      greeting:'Need a break?',
+      sub:'Chai and snacks incoming.',
+      emoji:'🍪',
+      aiLabel:'afternoon break',
+      priority:72,
+      gradient:'linear-gradient(135deg,#1c1207 0%,#120c04 100%)',
+      glowColor:'#fbbf24',
+      keywords:['biscuit','chai','tea','coffee','snacks','namkeen','chips','bread','butter','chocolate'],
+    },
+    evening: {
+      title:'🌆 Evening Cravings',
+      greeting:'Evening!',
+      sub:'Chai time delivered to your door.',
+      emoji:'🫖',
+      aiLabel:'evening time',
+      priority:74,
+      gradient:'linear-gradient(135deg,#3d1a00 0%,#200e00 100%)',
+      glowColor:'#fb923c',
+      keywords:['chai','tea','snacks','biscuit','namkeen','chips','bread','eggs','instant','maggi','noodles'],
+    },
+    night: {
+      title:'🌙 Late Night Bites',
+      greeting:'Still up?',
+      sub:'Quick bites delivered now.',
+      emoji:'🌙',
+      aiLabel:'night time',
+      priority:73,
+      gradient:'linear-gradient(135deg,#0f0a23 0%,#07051a 100%)',
+      glowColor:'#818cf8',
+      keywords:['chips','biscuit','chocolate','bread','eggs','cold coffee','cola','juice','instant','maggi','noodles','snacks'],
+    },
+    lateNight: {
+      title:'🦉 Night Owl Picks',
+      greeting:'Midnight craving?',
+      sub:'We\'ve got you covered.',
+      emoji:'🌃',
+      aiLabel:'late night',
+      priority:73,
+      gradient:'linear-gradient(135deg,#0f0a23 0%,#07051a 100%)',
+      glowColor:'#818cf8',
+      keywords:['chips','biscuit','chocolate','bread','instant','maggi','cola','juice','snacks','cold coffee'],
+    },
+  };
+  const ts = timeMap[ctx.timeSlot];
+  if (ts) secs.push({ id: ctx.timeSlot, ...ts });
+
+  secs.sort((a,b) => b.priority - a.priority);
+  return secs;
+}
+
+// ── HTML BUILDERS ──────────────────────────────────────────────────────────────
+function _heroHtml(sec) {
+  return `<div class="pers-hero" style="background:${sec.gradient}">
+    <div class="pers-hero-glow" style="background:radial-gradient(circle,${sec.glowColor},transparent 70%)"></div>
+    <div class="pers-hero-pill">
+      <span class="ai-dot"></span>
+      AI · ${sec.aiLabel}
+    </div>
+    <div class="pers-hero-greeting">${sec.greeting}</div>
+    <div class="pers-hero-sub">${sec.sub}</div>
+    <div class="pers-hero-emoji">${sec.emoji}</div>
+  </div>`;
+}
+
+function _aiSecHd(title) {
+  return `<div class="ai-sec-hd">
+    <span class="ai-sec-title">${title}</span>
+    <span class="ai-badge"><span class="ai-dot"></span> AI pick</span>
+  </div>`;
+}
+
+// ── MAIN: Build all personalised HTML ─────────────────────────────────────────
+async function buildPersonalisedHome() {
+  try {
+    const [weather] = await Promise.all([_getWeather()]);
+    const ctx = {
+      timeSlot : _getTimeSlot(),
+      season   : _getSeason(),
+      dayType  : _getDayType(),
+      festival : _getFestival(),
+      weather,
+    };
+
+    const sections = _getActiveSections(ctx);
+    if (!sections.length) return '';
+
+    const hero = sections[0];
+    const heroProd = _matchByKeywords(hero.keywords, 8);
+    if (heroProd.length < 1) return '';
+
+    let h = _heroHtml(hero);
+
+    // Primary AI section (matches hero context)
+    h += `<div class="sec">${_aiSecHd(hero.title)}<div class="pstrip">${heroProd.map(pCard).join('')}</div></div>`;
+
+    // "Order Again" — if user has order history
+    const reorderIds = _getTopReorderedIds(6);
+    if (reorderIds.length >= 2) {
+      const rp = reorderIds
+        .map(id => prods.find(p => p.id === id))
+        .filter(p => p && !p.disabled && p.variants?.[0]?.inStock !== false)
+        .slice(0, 6);
+      if (rp.length >= 2) {
+        h += `<div class="sec">${_aiSecHd('🔁 Order Again')}<div class="pstrip">${rp.map(pCard).join('')}</div></div>`;
+      }
+    }
+
+    // Second context section (different from primary, e.g. morning + weekend)
+    if (sections.length > 1) {
+      const sec2 = sections[1];
+      const sec2Prods = _matchByKeywords(sec2.keywords, 8)
+        .filter(p => !heroProd.some(h => h.id === p.id))
+        .slice(0, 6);
+      if (sec2Prods.length >= 2) {
+        h += `<div class="sec">${_aiSecHd(sec2.title)}<div class="pstrip">${sec2Prods.map(pCard).join('')}</div></div>`;
+      }
+    }
+
+    return h;
+  } catch {
+    return ''; // silent fail — static home still renders
+  }
+}
+
 function renderHome() {
   let h = '';
   // Banners
@@ -981,6 +1420,18 @@ function renderHome() {
   if (!h) h = '<div class="empty-state" style="margin-top:4rem"><div class="ei">🛍️</div><p>No products yet.</p></div>';
   document.getElementById('home').innerHTML = h;
   document.getElementById('scroll').scrollTop = 0;
+
+  // ── PERSONALISED SECTIONS (async, appended above static content) ───────────
+  // Runs after static home renders so the page feels instant on first paint.
+  buildPersonalisedHome().then(persHtml => {
+    if (!persHtml) return;
+    const homeEl = document.getElementById('home');
+    if (!homeEl) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'pers-block';
+    wrap.innerHTML = persHtml;
+    homeEl.insertBefore(wrap, homeEl.firstChild);
+  }).catch(() => {});
 }
 
 // ── PRODUCT CARD ──────────────────────────────────────────────────────────────
@@ -2128,6 +2579,8 @@ function _doPlaceOrder(method) {
   fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:d.name,phone:d.phone,block:d.block,villa:d.villa,note:d.note,items,total:t,freeGift:freeGiftLabel,paymentMethod:method})})
   .then(r=>r.json())
   .then(resp=>{
+    // Track ordered items for personalised reorder section
+    try { _trackOrderedItems(items); } catch {}
     cart={}; giftState={injected:false,claimed:false,prevUnlocked:false}; window._fdUnlocked=false; saveCart();
     closeCkoPage();
     // Refresh account data if logged in (so passbook is up to date)
