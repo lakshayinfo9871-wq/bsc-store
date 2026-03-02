@@ -1965,9 +1965,10 @@ function renderCkoPage() {
     return;
   }
   document.getElementById('ckPlaceBtn').style.display = '';
-  const selPay = window._payMethod === 'cod' ? 'upi' : (window._payMethod || 'upi');
+  const selPay = window._payMethod || 'cod';
   window._payMethod = selPay;
   const payMethods = [
+    { id:'cod',  icon:'💵', title:'Cash on Delivery', sub: 'Pay in cash when order arrives' },
     { id:'upi',  icon:'📱', title:'UPI Payment', sub: settings.upiId || 'Pay via UPI' },
     { id:'account', icon:'📒', title:'Add to Account', sub: 'Charged to your BSC khata' },
   ];
@@ -2091,7 +2092,7 @@ function ckoValidate() {
 
 function ckoPlace() {
   if (!getMilkToken()) { showToast('Please login first'); return; }
-  const method=window._payMethod||'upi';
+  const method=window._payMethod||'cod';
   if (method==='upi' && settings.upiId?.trim()) {
     const d=ckoValidate(); if(!d) return;
     window.location.href=`upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.storeName||'BSC Store')}&am=${total()}&cu=INR&tn=BSC+Order`;
@@ -2119,7 +2120,7 @@ function _doPlaceOrder(method) {
   const wa=settings.whatsapp||'';
   if (wa) {
     const lineItems=items.filter(i=>!i.isFreeGift).map(i=>`  • ${i.name}${i.variant?' ('+i.variant+')':''} × ${i.qty} = ₹${i.price*i.qty}`).join('\n');
-    const payLabel = method==='account'?'Add to Account (Khata)':'UPI Payment';
+    const payLabel = method==='cod'?'Cash on Delivery':method==='account'?'Add to Account (Khata)':'UPI Payment';
     let msg=`🛒 *New Order — ${settings.storeName||'BSC Store'}*\n\n👤 *${d.name}*\n📞 ${d.phone}\n📍 Block ${d.block}, Villa ${d.villa}${d.note?'\n📝 '+d.note:''}\n\n📦 *Items:*\n${lineItems}\n\n${freeGiftLabel?`🎁 Free Gift: ${freeGiftLabel}\n\n`:''}💰 *Total: ₹${t}*\n💳 Payment: ${payLabel}${method==='account'?' (added to khata)':''}\n\n_Sent from BSC Store App_`;
     setTimeout(()=>{ window.open('https://wa.me/'+wa+'?text='+encodeURIComponent(msg),'_blank'); },300);
   }
@@ -2168,6 +2169,21 @@ async function renderAccount() {
     const r = await fetch('/api/customer/dashboard', { headers: { Authorization: 'Bearer ' + tok } });
     if (!r.ok) { clearMilkToken(); renderAccountAuth(); return; }
     const data = await r.json();
+    // Auto-fill checkout address from account profile if not already saved locally
+    if (data.customer) {
+      const c = data.customer;
+      const existing = loadUD();
+      // Only sync if UD is empty or phone matches (don't overwrite a different address the user manually set)
+      if (!existing.name || existing.phone === c.phone) {
+        // Parse block/villa from address if stored as "A 14" or "A-14"
+        let block = existing.block || '', villa = existing.villa || '';
+        if (!block && c.address) {
+          const m = c.address.match(/^([A-Fa-f])[^0-9]*([0-9]+)/);
+          if (m) { block = m[1].toUpperCase(); villa = m[2]; }
+        }
+        saveUD({ name: c.name, phone: c.phone, block, villa, note: existing.note || '' });
+      }
+    }
     renderAccountHome(data);
   } catch { body.innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot connect to server</p></div>'; }
 }
