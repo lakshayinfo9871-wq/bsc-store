@@ -127,6 +127,7 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 /* ══════════ PERSONALISED HOME ══════════ */
 /* Animated scene banner */
 .scene-banner{margin:14px 14px 0;border-radius:20px;height:160px;position:relative;overflow:hidden;cursor:default;}
+.scene-banner-sm{height:100px;margin-top:20px;}
 .scene-canvas{width:100%;height:100%;position:absolute;inset:0;}
 /* Text overlay on scene */
 .scene-text{position:absolute;bottom:0;left:0;right:0;padding:14px 18px;background:linear-gradient(to top,rgba(0,0,0,.55) 0%,transparent 100%);pointer-events:none;}
@@ -836,54 +837,13 @@ function offPct(price, mrp) {
   return Math.round((mrp - price) / mrp * 100);
 }
 
-// ── LIVE WEATHER ──────────────────────────────────────────────────────────────
-// Uses admin's stored store location + Open-Meteo (free, no key needed).
-// Fetched once per session, cached 30 mins. Falls back silently if unavailable.
-let _liveWeather = null;
-
-async function _fetchLiveWeather(lat, lon) {
-  const key = `bsc_wx_${lat.toFixed(2)}_${lon.toFixed(2)}`;
-  try {
-    const cached = sessionStorage.getItem(key);
-    if (cached) {
-      const p = JSON.parse(cached);
-      if (Date.now() - p.ts < 30 * 60 * 1000) { _liveWeather = p.data; return; }
-    }
-  } catch(_) {}
-  try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weathercode,temperature_2m&timezone=auto&forecast_days=1`;
-    const d = await fetch(url).then(r => r.json());
-    const wc   = d.current?.weathercode ?? -1;
-    const temp = d.current?.temperature_2m ?? null;
-    _liveWeather = {
-      wc, temp,
-      isRaining : wc >= 51 && wc <= 99,   // drizzle, rain, showers, thunderstorm
-      isThunder : wc >= 95,
-      isCold    : temp !== null && temp < 12,
-      isChilly  : temp !== null && temp >= 12 && temp < 20,
-      isHot     : temp !== null && temp > 35,
-      isVeryHot : temp !== null && temp > 40,
-    };
-    try { sessionStorage.setItem(key, JSON.stringify({ data:_liveWeather, ts:Date.now() })); } catch(_) {}
-  } catch(_) {} // network failure → stay null, banners use season
-}
-
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
   loadCart(); // #9: restore cart from localStorage
   try {
     const d = await fetch('/api/store').then(r=>r.json());
     prods=d.products||[]; cats=d.categories||[]; banners=d.banners||[]; settings=d.settings||{}; subcats=d.subcategories||[];
-
-    // Fetch live weather in background using admin's saved store location
-    const loc = settings.storeLocation;
-    if (loc?.lat && loc?.lon) {
-      _fetchLiveWeather(loc.lat, loc.lon).then(() => {
-        if (_liveWeather) renderHome(); // re-render once weather data arrives
-      });
-    }
-
-    buildTabs(); renderHome(); updateCart();
+    buildTabs(); renderHome(); updateCart(); // re-render with restored cart
   } catch(e) {
     document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
   }
@@ -1976,15 +1936,11 @@ function _festComingHtml(fest) {
 }
 
 // ── SCENE BANNER (replaces pers-hero) ─────────────────────────────────────────
-function _sceneBannerHtml(sec, liveTag) {
+function _sceneBannerHtml(sec) {
   const svg = _buildScene(sec.scene || 'default', sec.grad, sec.glow);
-  // If live weather tag exists, replace the default tag chip with temperature info
-  const tagHtml = liveTag
-    ? `<div class="scene-tag" style="background:rgba(0,0,0,.55)">${liveTag}</div>`
-    : `<div class="scene-tag">${sec.tag}</div>`;
   return `<div class="scene-banner" style="background:${sec.grad}">
     ${svg}
-    ${tagHtml}
+    <div class="scene-tag">${sec.tag}</div>
     <div class="scene-text">
       <div class="scene-greeting">${sec.greeting}</div>
       <div class="scene-sub">${sec.sub}</div>
@@ -2004,64 +1960,100 @@ function _ctxSecHd(title, kw, sectionId) {
 // ── MAIN: Build personalised HTML ─────────────────────────────────────────────
 async function buildPersonalisedHome() {
   try {
-    // Determine season — use live weather if available, else fall back to month
-    let season = _getSeason();
-    let liveTag = null; // shown on the banner tag chip instead of the default
+    // ── Build context ─────────────────────────────────────────────────────────
+    const festivals = _getFestivals();
+    const season    = _getSeason();
+    const timeSlot  = _getTimeSlot();
+    const dayType   = _getDayType();
 
-    if (_liveWeather) {
-      if (_liveWeather.isRaining || _liveWeather.isThunder) {
-        season  = 'monsoon';
-        liveTag = _liveWeather.isThunder
-          ? `⛈️ Thunderstorm · ${Math.round(_liveWeather.temp)}°C`
-          : `🌧️ Raining now · ${Math.round(_liveWeather.temp)}°C`;
-      } else if (_liveWeather.isVeryHot) {
-        season  = 'summer';
-        liveTag = `🌡️ ${Math.round(_liveWeather.temp)}°C outside`;
-      } else if (_liveWeather.isHot) {
-        season  = 'summer';
-        liveTag = `☀️ ${Math.round(_liveWeather.temp)}°C — stay cool`;
-      } else if (_liveWeather.isCold) {
-        season  = 'winter';
-        liveTag = `❄️ ${Math.round(_liveWeather.temp)}°C outside`;
-      } else if (_liveWeather.isChilly) {
-        season  = 'winter';
-        liveTag = `🧥 ${Math.round(_liveWeather.temp)}°C — a bit chilly`;
-      }
-      // Clear/mild → keep month-based season, liveTag stays null
+    // ── Define the 3 category "buckets" ──────────────────────────────────────
+    // BUCKET 1: Festival (active within 7 days)
+    let festivalSec = null;
+    if (festivals.active) {
+      const f = festivals.active;
+      const now = new Date(); now.setHours(0,0,0,0);
+      const daysUntil = Math.ceil((f.festDay - now) / (1000*60*60*24));
+      const greeting = daysUntil <= 0 ? `${f.name} is here!`
+                     : daysUntil === 1 ? `${f.name} tomorrow!`
+                     : `${f.name} in ${daysUntil} days!`;
+      festivalSec = {
+        id:'festival', title:`${f.emoji} ${f.name} Picks`, tag:`${f.name} special`,
+        greeting, sub:`Stock up before it begins 🎉`,
+        grad:f.grad, scene:f.scene, glow:f.glow||'#f472b6', kw:f.kw
+      };
     }
 
-    const ctx = {
-      timeSlot  : _getTimeSlot(),
-      season,
-      dayType   : _getDayType(),
-      festivals : _getFestivals(),
-      liveTag,
+    // BUCKET 2: Weather (live weather overrides season)
+    const weatherMap = {
+      monsoon: { id:'rain',   title:'🌧 Rainy Day Essentials', tag:'rainy day',      greeting:'Stay cosy inside',   sub:'Everything for a rainy day, delivered fast.',    grad:'linear-gradient(135deg,#0c1a2e,#0a1322)', glow:'#60a5fa', scene:'rain',  kw:['maggi','noodles','chai','tea','coffee','bread','butter','biscuit','instant','soup','snacks','chips','ginger','curd'] },
+      summer:  { id:'summer', title:'🥤 Beat the Heat',        tag:'hot outside',    greeting:'Hot day!',           sub:'Cool drinks and quick bites, delivered cold.',    grad:'linear-gradient(135deg,#7c1d1d,#450a0a)', glow:'#fca5a5', scene:'sun',   kw:['cold drink','soda','juice','lemon','cola','lassi','buttermilk','coconut water','cold coffee','sprite'] },
+      winter:  { id:'winter', title:'🧣 Cosy Winter Picks',    tag:'chilly outside', greeting:'Chilly outside!',    sub:'Warm up with hot drinks and essentials.',         grad:'linear-gradient(135deg,#1e3a5f,#0c1a2e)', glow:'#93c5fd', scene:'cloud', kw:['chai','tea','coffee','milk','ginger','turmeric','soup','biscuit','bread','ghee','butter'] },
+      autumn:  { id:'autumn', title:'🍂 Autumn Picks',         tag:'autumn season',  greeting:'Pleasant weather!',  sub:'Fresh picks for a lovely day.',                  grad:'linear-gradient(135deg,#3d1a00,#200e00)', glow:'#fb923c', scene:'sunset',kw:['chai','tea','snacks','biscuit','bread','juice','fruit'] },
     };
 
-    const sections = _getActiveSections(ctx);
-    if (!sections.length) return '';
+    // Live weather can override the season (if admin set store location)
+    let effectiveSeason = season;
+    let weatherTag = null;
+    if (typeof _liveWeather !== 'undefined' && _liveWeather) {
+      if (_liveWeather.isRaining || _liveWeather.isThunder) {
+        effectiveSeason = 'monsoon';
+        weatherTag = _liveWeather.isThunder ? `⛈️ ${Math.round(_liveWeather.temp)}°C` : `🌧️ ${Math.round(_liveWeather.temp)}°C`;
+      } else if (_liveWeather.isVeryHot || _liveWeather.isHot) {
+        effectiveSeason = 'summer';
+        weatherTag = `🌡️ ${Math.round(_liveWeather.temp)}°C`;
+      } else if (_liveWeather.isCold || _liveWeather.isChilly) {
+        effectiveSeason = 'winter';
+        weatherTag = `❄️ ${Math.round(_liveWeather.temp)}°C`;
+      }
+    }
+    let weatherSec = weatherMap[effectiveSeason] ? { ...weatherMap[effectiveSeason] } : null;
+    if (weatherSec && weatherTag) weatherSec.tag = weatherTag;
 
-    const hero = sections[0];
-    const heroProd = _matchByKeywords(hero.kw, 8);
-    if (heroProd.length < 1) return '';
+    // BUCKET 3: Time of day
+    const timeMap = {
+      earlyMorning:{ id:'earlyMorning', title:'🌅 Rise & Shine',       tag:'early morning', greeting:'Good morning!',  sub:'Fresh essentials for a great start.',        grad:'linear-gradient(135deg,#14290a,#0c1a06)', glow:'#86efac', scene:'sunrise', kw:['milk','bread','eggs','butter','chai','tea','curd','banana','fruit','juice','dahi'] },
+      morning:     { id:'morning',      title:'☀️ Morning Essentials', tag:'morning',       greeting:'Good morning!',  sub:'Delivered before your day begins.',          grad:'linear-gradient(135deg,#14290a,#0c1a06)', glow:'#86efac', scene:'sun',     kw:['milk','bread','eggs','butter','chai','tea','curd','paneer','fruit','juice','dahi','oats'] },
+      lunch:       { id:'lunch',        title:'🍛 Lunch Time',          tag:'lunchtime',     greeting:'Lunchtime!',     sub:'Fresh ingredients delivered to your door.',  grad:'linear-gradient(135deg,#1a2e0a,#0e1a05)', glow:'#a3e635', scene:'sun',     kw:['rice','dal','vegetables','curd','roti','paneer','tomato','onion','potato','ghee','oil'] },
+      afternoon:   { id:'afternoon',    title:'☕ Afternoon Break',     tag:'afternoon',     greeting:'Need a break?',  sub:'Chai and snacks on their way.',              grad:'linear-gradient(135deg,#1c1207,#120c04)', glow:'#fbbf24', scene:'cloud',   kw:['biscuit','chai','tea','coffee','snacks','namkeen','chips','bread','butter','chocolate'] },
+      evening:     { id:'evening',      title:'🌆 Evening Cravings',    tag:'evening',       greeting:'Good evening!',  sub:'Chai time essentials delivered fast.',       grad:'linear-gradient(135deg,#3d1a00,#200e00)', glow:'#fb923c', scene:'sunset',  kw:['chai','tea','snacks','biscuit','namkeen','chips','bread','eggs','instant','maggi','noodles'] },
+      night:       { id:'night',        title:'🌙 Night Picks',         tag:'tonight',       greeting:'Good night!',    sub:'Late night cravings sorted.',                grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#818cf8', scene:'night',   kw:['chips','biscuit','chocolate','bread','eggs','cold coffee','cola','juice','instant','maggi','snacks'] },
+      lateNight:   { id:'lateNight',    title:'🦉 Night Owl Picks',     tag:'late night',    greeting:'Still up?',      sub:'Midnight cravings delivered.',               grad:'linear-gradient(135deg,#0f0a23,#07051a)', glow:'#818cf8', scene:'night',   kw:['chips','biscuit','chocolate','bread','instant','maggi','cola','juice','snacks','cold coffee'] },
+    };
+    const timeSec = timeMap[timeSlot] || timeMap['morning'];
 
-    let h = '';
+    // ── SLOT ASSIGNMENT ───────────────────────────────────────────────────────
+    // Slot 1 (hero banner): Festival > Weather > Time
+    // Slot 2 (secondary strip + small banner): if Slot1=Festival→Weather, if Slot1=Weather→Time, if Slot1=Time→null
+    // The upcoming teaser (7-14 days before) only shows when hero is NOT already a festival
+    let slot1, slot2;
 
-    // Coming festival banner (7 days prior, shown above hero)
-    if (ctx.festivals.upcoming) {
-      h += _festComingHtml(ctx.festivals.upcoming);
+    if (festivalSec) {
+      slot1 = festivalSec;
+      slot2 = weatherSec;  // below festival → show weather essentials
+    } else if (weatherSec) {
+      slot1 = weatherSec;
+      slot2 = timeSec;     // below weather → show time-of-day
+    } else {
+      slot1 = timeSec;
+      slot2 = null;        // time alone (autumn/clear day)
     }
 
-    // Animated scene banner
-    h += _sceneBannerHtml(hero, ctx.liveTag);
+    // ── BUILD HTML ────────────────────────────────────────────────────────────
+    let h = '';
 
-    // Store current context so ctxPage can use it
-    window._persCtx = { hero, sections };
+    // Upcoming festival teaser (small strip) — only if hero is NOT a festival
+    if (!festivalSec && festivals.upcoming) {
+      h += _festComingHtml(festivals.upcoming);
+    }
 
-    // Primary contextual section (show 5 cards, View All to see rest)
-    h += `<div class="sec">${_ctxSecHd(hero.title, hero.kw, hero.id)}<div class="pstrip">${heroProd.slice(0,5).map(pCard).join('')}</div></div>`;
+    // SLOT 1: Full animated banner + product strip
+    const slot1Prods = _matchByKeywords(slot1.kw, 8);
+    if (!slot1Prods.length) return '';
+    h += _sceneBannerHtml(slot1);
+    window._persCtx = { hero: slot1, sections: [slot1, slot2].filter(Boolean) };
+    h += `<div class="sec">${_ctxSecHd(slot1.title, slot1.kw, slot1.id)}<div class="pstrip">${slot1Prods.slice(0,5).map(pCard).join('')}</div></div>`;
 
-    // "Order Again" — from local history
+    // "Order Again" — from local order history
     const reorderIds = _getTopReorderedIds(6);
     if (reorderIds.length >= 2) {
       const rp = reorderIds
@@ -2069,25 +2061,33 @@ async function buildPersonalisedHome() {
         .filter(p => p && !p.disabled && p.variants?.[0]?.inStock !== false)
         .slice(0, 5);
       if (rp.length >= 2) {
-        // For reorder section pass ids as special kw
         const reorderKw = reorderIds.map(id => { const p=prods.find(x=>x.id===id); return p?(p.name||'').split(' ')[0].toLowerCase():''; }).filter(Boolean);
         h += `<div class="sec">${_ctxSecHd('🔁 Order Again', reorderKw, 'reorder')}<div class="pstrip">${rp.map(pCard).join('')}</div></div>`;
       }
     }
 
-    // Second context section
-    if (sections.length > 1) {
-      const sec2 = sections[1];
-      const sec2Prods = _matchByKeywords(sec2.kw, 8)
-        .filter(p => !heroProd.some(x=>x.id===p.id))
+    // SLOT 2: Smaller banner header + product strip (no duplicate full scene banner)
+    if (slot2) {
+      const slot2Prods = _matchByKeywords(slot2.kw, 8)
+        .filter(p => !slot1Prods.some(x=>x.id===p.id))
         .slice(0, 5);
-      if (sec2Prods.length >= 2) {
-        h += `<div class="sec">${_ctxSecHd(sec2.title, sec2.kw, sec2.id)}<div class="pstrip">${sec2Prods.map(pCard).join('')}</div></div>`;
+      if (slot2Prods.length >= 2) {
+        // Compact banner — same visual style but smaller height
+        h += `<div class="scene-banner scene-banner-sm" style="background:${slot2.grad}">
+          ${_buildScene(slot2.scene || 'default', slot2.grad, slot2.glow)}
+          <div class="scene-tag">${slot2.tag}</div>
+          <div class="scene-text">
+            <div class="scene-greeting" style="font-size:.95rem">${slot2.greeting}</div>
+            <div class="scene-sub">${slot2.sub}</div>
+          </div>
+        </div>`;
+        h += `<div class="sec">${_ctxSecHd(slot2.title, slot2.kw, slot2.id)}<div class="pstrip">${slot2Prods.map(pCard).join('')}</div></div>`;
       }
     }
 
     return h;
-  } catch {
+  } catch(e) {
+    console.error('buildPersonalisedHome error:', e);
     return '';
   }
 }
