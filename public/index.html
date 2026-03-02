@@ -140,38 +140,47 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 
 /* ══════════════════════ PRODUCT STRIP ══════════════════════ */
 .pstrip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;align-items:stretch;}
-/* ══════════════════════ PRODUCT CARD (Blinkit style) ══════════════════════ */
-.pcard{flex-shrink:0;width:148px;background:var(--bg2);border-radius:14px;border:1px solid var(--border);overflow:visible;position:relative;display:flex;flex-direction:column;}
-.pc-img-wrap{height:120px;background:var(--bg3);border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:center;padding:10px;overflow:hidden;position:relative;}
+
+/* ══════════════════════ UNIFIED PRODUCT CARD ══════════════════════ */
+/* Same card everywhere — home strip (148px wide) & category grid (fills column) */
+.pcard{flex-shrink:0;width:148px;background:var(--bg2);border-radius:14px;border:1px solid var(--border);overflow:hidden;position:relative;display:flex;flex-direction:column;}
+
+/* Image area */
+.pc-img-wrap{height:130px;background:var(--bg3);border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:center;padding:10px;overflow:hidden;position:relative;}
 .pc-img-wrap img{width:100%;height:100%;object-fit:contain;}
-.pc-discount-badge{position:absolute;top:7px;left:7px;background:var(--green);color:#000;font-size:.6rem;font-weight:900;padding:2px 6px;border-radius:5px;letter-spacing:.02em;}
-.pc-new-badge{position:absolute;top:7px;right:7px;background:#3b82f6;color:#fff;font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:5px;}
+
+/* Discount badge — top left of image */
+.pc-discount-badge{position:absolute;top:7px;left:7px;background:var(--green);color:#000;font-size:.58rem;font-weight:900;padding:2px 6px;border-radius:5px;letter-spacing:.02em;z-index:2;}
+
+/* NEW badge — top left */
+.pc-new-badge{position:absolute;top:7px;left:7px;background:#3b82f6;color:#fff;font-size:.58rem;font-weight:800;padding:2px 6px;border-radius:5px;z-index:2;}
+
+/* ── ADD / QTY BUTTON — overlaid bottom-right corner of image ── */
+.pc-add-overlay{position:absolute;bottom:8px;right:8px;z-index:3;}
+.add-btn{background:var(--green);color:#000;border:none;border-radius:10px;padding:7px 16px;font-size:12px;font-weight:900;letter-spacing:.05em;transition:filter .15s,transform .1s;display:block;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.35);}
+.add-btn:active{filter:brightness(1.15);transform:scale(.95);}
+.qty-ctrl{display:flex;align-items:center;justify-content:space-between;background:var(--green);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.35);}
+.qty-ctrl button{background:none;color:#000;font-size:16px;font-weight:900;padding:5px 10px;border:none;line-height:1;flex-shrink:0;}
+.qty-ctrl button:active{background:rgba(0,0,0,.12);}
+.qty-ctrl span{color:#000;font-size:12px;font-weight:900;min-width:22px;text-align:center;padding:0 2px;}
+
+/* Card body */
 .pc-body{padding:8px 10px 10px;display:flex;flex-direction:column;flex:1;}
-.pc-variant-label{font-size:10px;color:var(--text2);font-weight:700;margin-bottom:2px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:2px 6px;display:inline-block;}
+.pc-variant-label{font-size:10px;color:var(--text2);font-weight:700;margin-bottom:3px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:2px 6px;display:inline-block;}
 .pc-name{font-size:12px;font-weight:700;line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;letter-spacing:-.2px;min-height:calc(12px * 1.3 * 2);word-break:break-word;}
-.pc-delivery{display:none;}
 .pc-price-row{display:flex;align-items:baseline;gap:4px;flex-wrap:wrap;margin-bottom:2px;}
 .pc-price{font-size:14px;font-weight:900;letter-spacing:-.4px;}
 .pc-mrp{font-size:10px;color:var(--text3);text-decoration:line-through;}
 .pc-off{font-size:9px;background:rgba(255,71,87,.15);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:800;}
-.pc-bulk-hint{display:inline-flex;align-items:center;gap:3px;font-size:9px;color:#000;font-weight:800;background:var(--yellow);border-radius:4px;padding:2px 6px;margin-bottom:5px;letter-spacing:.01em;}
+.pc-bulk-hint{display:inline-flex;align-items:center;gap:3px;font-size:9px;color:#000;font-weight:800;background:var(--yellow);border-radius:4px;padding:2px 6px;margin-bottom:3px;letter-spacing:.01em;}
 .pc-bulk-hint.best{background:var(--green);}
-.pc-bot{margin-top:auto;}
-/* ADD button — full width */
-.add-btn{width:100%;background:none;border:1.5px solid var(--green);color:var(--green);border-radius:9px;padding:7px 0;font-size:12px;font-weight:900;letter-spacing:.04em;transition:background .15s,color .15s,transform .1s;display:block;text-align:center;}
-.add-btn:active{background:var(--green);color:#000;transform:scale(.97);}
-/* Qty control — full width, − N + layout */
-.qty-ctrl{display:flex;align-items:center;justify-content:space-between;background:var(--green);border-radius:9px;overflow:hidden;width:100%;}
-.qty-ctrl button{background:none;color:#000;font-size:17px;font-weight:900;padding:5px 11px;border:none;line-height:1;flex-shrink:0;}
-.qty-ctrl button:active{background:rgba(0,0,0,.12);}
-.qty-ctrl span{color:#000;font-size:12px;font-weight:900;flex:1;text-align:center;}
+.pc-bot{display:none;}/* legacy — no longer needed, ADD is overlaid */
 
 /* Variant selector inside card */
 .pc-variant-btn{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 8px;font-size:11px;color:var(--text);font-weight:600;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left;transition:border-color .2s;}
 .pc-variant-btn:active{border-color:var(--green);background:rgba(45,211,111,.06);}
 .pc-variant-btn .vb-arrow{font-size:.7rem;color:var(--text3);transition:transform .3s cubic-bezier(.4,0,.2,1);}
 .pc-variant-btn.open .vb-arrow{transform:rotate(180deg);}
-/* Variant dropdown */
 .pc-variant-dropdown{overflow:hidden;max-height:0;opacity:0;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .22s ease;background:var(--bg3);border-radius:8px;border:1px solid var(--border);margin-bottom:6px;}
 .pc-variant-dropdown.open{max-height:200px;opacity:1;}
 .pc-vd-option{padding:7px 10px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);transition:background .15s;}
@@ -217,46 +226,8 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .cat-right::-webkit-scrollbar{display:none;}
 .cat-right-section{margin-bottom:16px;}
 .cat-right-section-title{font-size:.8rem;font-weight:900;color:var(--text);padding:8px 4px 10px;letter-spacing:-.2px;}
-/* Enhanced product card for split view */
-/* ── UNIFORM CARD HEIGHT: all cards same size via grid rows ── */
-.cat-right-grid{display:grid;grid-template-columns:1fr;gap:6px;}
-.pcard-blinkit{background:var(--bg2);border-radius:12px;border:1px solid var(--border);overflow:hidden;position:relative;display:flex;flex-direction:row;min-width:0;max-width:100%;width:100%;height:100%;align-items:stretch;}
-.pcard-blinkit .pc-img-wrap{width:90px;flex-shrink:0;background:var(--bg3);border-radius:12px 0 0 12px;display:flex;align-items:center;justify-content:center;padding:8px;overflow:hidden;position:relative;}
-.pcard-blinkit .pc-img-wrap img{width:100%;height:100%;object-fit:contain;}
-.pcard-blinkit .pc-discount-badge{position:absolute;top:6px;left:6px;background:var(--green);color:#000;font-size:.58rem;font-weight:900;padding:2px 5px;border-radius:4px;}
-.pcard-blinkit .pc-heart{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:.6rem;cursor:pointer;backdrop-filter:blur(4px);}
-.pcard-blinkit .pc-tag-row{display:flex;gap:4px;flex-wrap:wrap;padding:4px 7px 0;}
-.pcard-blinkit .pc-tag{font-size:.55rem;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(45,211,111,.12);color:var(--green);border:1px solid rgba(45,211,111,.18);}
-.pcard-blinkit .pc-body{padding:8px 8px 8px 8px;flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
-.pcard-blinkit .pc-variant-label{font-size:9px;color:var(--text2);font-weight:700;margin-bottom:2px;background:var(--bg4);border:1px solid var(--border);border-radius:5px;padding:1px 5px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-/* Name: always 2 lines, fixed height so all cards align */
-.pcard-blinkit .pc-name{font-size:.7rem;font-weight:700;line-height:1.35;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:calc(0.7rem * 1.35 * 2);word-break:break-word;}
-.pcard-blinkit .pc-delivery{font-size:.6rem;color:var(--text3);margin-bottom:2px;display:flex;align-items:center;gap:3px;}
-.pcard-blinkit .pc-delivery .dot{width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;}
-.pcard-blinkit .pc-price-row{display:flex;align-items:baseline;gap:3px;flex-wrap:wrap;margin-bottom:2px;}
-.pcard-blinkit .pc-price{font-size:.85rem;font-weight:900;}
-.pcard-blinkit .pc-mrp{font-size:.65rem;color:var(--text3);text-decoration:line-through;}
-.pcard-blinkit .pc-off{font-size:.58rem;color:var(--green);font-weight:800;}
-.pcard-blinkit .pc-per-unit{font-size:.58rem;color:var(--text3);margin-bottom:3px;}
-.pcard-blinkit .pc-bulk-hint{display:inline-flex;align-items:center;gap:3px;font-size:.55rem;color:#000;font-weight:800;background:var(--yellow);border-radius:4px;padding:1px 4px;margin-bottom:3px;letter-spacing:.01em;}
-.pcard-blinkit .pc-bulk-hint.best{background:var(--green);}
-.pcard-blinkit .pc-bot{margin-top:auto;padding-top:4px;}
-/* Bigger ADD button */
-.pcard-blinkit .add-btn{width:100%;background:none;border:1.5px solid var(--green);color:var(--green);border-radius:8px;padding:7px 0;font-size:.75rem;font-weight:900;letter-spacing:.04em;transition:background .15s,color .15s;display:block;text-align:center;}
-.pcard-blinkit .add-btn:active{background:var(--green);color:#000;}
-.pcard-blinkit .qty-ctrl{display:flex;align-items:center;justify-content:space-between;background:var(--green);border-radius:8px;overflow:hidden;width:100%;}
-.pcard-blinkit .qty-ctrl button{background:none;color:#000;font-size:14px;font-weight:900;padding:4px 9px;border:none;line-height:1;flex-shrink:0;}
-.pcard-blinkit .qty-ctrl button:active{background:rgba(0,0,0,.12);}
-.pcard-blinkit .qty-ctrl span{color:#000;font-size:.72rem;font-weight:900;flex:1;text-align:center;}
-.pcard-blinkit .pc-variant-btn{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:4px 7px;font-size:.68rem;color:var(--text);font-weight:600;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left;}
-.pcard-blinkit .pc-variant-dropdown{overflow:hidden;max-height:0;opacity:0;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .22s ease;background:var(--bg3);border-radius:7px;border:1px solid var(--border);margin-bottom:5px;}
-.pcard-blinkit .pc-variant-dropdown.open{max-height:200px;opacity:1;}
-.pcard-blinkit .pc-vd-option{padding:6px 8px;font-size:.68rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
-.pcard-blinkit .pc-vd-option:last-child{border:none;}
-.pcard-blinkit .pc-vd-option:active{background:rgba(45,211,111,.1);}
-.pcard-blinkit .pc-vd-option.selected{color:var(--green);}
-.pcard-blinkit .vb-arrow{font-size:.6rem;color:var(--text3);transition:transform .3s cubic-bezier(.4,0,.2,1);}
-.pcard-blinkit .pc-variant-btn.open .vb-arrow{transform:rotate(180deg);}
+/* Category grid — uniform height cards */
+.cat-right-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
 
 /* All-cats grid page uses blinkit cat cards */
 .cats-grid-page{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px;}
@@ -1012,7 +983,6 @@ function pCard(p) {
   const dropId = 'vdrop_' + p.id;
   const btnId  = 'vbtn_' + p.id;
 
-  // Premium variant button + smooth dropdown (no native select)
   const variantBlock = hasMultiVariants
     ? `<button class="pc-variant-btn" id="${btnId}" onclick="event.stopPropagation();toggleVariantDrop(${p.id},'${dropId}','${btnId}')">
         <span>${v.label}</span>
@@ -1041,7 +1011,8 @@ function pCard(p) {
     <div class="pc-img-wrap">
       ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : '<span style="font-size:2.5rem">📦</span>'}
       ${off > 0 ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
-      ${p.isNew ? `<span class="pc-new-badge">NEW</span>` : ''}
+      ${p.isNew && off === 0 ? `<span class="pc-new-badge">NEW</span>` : ''}
+      <div class="pc-add-overlay">${addCtrl}</div>
     </div>
     <div class="pc-body">
       ${variantBlock}
@@ -1051,7 +1022,6 @@ function pCard(p) {
         ${mrp ? `<span class="pc-mrp">₹${mrp}</span><span class="pc-off">${off}% off</span>` : ''}
       </div>
       ${bulkBadge}
-      <div class="pc-bot">${addCtrl}</div>
     </div>
   </div>`;
 }
@@ -1170,13 +1140,13 @@ function updateCardInPlace(card, p, vid) {
   const badge = card.querySelector('.pc-discount-badge');
   if (badge) badge.textContent = off > 0 ? off+'% OFF' : '';
 
-  // Update add/qty control
-  const bot = card.querySelector('.pc-bot');
-  if (bot) {
+  // Update add/qty control (overlaid on image)
+  const overlay = card.querySelector('.pc-add-overlay');
+  if (overlay) {
     if (qty > 0) {
-      bot.innerHTML = `<div class="qty-ctrl"><button onclick="event.stopPropagation();chQty(${p.id},'${vid}',-1)">−</button><span>${qty}</span><button onclick="event.stopPropagation();chQty(${p.id},'${vid}',1)">+</button></div>`;
+      overlay.innerHTML = `<div class="qty-ctrl"><button onclick="event.stopPropagation();chQty(${p.id},'${vid}',-1)">−</button><span>${qty}</span><button onclick="event.stopPropagation();chQty(${p.id},'${vid}',1)">+</button></div>`;
     } else {
-      bot.innerHTML = `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${vid}',1)">ADD</button>`;
+      overlay.innerHTML = `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${vid}',1)">ADD</button>`;
     }
   }
 
@@ -1193,7 +1163,7 @@ function reRenderCurrentPage() {
   else renderHome();
 }
 
-// Blinkit-style product card for split panel
+// Category grid card — same card, just fills the grid column width
 function pCardBlinkit(p) {
   const selVid = window._selVariant?.[p.id] || defaultVariant(p)?.id;
   const v = getVariant(p, selVid);
@@ -1232,32 +1202,26 @@ function pCardBlinkit(p) {
        </div>`
     : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
 
-  const perUnit = v.label ? `₹${(price / 1).toFixed(0)}/${v.label}` : '';
-
-  return `<div class="pcard pcard-blinkit" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
+  return `<div class="pcard" style="width:100%;flex-shrink:1;" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
     <div class="pc-img-wrap">
       ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : '<span style="font-size:2.2rem">📦</span>'}
       ${off > 0 ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
+      ${p.isNew && off === 0 ? `<span class="pc-new-badge">NEW</span>` : ''}
+      <div class="pc-add-overlay">${addCtrl}</div>
     </div>
     <div class="pc-body">
-      <div style="display:flex;align-items:flex-start;gap:6px;flex:1;min-width:0">
-        <div style="flex:1;min-width:0">
-          ${variantBlock}
-          <div class="pc-name">${p.name}</div>
-          ${bulkBadge}
-          <div class="pc-price-row">
-            <span class="pc-price">₹${price}</span>
-            ${mrp ? `<span class="pc-mrp">₹${mrp}</span>` : ''}
-            ${off > 0 ? `<span class="pc-off">${off}% off</span>` : ''}
-          </div>
-        </div>
-        <div style="flex-shrink:0;width:72px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;padding-top:4px">
-          <div class="pc-bot">${addCtrl}</div>
-        </div>
+      ${variantBlock}
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-price-row">
+        <span class="pc-price">₹${price}</span>
+        ${mrp ? `<span class="pc-mrp">₹${mrp}</span>` : ''}
+        ${off > 0 ? `<span class="pc-off">${off}% off</span>` : ''}
       </div>
+      ${bulkBadge}
     </div>
   </div>`;
 }
+
 
 // Legacy — no longer called but keep for safety
 function onVariantChange(pid, vid) {
