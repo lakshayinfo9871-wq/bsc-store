@@ -510,7 +510,7 @@ tr:hover td{background:#fafafa;}
     <button class="vp-close" onclick="toggleVoicePanel()">✕</button>
   </div>
   <div class="vp-messages" id="vaMessages">
-    <div class="vp-msg system">👋 Hi! Say or type a command to control the admin panel.<br><span style="font-size:.72rem;opacity:.85">Try: "go to orders" · "show pending orders" · "add product" · "search milk" · "low stock" · "how many products?" · "settings"</span></div>
+    <div class="vp-msg system">👋 I do real actions — no tab switching needed!<br><span style="font-size:.72rem;opacity:.85;line-height:1.6">🥛 "Mark milk for Ramesh" · "Mark all milk today"<br>📦 "Accept order #5" · "Deliver Priya's order"<br>💰 "Ramesh paid 200" · "Add udhar 150 for Suresh"<br>📊 "Pending orders" · "Milk status" · say "help" for more</span></div>
   </div>
   <div class="vp-status" id="vaStatus"></div>
   <div class="vp-controls">
@@ -3099,274 +3099,412 @@ function vaGetAdminContext() {
   return { page: currentPage, products: allProducts.length, categories: allCategories.length };
 }
 
-// Map of admin actions the AI can trigger
-const VA_ACTIONS = {
-  navigate: (page) => { goTo(page); return `✅ Navigated to ${page}`; },
-  openAddProduct: () => { goTo('products'); setTimeout(()=>openProductModal(), 200); return '✅ Opened Add Product form'; },
-  openAddCategory: () => { goTo('categories'); setTimeout(()=>openCatModal(), 200); return '✅ Opened Add Category form'; },
-  openAddBanner: () => { goTo('banners'); setTimeout(()=>openBannerModal(), 200); return '✅ Opened Add Banner form'; },
-  filterOrders: (status) => {
-    goTo('orders');
-    setTimeout(()=>{
-      const btns = document.querySelectorAll('.filter-chip, [data-status]');
-      btns.forEach(b=>{ if(b.textContent.toLowerCase().includes(status.toLowerCase())) b.click(); });
-    }, 300);
-    return `✅ Filtered orders by: ${status}`;
-  },
-  searchProducts: (q) => {
-    goTo('products');
-    setTimeout(()=>{
-      const inp = document.querySelector('.search-input');
-      if(inp) { inp.value = q; inp.dispatchEvent(new Event('input')); }
-    }, 200);
-    return `✅ Searching products for: ${q}`;
-  },
-  scrollTop: () => { document.querySelector('.main')?.scrollTo({top:0,behavior:'smooth'}); return '✅ Scrolled to top'; },
-  refresh: () => { loadAll(true).then(()=>{ const fn = {dashboard:renderDashboard,orders:renderOrders,customers:renderCustomers,products:renderProducts}[currentPage]; if(fn)fn(); }); return '✅ Refreshed data'; },
-};
+// ── VOICE ASSISTANT — DEEP ACTION ENGINE ──────────────────────────────────────
+// Finds customers/orders by name, executes real actions, no navigation needed
 
-// ── LOCAL NLP ENGINE — no API, works 100% offline ─────────────────────────────
-// Intent matching with keyword patterns + live data awareness
+// ── Helper: fuzzy find customer by name fragment ──────────────────────────────
+function vaFindCustomer(nameHint) {
+  if (!nameHint) return null;
+  const q = nameHint.toLowerCase().trim();
+  // Exact match first
+  let c = allCustomers.find(x => x.name?.toLowerCase() === q);
+  if (c) return c;
+  // Starts-with
+  c = allCustomers.find(x => x.name?.toLowerCase().startsWith(q));
+  if (c) return c;
+  // Contains all words
+  const words = q.split(/\s+/).filter(Boolean);
+  c = allCustomers.find(x => words.every(w => x.name?.toLowerCase().includes(w)));
+  if (c) return c;
+  // Contains any word (last resort)
+  c = allCustomers.find(x => words.some(w => w.length > 2 && x.name?.toLowerCase().includes(w)));
+  return c || null;
+}
 
-const VA_NLP = {
-  // Each rule: { patterns: [regex...], handler: fn → {reply, action, params} }
-  rules: [
+// ── Helper: fuzzy find milk customer ─────────────────────────────────────────
+function vaFindMilkCustomer(nameHint) {
+  if (!nameHint) return null;
+  const q = nameHint.toLowerCase().trim();
+  const words = q.split(/\s+/).filter(Boolean);
+  return milkCustomers.find(x =>
+    x.name?.toLowerCase() === q ||
+    x.name?.toLowerCase().startsWith(q) ||
+    words.every(w => x.name?.toLowerCase().includes(w)) ||
+    words.some(w => w.length > 2 && x.name?.toLowerCase().includes(w))
+  ) || null;
+}
 
-    // ── NAVIGATION ─────────────────────────────────────────────────────────────
-    { patterns: [/\b(go|open|show|take me|navigate|switch)\b.*\b(dashboard|home|main)\b/i, /^dashboard$/i],
-      handler: () => ({ reply: `Opening Dashboard! You have ${allProducts.length} products and ${allCategories.length} categories.`, action:'navigate', params:'dashboard' }) },
+// ── Helper: today's date string YYYY-MM-DD ────────────────────────────────────
+function vaToday() { return new Date().toISOString().slice(0,7+3).slice(0,10); }
 
-    { patterns: [/\b(go|open|show|view)\b.*\border(s)?\b/i, /^orders?$/i, /\bmy orders?\b/i],
-      handler: () => ({ reply: `Opening Orders page!`, action:'navigate', params:'orders' }) },
-
-    { patterns: [/\b(go|open|show)\b.*\bcustomer(s)?\b/i, /^customers?$/i],
-      handler: () => ({ reply: `Here are your customers!`, action:'navigate', params:'customers' }) },
-
-    { patterns: [/\b(go|open|show)\b.*\bmilk\b/i, /^milk$/i, /\bmilk (delivery|log|subs)\b/i],
-      handler: () => ({ reply: `Opening Milk Delivery section!`, action:'navigate', params:'milk' }) },
-
-    { patterns: [/\b(go|open|show)\b.*\b(udhar|credit|khata|ledger)\b/i, /^udhar$/i],
-      handler: () => ({ reply: `Opening Udhar & Credit section!`, action:'navigate', params:'udhar' }) },
-
-    { patterns: [/\b(go|open|show)\b.*\bproduct(s)?\b/i, /^products?$/i],
-      handler: () => ({ reply: `Opening Products! You have ${allProducts.length} products total.`, action:'navigate', params:'products' }) },
-
-    { patterns: [/\b(go|open|show)\b.*\b(scanner|barcode|scan)\b/i, /^scanner?$/i],
-      handler: () => ({ reply: `Opening Barcode Scanner!`, action:'navigate', params:'scanner' }) },
-
-    { patterns: [/\b(go|open|show)\b.*\bcategor(y|ies)\b/i, /^categor(y|ies)$/i],
-      handler: () => ({ reply: `Opening Categories! You have ${allCategories.length} categories.`, action:'navigate', params:'categories' }) },
-
-    { patterns: [/\b(go|open|show)\b.*\bsubcategor(y|ies)\b/i, /^subcategor(y|ies)$/i],
-      handler: () => ({ reply: `Opening Subcategories!`, action:'navigate', params:'subcategories' }) },
-
-    { patterns: [/\b(go|open|show)\b.*\bbanner(s)?\b/i, /^banners?$/i],
-      handler: () => ({ reply: `Opening Banners!`, action:'navigate', params:'banners' }) },
-
-    { patterns: [/\b(go|open|show)\b.*\bsetting(s)?\b/i, /^settings?$/i, /\bconfig\b/i],
-      handler: () => ({ reply: `Opening Settings!`, action:'navigate', params:'settings' }) },
-
-    // ── ADD / CREATE ────────────────────────────────────────────────────────────
-    { patterns: [/\b(add|create|new|plus)\b.*\bproduct\b/i, /\bproduct.*\b(add|create|new)\b/i],
-      handler: () => ({ reply: `Opening the Add Product form!`, action:'openAddProduct', params:'' }) },
-
-    { patterns: [/\b(add|create|new)\b.*\bcategor(y|ies)\b/i],
-      handler: () => ({ reply: `Opening Add Category form!`, action:'openAddCategory', params:'' }) },
-
-    { patterns: [/\b(add|create|new)\b.*\bbanner\b/i],
-      handler: () => ({ reply: `Opening Add Banner form!`, action:'openAddBanner', params:'' }) },
-
-    // ── FILTER ORDERS ───────────────────────────────────────────────────────────
-    { patterns: [/\b(pending|new|fresh)\b.*order/i, /order.*\bpending\b/i, /\bshow pending\b/i],
-      handler: () => {
-        const n = _vaCountOrdersByStatus('pending');
-        return { reply: `Showing pending orders! ${n !== null ? `You have ${n} pending order${n!==1?'s':''}.` : ''}`, action:'filterOrders', params:'pending' };
-      }},
-
-    { patterns: [/\b(accepted|confirmed|approve)\b.*order/i, /order.*\baccepted\b/i],
-      handler: () => ({ reply: `Showing accepted orders!`, action:'filterOrders', params:'accepted' }) },
-
-    { patterns: [/\b(packed|packing|ready)\b.*order/i, /order.*\bpacked\b/i],
-      handler: () => ({ reply: `Showing packed orders!`, action:'filterOrders', params:'packed' }) },
-
-    { patterns: [/\b(delivered|complete|done)\b.*order/i, /order.*\bdelivered\b/i],
-      handler: () => ({ reply: `Showing delivered orders!`, action:'filterOrders', params:'delivered' }) },
-
-    { patterns: [/\b(cancel|cancelled|rejected)\b.*order/i, /order.*\bcancell?ed\b/i],
-      handler: () => ({ reply: `Showing cancelled orders!`, action:'filterOrders', params:'cancelled' }) },
-
-    // ── SEARCH PRODUCTS ─────────────────────────────────────────────────────────
-    { patterns: [/\b(find|search|look|locate)\b.*\bproduct\b.*?([a-z][a-z ]+)/i,
-                 /\bsearch\b.*?\bfor\b\s+(.+)/i,
-                 /\bfind\b\s+(.+)/i],
-      handler: (cmd) => {
-        // Extract search term
-        let q = cmd.replace(/\b(find|search|look for|locate|product|products)\b/gi,'').replace(/\bfor\b/gi,'').trim();
-        q = q.replace(/[^a-z0-9 ]/gi,'').trim();
-        if (!q) return { reply: `Opening Products — type in the search box!`, action:'navigate', params:'products' };
-        const matches = allProducts.filter(p => p.name?.toLowerCase().includes(q.toLowerCase())).length;
-        return { reply: `Searching products for "${q}"! Found ${matches} match${matches!==1?'es':''}.`, action:'searchProducts', params:q };
-      }},
-
-    // ── STATS & INFO ────────────────────────────────────────────────────────────
-    { patterns: [/how many product/i, /product count/i, /total product/i],
-      handler: () => ({ reply: `You have ${allProducts.length} products across ${allCategories.length} categories.`, action:'none', params:'' }) },
-
-    { patterns: [/how many customer/i, /customer count/i, /total customer/i],
-      handler: () => ({ reply: `I see ${allCategories.length} categories loaded. Open Customers page to see the full list!`, action:'navigate', params:'customers' }) },
-
-    { patterns: [/how many order/i, /order count/i, /today.*order/i, /order.*today/i],
-      handler: () => ({ reply: `Opening Orders to check — your latest orders are there!`, action:'navigate', params:'orders' }) },
-
-    { patterns: [/how many categor/i, /categor.*count/i],
-      handler: () => ({ reply: `You have ${allCategories.length} categories: ${allCategories.slice(0,4).map(c=>c.name).join(', ')}${allCategories.length>4?'...':''}.`, action:'none', params:'' }) },
-
-    { patterns: [/which page|where am i|current page/i],
-      handler: () => ({ reply: `You're on the ${currentPage} page right now.`, action:'none', params:'' }) },
-
-    { patterns: [/list.*product|show.*all.*product/i],
-      handler: () => {
-        const names = allProducts.slice(0,6).map(p=>p.name).join(', ');
-        return { reply: `Your products include: ${names}${allProducts.length>6?` and ${allProducts.length-6} more`:''}. Opening Products page!`, action:'navigate', params:'products' };
-      }},
-
-    { patterns: [/list.*categor|show.*all.*categor/i],
-      handler: () => {
-        const names = allCategories.map(c=>c.name).join(', ');
-        return { reply: `Your categories: ${names}. Opening Categories!`, action:'navigate', params:'categories' };
-      }},
-
-    // ── LOW STOCK ───────────────────────────────────────────────────────────────
-    { patterns: [/low stock|out of stock|stock alert|running out/i],
-      handler: () => {
-        const low = allProducts.filter(p => typeof p.stockQuantity==='number' && p.stockQuantity<=5 && p.stockQuantity>=0);
-        if (!low.length) return { reply: `No low-stock alerts right now! All products look good.`, action:'none', params:'' };
-        return { reply: `⚠️ ${low.length} product${low.length>1?'s are':' is'} low on stock: ${low.slice(0,3).map(p=>p.name).join(', ')}${low.length>3?'...':''}. Opening Products!`, action:'navigate', params:'products' };
-      }},
-
-    // ── REFRESH ─────────────────────────────────────────────────────────────────
-    { patterns: [/\b(refresh|reload|update|sync)\b/i],
-      handler: () => ({ reply: `Refreshing data from server!`, action:'refresh', params:'' }) },
-
-    // ── SCROLL ──────────────────────────────────────────────────────────────────
-    { patterns: [/scroll (to )?(top|up|back)/i, /go (to )?top/i],
-      handler: () => ({ reply: `Scrolled to top!`, action:'scrollTop', params:'' }) },
-
-    // ── GREETINGS ───────────────────────────────────────────────────────────────
-    { patterns: [/^(hi|hey|hello|helo|hii|sup|yo)\b/i],
-      handler: () => {
-        const hour = new Date().getHours();
-        const greet = hour<12 ? 'Good morning' : hour<17 ? 'Good afternoon' : 'Good evening';
-        return { reply: `${greet}! 👋 I'm your BSC Store assistant. I can navigate pages, show orders, search products, check stock, and more. What can I do for you?`, action:'none', params:'' };
-      }},
-
-    { patterns: [/thank(s| you)|thanks/i, /great|awesome|perfect|nice|good job/i],
-      handler: () => ({ reply: `Happy to help! Anything else you need?`, action:'none', params:'' }) },
-
-    { patterns: [/\b(help|what can you do|commands|options)\b/i],
-      handler: () => ({ reply: `I can: navigate pages (orders, products, customers, settings...), filter orders by status, search products, check stock alerts, show counts, add new items, refresh data. Just say what you need!`, action:'none', params:'' }) },
-
-    // ── LOGOUT ──────────────────────────────────────────────────────────────────
-    { patterns: [/\b(logout|log out|sign out)\b/i],
-      handler: () => { setTimeout(logout, 500); return { reply: `Logging you out...`, action:'none', params:'' }; } },
-  ],
-
-  // Match command to best rule
-  match(cmd) {
-    const lower = cmd.toLowerCase().trim();
-    for (const rule of this.rules) {
-      for (const pat of rule.patterns) {
-        if (pat.test(lower) || pat.test(cmd)) {
-          return rule.handler(cmd);
-        }
-      }
-    }
-    // Fallback: fuzzy page nav — if user just says a page name
-    const pageAliases = {
-      dashboard:['dashboard','dash','home','main','overview'],
-      orders:['orders','order','billing'],
-      customers:['customers','customer','client','clients','user','users'],
-      products:['products','product','items','item','catalogue','catalog','inventory'],
-      milk:['milk','dairy','milkman'],
-      udhar:['udhar','credit','khata','due','dues','ledger'],
-      categories:['categories','category','cat'],
-      subcategories:['subcategories','subcategory','subcat'],
-      banners:['banners','banner','slides','ads'],
-      settings:['settings','setting','config','preferences'],
-      scanner:['scanner','scan','barcode'],
-    };
-    for (const [page, aliases] of Object.entries(pageAliases)) {
-      if (aliases.some(a => lower.includes(a))) {
-        return { reply: `Opening ${page}!`, action:'navigate', params:page };
-      }
-    }
-    return null;
-  }
-};
-
-function _vaCountOrdersByStatus(status) {
-  // Try to read from DOM if orders page is loaded
-  try {
-    const rows = document.querySelectorAll('#ordersTable tbody tr, .order-row');
-    if (rows.length) {
-      let count = 0;
-      rows.forEach(r => { if(r.textContent.toLowerCase().includes(status)) count++; });
-      return count;
-    }
-  } catch {}
+// ── Helper: extract ₹ amount from text ───────────────────────────────────────
+function vaExtractAmount(text) {
+  const m = text.match(/(?:rs\.?|₹|rupees?)\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:rs\.?|₹|rupees?)|(\d+(?:\.\d+)?)/i);
+  if (m) return parseFloat(m[1]||m[2]||m[3]);
   return null;
 }
 
-function sendVoiceCommand(cmdOverride) {
+// ── Helper: extract customer name — strips action keywords ───────────────────
+function vaExtractName(text, ...stripWords) {
+  let s = text.toLowerCase();
+  const noise = ['mark','milk','delivered','delivery','today','add','for','of','the','a','an','to',
+    'udhar','credit','payment','paid','record','give','take','accept','order','orders','pending',
+    'customer','sir','ji','bhai','didi','madam','mr','mrs','ms',...stripWords];
+  noise.forEach(w => { s = s.replace(new RegExp('\\b'+w+'\\b','gi'),' '); });
+  // strip quantities like 1L 2l 500ml
+  s = s.replace(/\b\d+\s*(?:l|ltr|litre|ml|kg|g|gm)\b/gi,' ');
+  // strip amounts
+  s = s.replace(/(?:rs\.?|₹|rupees?)?\s*\d+(?:\.\d+)?/gi,' ');
+  return s.replace(/\s+/g,' ').trim();
+}
+
+// ── VA CONFIRM: show a quick in-chat confirm prompt ───────────────────────────
+function vaConfirm(msg, onYes) {
+  const el = document.getElementById('vaMessages');
+  const div = document.createElement('div');
+  div.className = 'vp-msg ai';
+  div.innerHTML = `${msg}<br><div style="display:flex;gap:8px;margin-top:8px">
+    <button onclick="this.closest('.vp-msg').remove();(${onYes.toString()})()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer">✅ Yes</button>
+    <button onclick="this.closest('.vp-msg').remove()" style="background:#e5e7eb;color:#374151;border:none;border-radius:8px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer">✕ Cancel</button>
+  </div>`;
+  el.appendChild(div);
+  vaScrollBottom();
+}
+
+// ── INTENT HANDLERS — each returns a {reply} string after acting ──────────────
+
+// MARK MILK DELIVERED for a customer
+async function vaMarkMilkDelivered(nameHint) {
+  if (!milkCustomers.length) await loadMilkData();
+  const c = vaFindMilkCustomer(nameHint);
+  if (!c) return `❌ Couldn't find a milk customer named "${nameHint}". Say "milk customers" to see the list.`;
+  const today = vaToday();
+  const already = milkLogs.find(l => l.customerId===c.id && l.date===today);
+  if (already) return `✅ ${c.name}'s milk was already marked delivered today (${c.defaultQty||1}L).`;
+  try {
+    await fetch('/api/admin/milk/log', {method:'POST', headers:ah(), body:JSON.stringify({customerId:c.id, date:today, qty:c.defaultQty||1, items:c.defaultItems||[]})});
+    await loadMilkData(); renderMilkPage();
+    return `✅ Marked ${c.name}'s milk delivered today — ${c.defaultQty||1}L!`;
+  } catch(e) { return `❌ Failed to mark milk for ${c.name}.`; }
+}
+
+// MARK ALL MILK for today
+async function vaMarkAllMilk() {
+  if (!milkCustomers.length) await loadMilkData();
+  const today = vaToday();
+  const active = milkCustomers.filter(c=>c.active);
+  const unmarked = active.filter(c=>!milkLogs.find(l=>l.customerId===c.id&&l.date===today));
+  if (!unmarked.length) return `✅ All ${active.length} milk customers already marked for today!`;
+  try {
+    const r = await fetch('/api/admin/milk/bulk-mark',{method:'POST',headers:ah(),body:JSON.stringify({date:today})});
+    const d = await r.json();
+    await loadMilkData(); renderMilkPage();
+    return `✅ Marked ${d.marked||unmarked.length} customers as milk delivered for today!`;
+  } catch(e) { return `❌ Bulk mark failed. Try the Mark Today button.`; }
+}
+
+// ACCEPT / UPDATE an order by customer name or order ID
+async function vaUpdateOrder(query, newStatus) {
+  if (!ordersData.length) {
+    const r = await fetch('/api/admin/orders?date=today',{headers:ah()});
+    if(r.ok) ordersData = await r.json();
+  }
+  // Find by order ID
+  const idMatch = query.match(/\b#?(\d+)\b/);
+  let order = idMatch ? ordersData.find(o=>String(o.id)===idMatch[1]) : null;
+  // Find by customer name
+  if (!order) {
+    const q = query.toLowerCase();
+    order = ordersData.find(o => o.customerName?.toLowerCase().includes(q) || o.phone?.includes(q));
+    if (!order) {
+      // Try word-by-word
+      const words = q.split(/\s+/).filter(w=>w.length>2);
+      order = ordersData.find(o => words.some(w=>o.customerName?.toLowerCase().includes(w)));
+    }
+  }
+  if (!order) {
+    const pending = ordersData.filter(o=>o.status==='pending');
+    if (pending.length===1 && (query.match(/pending|next|this|that/i)||!query.trim())) order=pending[0];
+  }
+  if (!order) return `❌ No order found for "${query}". Try saying "accept order #123" or the customer's name.`;
+  await quickUpdateOrder(order.id, newStatus);
+  return `✅ Order #${order.id} (${order.customerName}) marked as ${newStatus}!`;
+}
+
+// ADD UDHAR for a customer
+async function vaAddUdhar(nameHint, amount, note) {
+  if (!allCustomers.length) await loadCustomersData();
+  const c = vaFindCustomer(nameHint);
+  if (!c) return `❌ Customer "${nameHint}" not found. Check the name.`;
+  if (!amount || isNaN(amount)) return `❌ Please say the amount too — e.g. "add udhar 200 for Ramesh"`;
+  await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,type:'credit',amount:parseFloat(amount),note:note||'Voice entry'})});
+  await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,items:[],amount:parseFloat(amount),note:note||'Voice entry'})});
+  if(currentPage==='customers') { await loadCustomersData(); renderCustomersPage(); }
+  return `✅ Added ₹${amount} udhar for ${c.name}!`;
+}
+
+// RECORD PAYMENT from a customer
+async function vaRecordPayment(nameHint, amount) {
+  if (!allCustomers.length) await loadCustomersData();
+  const c = vaFindCustomer(nameHint);
+  if (!c) return `❌ Customer "${nameHint}" not found.`;
+  if (!amount || isNaN(amount)) return `❌ Please say the amount — e.g. "Ramesh paid 500"`;
+  await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,type:'payment',amount:parseFloat(amount),note:'cash'})});
+  await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,amount:parseFloat(amount),method:'cash'})});
+  if(currentPage==='customers') { await loadCustomersData(); renderCustomersPage(); }
+  return `✅ Recorded ₹${amount} payment from ${c.name}!`;
+}
+
+// SHOW customer profile
+async function vaOpenCustomer(nameHint) {
+  if (!allCustomers.length) await loadCustomersData();
+  const c = vaFindCustomer(nameHint);
+  if (!c) return `❌ Customer "${nameHint}" not found.`;
+  goTo('customers');
+  setTimeout(()=>openCustomerProfile(c.id), 250);
+  return `✅ Opening profile for ${c.name}!`;
+}
+
+// PENDING ORDERS summary
+async function vaPendingOrders() {
+  const r = await fetch('/api/admin/orders?date=today',{headers:ah()});
+  if(r.ok) ordersData = await r.json();
+  const pending = ordersData.filter(o=>o.status==='pending');
+  if (!pending.length) return `✅ No pending orders right now!`;
+  const names = pending.slice(0,4).map(o=>`#${o.id} ${o.customerName} ₹${o.total}`).join(' · ');
+  return `📦 ${pending.length} pending order${pending.length>1?'s':''}: ${names}${pending.length>4?` + ${pending.length-4} more`:''}`;
+}
+
+// MILK STATUS for today
+async function vaMilkStatus() {
+  if (!milkCustomers.length) await loadMilkData();
+  const today = vaToday();
+  const active = milkCustomers.filter(c=>c.active);
+  const marked = active.filter(c=>milkLogs.find(l=>l.customerId===c.id&&l.date===today));
+  const unmarked = active.filter(c=>!milkLogs.find(l=>l.customerId===c.id&&l.date===today));
+  let msg = `🥛 Milk today: ${marked.length}/${active.length} delivered.`;
+  if (unmarked.length) msg += ` Remaining: ${unmarked.slice(0,4).map(c=>c.name).join(', ')}${unmarked.length>4?` +${unmarked.length-4} more`:''}`;
+  return msg;
+}
+
+// LIST MILK CUSTOMERS
+function vaMilkCustomerList() {
+  const active = milkCustomers.filter(c=>c.active);
+  if (!active.length) return `No active milk customers found.`;
+  return `🥛 ${active.length} milk customers: ${active.map(c=>c.name).join(', ')}`;
+}
+
+// PAUSE / RESUME milk sub
+async function vaPauseMilk(nameHint) {
+  const c = vaFindMilkCustomer(nameHint);
+  if (!c) return `❌ Milk customer "${nameHint}" not found.`;
+  await pauseMilkSub(c.id);
+  return `✅ Paused milk delivery for ${c.name}.`;
+}
+async function vaResumeMilk(nameHint) {
+  const c = vaFindMilkCustomer(nameHint);
+  if (!c) return `❌ Milk customer "${nameHint}" not found.`;
+  await resumeMilkSub(c.id);
+  return `✅ Resumed milk delivery for ${c.name}.`;
+}
+
+// RECORD MILK PAYMENT
+async function vaMilkPayment(nameHint, amount) {
+  if (!milkCustomers.length) await loadMilkData();
+  const c = vaFindMilkCustomer(nameHint);
+  if (!c) return `❌ Milk customer "${nameHint}" not found.`;
+  if (!amount || isNaN(amount)) return `❌ Say the amount — e.g. "milk payment 300 for Ramesh"`;
+  const month = new Date().toISOString().slice(0,7);
+  await recordMilkPayment(c.id, month, parseFloat(amount));
+  return `✅ Recorded ₹${amount} milk payment from ${c.name}!`;
+}
+
+// ── MAIN NLP MATCHER ──────────────────────────────────────────────────────────
+async function vaProcessCommand(cmd) {
+  const t = cmd.toLowerCase().trim();
+
+  // ── MARK MILK ───────────────────────────────────────────────────────────────
+  if (/\bmark.{0,30}(all|everyone|sabhi|sab)\b.*milk|\bmilk.{0,15}(all|everyone|sabhi|bulk|today)\b/i.test(t) ||
+      /\bbulk.?mark\b/i.test(t)) {
+    return await vaMarkAllMilk();
+  }
+  if (/\bmark.{1,40}milk\b|\bmilk.{1,40}(delivered|mark|done|de do|de diya)\b|\bdelivered.{1,30}milk\b/i.test(t) ||
+      /\bmilk\b.*\b(today|kal|abhi)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'mark','milk','delivered','today','de do','de diya');
+    if (name) return await vaMarkMilkDelivered(name);
+    return await vaMilkStatus();
+  }
+
+  // ── MILK STATUS / LIST ───────────────────────────────────────────────────────
+  if (/\b(milk.?status|milk.?today|today.?milk|kitna.?milk|milk.?kaun)\b/i.test(t) ||
+      /^milk\s*$/i.test(t)) {
+    return await vaMilkStatus();
+  }
+  if (/\b(milk.?customer|milk.?list|who.?milk|kaun.?milk)\b/i.test(t)) {
+    if (!milkCustomers.length) await loadMilkData();
+    return vaMilkCustomerList();
+  }
+
+  // ── PAUSE / RESUME MILK ──────────────────────────────────────────────────────
+  if (/\bpause.{1,30}milk\b|\bmilk.{1,20}pause\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'pause','milk');
+    return name ? await vaPauseMilk(name) : `Say who to pause — e.g. "pause milk for Ramesh"`;
+  }
+  if (/\bresume.{1,30}milk\b|\bmilk.{1,20}resume\b|\bstart.{1,30}milk\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'resume','start','milk');
+    return name ? await vaResumeMilk(name) : `Say who to resume — e.g. "resume milk for Ramesh"`;
+  }
+
+  // ── MILK PAYMENT ─────────────────────────────────────────────────────────────
+  if (/\bmilk.{1,20}pay|\bpay.{1,20}milk\b/i.test(t)) {
+    const amount = vaExtractAmount(t);
+    const name = vaExtractName(cmd, 'milk','payment','paid','pay','received');
+    return await vaMilkPayment(name, amount);
+  }
+
+  // ── ACCEPT / DELIVER ORDERS ──────────────────────────────────────────────────
+  if (/\b(accept|confirm|approve)\b.{0,30}(order|#\d+)/i.test(t) ||
+      /\border.{0,15}(accept|confirm)\b/i.test(t)) {
+    const query = vaExtractName(cmd, 'accept','confirm','approve','order');
+    return await vaUpdateOrder(query, 'accepted');
+  }
+  if (/\b(deliver|mark.{0,10}deliver|dispatch)\b.{0,30}(order|#\d+)/i.test(t) ||
+      /\border.{0,15}(deliver|done|complete)\b/i.test(t)) {
+    const query = vaExtractName(cmd, 'deliver','dispatch','mark','order','delivered','done','complete');
+    return await vaUpdateOrder(query, 'delivered');
+  }
+  if (/\b(pack|packed|ready)\b.{0,30}(order|#\d+)/i.test(t)) {
+    const query = vaExtractName(cmd, 'pack','packed','ready','order');
+    return await vaUpdateOrder(query, 'packed');
+  }
+  if (/\b(cancel)\b.{0,30}(order|#\d+)/i.test(t)) {
+    const query = vaExtractName(cmd, 'cancel','order');
+    return await vaUpdateOrder(query, 'cancelled');
+  }
+
+  // ── PENDING ORDERS SUMMARY ───────────────────────────────────────────────────
+  if (/\b(pending.?order|order.?pending|kaun.?order|new.?order|today.?order|order.?today|kitne.?order)\b/i.test(t)) {
+    return await vaPendingOrders();
+  }
+
+  // ── UDHAR ────────────────────────────────────────────────────────────────────
+  if (/\b(add|daal|jod|likh).{0,20}(udhar|credit|udhaar)\b|\b(udhar|udhaar|credit).{0,20}(add|de|diya|lagao)\b/i.test(t)) {
+    const amount = vaExtractAmount(t);
+    const name = vaExtractName(cmd, 'add','udhar','udhaar','credit','daal','jod','likh','de','diya','lagao','rupees','rs','₹');
+    return await vaAddUdhar(name, amount, '');
+  }
+
+  // ── PAYMENT RECEIVED ─────────────────────────────────────────────────────────
+  if (/\b(paid|payment|received|mila|aaya|collected)\b/i.test(t) &&
+      /\b(\d+|rupee|rs|₹)\b/i.test(t)) {
+    const amount = vaExtractAmount(t);
+    const name = vaExtractName(cmd, 'paid','payment','received','mila','aaya','collected','cash','upi','rupees','rs','₹');
+    return await vaRecordPayment(name, amount);
+  }
+
+  // ── OPEN CUSTOMER PROFILE ────────────────────────────────────────────────────
+  if (/\b(open|show|profile|detail|view).{1,20}customer\b|\bcustomer.{1,20}(open|show|profile)\b/i.test(t) ||
+      /^(open|show|profile)\s+\w/i.test(t)) {
+    const name = vaExtractName(cmd, 'open','show','profile','detail','view','customer');
+    if (name.length > 1) return await vaOpenCustomer(name);
+  }
+
+  // ── STATS & COUNTS ───────────────────────────────────────────────────────────
+  if (/\b(how many|kitne|total|count).{0,15}product\b/i.test(t))
+    return `📦 You have ${allProducts.length} products across ${allCategories.length} categories.`;
+  if (/\b(how many|kitne|total|count).{0,15}customer\b/i.test(t))
+    return `👥 You have ${allCustomers.length} customers.`;
+  if (/\b(how many|kitne|total).{0,15}categor\b/i.test(t))
+    return `🗂 You have ${allCategories.length} categories: ${allCategories.slice(0,5).map(c=>c.name).join(', ')}${allCategories.length>5?'...':''}`;
+  if (/\b(which|current|kaunsa|konsa).{0,10}page\b|\bwhere am i\b/i.test(t))
+    return `You're on the ${currentPage} page.`;
+
+  // ── NAVIGATION (last resort) ─────────────────────────────────────────────────
+  const pages = {
+    dashboard:['dashboard','dash','home','main','overview'],
+    orders:['orders','order','billing'],
+    customers:['customers','customer','client'],
+    products:['products','product','items','item','catalogue','catalog','inventory'],
+    milk:['milk','dairy','milkman','doodh'],
+    udhar:['udhar','udhaar','credit','khata','due','dues','ledger','bahi'],
+    categories:['categories','category'],
+    subcategories:['subcategories','subcategory'],
+    banners:['banners','banner','slides'],
+    settings:['settings','setting','config'],
+    scanner:['scanner','scan','barcode'],
+  };
+  const addActions = {
+    openAddProduct:[/\b(add|new|create)\b.{0,10}\bproduct\b/i],
+    openAddCategory:[/\b(add|new|create)\b.{0,10}\bcategor\b/i],
+    openAddBanner:[/\b(add|new|create)\b.{0,10}\bbanner\b/i],
+  };
+  for (const [action, pats] of Object.entries(addActions)) {
+    if (pats.some(p=>p.test(t))) {
+      if(action==='openAddProduct'){goTo('products');setTimeout(()=>openProductModal(),200);}
+      if(action==='openAddCategory'){goTo('categories');setTimeout(()=>openCatModal(),200);}
+      if(action==='openAddBanner'){goTo('banners');setTimeout(()=>openBannerModal(),200);}
+      return `✅ Opening form!`;
+    }
+  }
+  for (const [page, aliases] of Object.entries(pages)) {
+    if (aliases.some(a => t.includes(a))) { goTo(page); return `Opening ${page}!`; }
+  }
+
+  // ── REFRESH ───────────────────────────────────────────────────────────────────
+  if (/\b(refresh|reload|sync|update)\b/i.test(t)) {
+    await loadAll(true);
+    const fn={dashboard:renderDashboard,orders:renderOrders,customers:renderCustomers,products:renderProducts,milk:renderMilk}[currentPage];
+    if(fn)fn();
+    return `✅ Data refreshed!`;
+  }
+
+  // ── GREETINGS ────────────────────────────────────────────────────────────────
+  if (/^(hi|hey|hello|helo|hii|sup|yo|namaskar|namaste)\b/i.test(t)) {
+    const h=new Date().getHours();
+    return `${h<12?'Good morning':'h<17?Good afternoon':'Good evening'}! 👋 I can mark milk, accept orders, record payments, add udhar — just say what you need!`;
+  }
+  if (/\bhelp\b/i.test(t))
+    return `I can do real actions:\n• "Mark milk for Ramesh" → marks delivered\n• "Mark all milk today" → bulk mark\n• "Accept order #5" or "Deliver Priya's order"\n• "Ramesh paid 200" → records payment\n• "Add udhar 150 for Suresh"\n• "Milk status today"\n• "Pending orders"\n• "Open Ramesh profile"`;
+
+  return null; // unknown
+}
+
+// ── SEND / PROCESS COMMAND ───────────────────────────────────────────────────
+async function sendVoiceCommand(cmdOverride) {
   const inp = document.getElementById('vaInput');
   const cmd = (cmdOverride || inp?.value || '').trim();
   if (!cmd) return;
   if (inp) inp.value = '';
 
   vaAddMsg('user', cmd);
-  vaSetStatus('⚡ Processing...');
+  vaSetStatus('⚡ Working...');
 
-  // Small artificial delay so it feels responsive, not instant
-  setTimeout(() => {
-    const result = VA_NLP.match(cmd);
-
-    let reply, action, params;
-    if (result) {
-      reply = result.reply;
-      action = result.action;
-      params = result.params;
-    } else {
-      // Unknown command — give helpful nudge
-      const suggestions = ['Go to orders', 'Show pending orders', 'Search products', 'Add product', 'Low stock', 'Go to settings'];
-      const random = suggestions[Math.floor(Math.random() * suggestions.length)];
-      reply = `I didn't quite get that. Try saying something like "${random}" — or say "help" to see what I can do!`;
-      action = 'none'; params = '';
+  let reply;
+  try {
+    reply = await vaProcessCommand(cmd);
+    if (!reply) {
+      const tips = ['Mark milk for [name]','Accept order #5','[Name] paid 200','Add udhar 150 for [name]','Milk status','Pending orders'];
+      reply = `I didn't get that. Try: "${tips[Math.floor(Math.random()*tips.length)]}" — or say "help" for all commands.`;
     }
+  } catch(e) {
+    console.error('VA error', e);
+    reply = `⚠️ Something went wrong: ${e.message||e}. Try again!`;
+  }
 
-    vaAddMsg('ai', reply);
+  vaAddMsg('ai', reply);
+  vaSetStatus('');
 
-    // Execute action
-    if (action && action !== 'none' && VA_ACTIONS[action]) {
-      try {
-        VA_ACTIONS[action](params || '');
-      } catch(e) {}
-    }
-    vaSetStatus('');
-
-    // Speak reply using browser TTS (no API needed)
-    if ('speechSynthesis' in window && _vaOpen) {
-      const clean = reply.replace(/[✅❌⚠️🎙️👋]/g,'').replace(/\s+/g,' ').trim();
-      const utter = new SpeechSynthesisUtterance(clean);
-      utter.rate = 1.05; utter.pitch = 1.0;
-      // Prefer a natural voice
-      const voices = window.speechSynthesis.getVoices();
-      const pref = voices.find(v => /Google|Natural|Enhanced|Samantha|Karen|Daniel/i.test(v.name));
-      if (pref) utter.voice = pref;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utter);
-    }
-
-  }, 180);
+  // Speak reply
+  if ('speechSynthesis' in window && _vaOpen) {
+    const clean = reply.replace(/[✅❌⚠️🎙️👋📦🥛📒]/g,'').replace(/\s+/g,' ').trim();
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.rate = 1.05;
+    const voices = window.speechSynthesis.getVoices();
+    const pref = voices.find(v => /Google|Natural|Enhanced|Samantha|Karen|Daniel/i.test(v.name));
+    if (pref) utter.voice = pref;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  }
 }
 
 // Speech recognition (mic)
