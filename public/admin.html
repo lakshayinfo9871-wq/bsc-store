@@ -3095,13 +3095,16 @@ function vaGetAdminContext() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// AI ASSISTANT v5 — fully trained, all actions, Gemini powered
+// AI ASSISTANT v6 — fully trained, understands everything
 // ════════════════════════════════════════════════════════════════════════════
 
 let _vaOpen = false;
 let _vaConversation = [];
 let _vaRecognition = null;
 let _vaListening = false;
+let _custListCache = '';
+let _custListTime = 0;
+let _vaLastCall = 0;
 
 function toggleVoicePanel() {
   _vaOpen = !_vaOpen;
@@ -3120,96 +3123,36 @@ function vaAddMsg(role, text) {
 function vaScrollBottom() { const el = document.getElementById('vaMessages'); if (el) el.scrollTop = el.scrollHeight; }
 function vaSetStatus(msg) { const el = document.getElementById('vaStatus'); if (el) el.textContent = msg; }
 
+function vaGetCustList() {
+  const now = Date.now();
+  if (now - _custListTime < 5*60*1000 && _custListCache) return _custListCache;
+  _custListCache = (allCustomers||[]).map(c =>
+    c.name + (c.block && c.villa ? '(' + c.block + '-' + c.villa + ')' : '')
+  ).join(', ');
+  _custListTime = now;
+  return _custListCache;
+}
+
 async function vaGetLiveContext() {
   const today = new Date().toISOString().slice(0, 10);
-  let milkLine = '', custList = '', orderLine = '', udharLine = '';
+  let milkLine = '', orderLine = '', udharLine = '';
   try {
     if (!milkCustomers.length) await loadMilkData();
     const active  = milkCustomers.filter(c => c.active);
     const marked  = active.filter(c => milkLogs.find(l => l.customerId === c.id && l.date === today));
     const pending = active.filter(c => !milkLogs.find(l => l.customerId === c.id && l.date === today));
     milkLine = marked.length + '/' + active.length + ' done. Pending: ' +
-      pending.slice(0,5).map(c => c.name + (c.block&&c.villa ? '('+c.block+'-'+c.villa+')' : '')).join(',');
-  } catch(e) { milkLine = ''; }
-  try {
-    if (!allCustomers.length) await loadCustomersData();
-    // Only send name + address — keep it short
-    custList = allCustomers.map(c =>
-      c.name + (c.block && c.villa ? '(' + c.block + '-' + c.villa + ')' : '')
-    ).join(', ');
-  } catch(e) { custList = ''; }
+      pending.slice(0,6).map(c => c.name + (c.block&&c.villa ? '('+c.block+'-'+c.villa+')' : '')).join(', ');
+  } catch(e) {}
   try {
     const overdue = (udharSummaries||[]).filter(s => (s.balance||0) > 0);
-    udharLine = overdue.slice(0,5).map(s => s.customer.name + ':Rs.' + Math.round(s.balance)).join(', ');
-  } catch(e) { udharLine = ''; }
+    udharLine = overdue.slice(0,8).map(s => s.customer.name + ':Rs.' + Math.round(s.balance)).join(', ') || 'none';
+  } catch(e) {}
   try {
-    const pending = (ordersData||[]).filter(o => o.status === 'pending');
-    orderLine = pending.slice(0,3).map(o => '#'+o.id+' '+o.customerName).join(', ');
-  } catch(e) { orderLine = ''; }
-  return { today, milkLine, custList, udharLine, orderLine };
-}
-
-async function vaAskClaude(userMessage) {
-  const ctx = await vaGetLiveContext();
-
-  const systemPrompt = `BSC Store admin AI. Understand English/Hindi/Hinglish/typos/short forms.
-TODAY:${ctx.today} PAGE:${currentPage}
-CUSTOMERS: ${ctx.custList}
-MILK: ${ctx.milkLine}
-UDHAR: ${ctx.udharLine}
-ORDERS: ${ctx.orderLine}
-
-Return ONLY raw JSON for actions, plain text for questions. No markdown.
-
-ACTIONS (JSON format):
-mark_milk: {"action":"mark_milk","customerHint":"A-17","qty":0.5}
-mark_all_milk: {"action":"mark_all_milk"}
-mark_all with exceptions: {"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
-remove_milk: {"action":"remove_milk","customerHint":"A-17"}
-pause_milk/resume_milk: {"action":"pause_milk","customerHint":"Ramesh"}
-add_udhar: {"action":"add_udhar","customerHint":"A-38","amount":300,"note":"butter"}
-record_payment: {"action":"record_payment","customerHint":"Ramesh","amount":500}
-delete_udhar: {"action":"delete_udhar","customerHint":"Lakshay","amount":200}
-delete_all_udhar: {"action":"delete_all_udhar","customerHint":"Lakshay"}
-check_balance: {"action":"check_balance","customerHint":"Priya"}
-open_customer: {"action":"open_customer","customerHint":"B-12"}
-update_order: {"action":"update_order","orderHint":"#5","status":"delivered"}
-navigate: {"action":"navigate","page":"milk"}
-milk_status/pending_orders/today_summary: {"action":"milk_status"}
-
-RULES: customerHint=name or address(A-38,B-12). item goes in note field.`
-
-  try {
-    const proxyRes = await fetch('/api/admin/ai-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...ah() },
-      body: JSON.stringify({
-        system: systemPrompt,
-        messages: [ ..._vaConversation.slice(-8), { role: 'user', content: userMessage } ]
-      })
-    });
-    if (!proxyRes.ok) {
-      const e = await proxyRes.json().catch(()=>({}));
-      return { type: 'text', text: 'AI error: ' + (e.error || proxyRes.status) };
-    }
-    const data = await proxyRes.json();
-    const text = (data.content?.[0]?.text || data.text || '').trim();
-    console.log('AI raw:', text);
-
-    // Parse JSON action — strip any markdown fences first
-    const clean = text.replace(/^```json?\s*/i,'').replace(/```$/,'').trim();
-    try {
-      const j = JSON.parse(clean);
-      if (j && j.action) return { type: 'action', ...j };
-    } catch(e) {}
-    // JSON buried in text
-    const m = clean.match(/\{[\s\S]*?"action"[\s\S]*?\}/);
-    if (m) { try { const j = JSON.parse(m[0]); if (j && j.action) return { type:'action', ...j }; } catch(e) {} }
-    return { type: 'text', text };
-  } catch(e) {
-    console.error('VA error:', e);
-    return { type: 'text', text: 'Network error: ' + e.message };
-  }
+    const pend = (ordersData||[]).filter(o => o.status === 'pending');
+    orderLine = pend.slice(0,4).map(o => '#'+o.id+' '+o.customerName+' Rs.'+o.total).join(', ') || 'none';
+  } catch(e) {}
+  return { today, milkLine, udharLine, orderLine };
 }
 
 function vaFindCustomer(hint, pool) {
@@ -3226,80 +3169,167 @@ function vaFindCustomer(hint, pool) {
     || null;
 }
 
+async function vaAskClaude(userMessage) {
+  const now = Date.now();
+  const wait = 3000 - (now - _vaLastCall);
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  _vaLastCall = Date.now();
+
+  const ctx = await vaGetLiveContext();
+  const custList = vaGetCustList();
+
+  const systemPrompt = `You are BSC Store admin AI. Understand English/Hindi/Hinglish/typos perfectly.
+TODAY:${ctx.today} PAGE:${currentPage}
+ALL CUSTOMERS: ${custList}
+MILK TODAY: ${ctx.milkLine}
+UDHAR BALANCES: ${ctx.udharLine}
+PENDING ORDERS: ${ctx.orderLine}
+
+Return ONLY raw JSON for actions (no markdown, no explanation). Plain text for questions.
+
+ACTIONS:
+Mark milk one customer: {"action":"mark_milk","customerHint":"A-20","qty":1}
+Mark milk custom qty: {"action":"mark_milk","customerHint":"A-17","qty":0.5}
+Mark ALL milk default: {"action":"mark_all_milk"}
+Mark all EXCEPT one not delivered: {"action":"mark_all_except","skipHint":"A-20"}
+Mark all + one with custom qty: {"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
+Remove milk entry: {"action":"remove_milk","customerHint":"A-17"}
+Pause milk: {"action":"pause_milk","customerHint":"Ramesh"}
+Resume milk: {"action":"resume_milk","customerHint":"Ramesh"}
+Add udhar: {"action":"add_udhar","customerHint":"A-38","amount":300,"note":"butter"}
+Record payment: {"action":"record_payment","customerHint":"Ramesh","amount":500,"method":"cash"}
+Delete one udhar entry: {"action":"delete_udhar","customerHint":"Lakshay","amount":200}
+Delete ALL udhar: {"action":"delete_all_udhar","customerHint":"Lakshay"}
+Check balance: {"action":"check_balance","customerHint":"Priya"}
+Show all udhar balances: {"action":"show_all_udhar"}
+Open customer profile: {"action":"open_customer","customerHint":"B-12"}
+Update order: {"action":"update_order","orderHint":"#5","status":"delivered"}
+Navigate: {"action":"navigate","page":"milk"}
+Milk status: {"action":"milk_status"}
+Pending orders: {"action":"pending_orders"}
+Today summary: {"action":"today_summary"}
+
+EXAMPLES (learn these patterns):
+"ajj A-20 ka doodh nhi gya" -> {"action":"mark_all_except","skipHint":"A-20"}
+"sabka milk done bas A-20 ka nhi gya" -> {"action":"mark_all_except","skipHint":"A-20"}
+"sabka doodh gya lekin A-17 ka 0.5L" -> {"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
+"A-17 ka aaj 0.5L gya" -> {"action":"mark_milk","customerHint":"A-17","qty":0.5}
+"sabka milk done" -> {"action":"mark_all_milk"}
+"kiska udhar bacha hai" -> {"action":"show_all_udhar"}
+"ajj kitne rs ka doodh deliver hua" -> {"action":"milk_status"}
+"lakshay ka profile open" -> {"action":"open_customer","customerHint":"Lakshay"}
+"B-12 kholo" -> {"action":"open_customer","customerHint":"B-12"}
+"ramesh ne 500 diya" -> {"action":"record_payment","customerHint":"Ramesh","amount":500}
+"A-38 butter 300 udhar" -> {"action":"add_udhar","customerHint":"A-38","amount":300,"note":"butter"}
+
+RULES: customerHint=person name or address. note=item/product. qty=litres for milk.`;
+
+  try {
+    const proxyRes = await fetch('/api/admin/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...ah() },
+      body: JSON.stringify({
+        system: systemPrompt,
+        messages: [ ..._vaConversation.slice(-6), { role: 'user', content: userMessage } ]
+      })
+    });
+    if (!proxyRes.ok) {
+      const e = await proxyRes.json().catch(()=>({}));
+      return { type: 'text', text: 'AI error: ' + (e.error || proxyRes.status) };
+    }
+    const data = await proxyRes.json();
+    const raw = (data.content?.[0]?.text || data.text || '').trim();
+    console.log('AI raw:', raw);
+
+    const clean = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```$/,'').trim();
+    try { const j = JSON.parse(clean); if (j?.action) return { type:'action', ...j }; } catch(e) {}
+    const m = clean.match(/\{[\s\S]*?"action"[\s\S]*?\}/);
+    if (m) { try { const j = JSON.parse(m[0]); if (j?.action) return { type:'action', ...j }; } catch(e) {} }
+    return { type: 'text', text: raw };
+  } catch(e) {
+    return { type: 'text', text: 'Network error: ' + e.message };
+  }
+}
+
 async function vaExecuteAction(act) {
   const today = new Date().toISOString().slice(0, 10);
-  const hint  = (act.customerHint || '').trim();
+  const hint  = (act.customerHint || act.skipHint || '').trim();
 
-  // ── MARK MILK (single, with optional custom qty) ──────────────────────────
+  // MARK MILK SINGLE
   if (act.action === 'mark_milk') {
     if (!milkCustomers.length) await loadMilkData();
-    const c = vaFindCustomer(hint, milkCustomers);
-    if (!c) return 'Could not find milk customer "' + hint + '".';
+    const c = vaFindCustomer(act.customerHint, milkCustomers);
+    if (!c) return 'Customer "' + act.customerHint + '" not found in milk list.';
     const qty = parseFloat(act.qty) || c.defaultQty || 1;
-    const existing = milkLogs.find(l => l.customerId === c.id && l.date === today);
-    if (existing && !act.qty) return c.name + "'s milk already marked (" + (existing.qty||1) + 'L) today.';
     await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
       body: JSON.stringify({ customerId:c.id, date:today, qty, items:c.defaultItems||[] }) });
     await loadMilkData(); if(currentPage==='milk') renderMilkPage();
     return 'Done! ' + c.name + ' — ' + qty + 'L marked.';
   }
 
-  // ── MARK ALL MILK (with optional exceptions for custom qty) ──────────────
+  // MARK ALL MILK (with optional exceptions)
   if (act.action === 'mark_all_milk') {
     if (!milkCustomers.length) await loadMilkData();
     const exceptions = act.exceptions || [];
-
-    if (exceptions.length === 0) {
-      // Simple bulk mark
-      const r = await fetch('/api/admin/milk/bulk-mark', { method:'POST', headers:ah(),
-        body: JSON.stringify({ date:today }) });
-      const d = await r.json();
-      await loadMilkData(); if(currentPage==='milk') renderMilkPage();
-      return 'Done! Marked ' + (d.marked||'all') + ' customers delivered.';
-    }
-
-    // Bulk mark first
-    await fetch('/api/admin/milk/bulk-mark', { method:'POST', headers:ah(),
+    const r = await fetch('/api/admin/milk/bulk-mark', { method:'POST', headers:ah(),
       body: JSON.stringify({ date:today }) });
-
-    // Then override exceptions with custom qty
-    let overrideResults = [];
-    for (const ex of exceptions) {
-      const c = vaFindCustomer(ex.customerHint, milkCustomers);
-      if (!c) { overrideResults.push(ex.customerHint + ' not found'); continue; }
-      const qty = parseFloat(ex.qty) || c.defaultQty || 1;
-      await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
-        body: JSON.stringify({ customerId:c.id, date:today, qty, items:c.defaultItems||[] }) });
-      overrideResults.push(c.name + ' = ' + qty + 'L');
+    const d = await r.json();
+    let msg = 'Done! Marked ' + (d.marked||'all') + ' customers.';
+    if (exceptions.length) {
+      for (const ex of exceptions) {
+        const c = vaFindCustomer(ex.customerHint, milkCustomers);
+        if (!c) continue;
+        const qty = parseFloat(ex.qty) || c.defaultQty || 1;
+        await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
+          body: JSON.stringify({ customerId:c.id, date:today, qty, items:c.defaultItems||[] }) });
+        msg += ' ' + c.name + ' updated to ' + qty + 'L.';
+      }
     }
     await loadMilkData(); if(currentPage==='milk') renderMilkPage();
-    return 'Done! All milk marked. Custom: ' + overrideResults.join(', ') + '.';
+    return msg;
   }
 
-  // ── REMOVE MILK ───────────────────────────────────────────────────────────
+  // MARK ALL EXCEPT ONE (not delivered)
+  if (act.action === 'mark_all_except') {
+    if (!milkCustomers.length) await loadMilkData();
+    const skip = vaFindCustomer(act.skipHint, milkCustomers);
+    const active = milkCustomers.filter(c => c.active);
+    let marked = 0;
+    for (const c of active) {
+      if (skip && c.id === skip.id) continue;
+      const already = milkLogs.find(l => l.customerId === c.id && l.date === today);
+      if (already) continue;
+      await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
+        body: JSON.stringify({ customerId:c.id, date:today, qty:c.defaultQty||1, items:c.defaultItems||[] }) });
+      marked++;
+    }
+    await loadMilkData(); if(currentPage==='milk') renderMilkPage();
+    return 'Done! Marked ' + marked + ' customers.' + (skip ? ' Skipped: ' + skip.name + '.' : '');
+  }
+
+  // REMOVE MILK
   if (act.action === 'remove_milk') {
     if (!milkCustomers.length) await loadMilkData();
     const c = vaFindCustomer(hint, milkCustomers);
-    if (!c) return 'Could not find "' + hint + '".';
+    if (!c) return 'Customer "' + hint + '" not found.';
     await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
       body: JSON.stringify({ customerId:c.id, date:today, qty:0 }) });
     await loadMilkData(); if(currentPage==='milk') renderMilkPage();
-    return "Removed today's milk entry for " + c.name + '.';
+    return "Removed today's milk for " + c.name + '.';
   }
 
-  // ── PAUSE / RESUME MILK ───────────────────────────────────────────────────
+  // PAUSE / RESUME MILK
   if (act.action === 'pause_milk' || act.action === 'resume_milk') {
     if (!milkCustomers.length) await loadMilkData();
     const c = vaFindCustomer(hint, milkCustomers);
-    if (!c) return 'Could not find "' + hint + '".';
+    if (!c) return 'Customer "' + hint + '" not found.';
     const action = act.action === 'pause_milk' ? 'pause' : 'resume';
-    await fetch('/api/admin/milk/subscriptions/' + c.id + '/' + action,
-      { method:'POST', headers:ah(), body:'{}' });
+    await fetch('/api/admin/milk/subscriptions/'+c.id+'/'+action, { method:'POST', headers:ah(), body:'{}' });
     await loadMilkData(); if(currentPage==='milk') renderMilkPage();
-    return (action === 'pause' ? 'Paused' : 'Resumed') + ' milk for ' + c.name + '.';
+    return (action==='pause'?'Paused':'Resumed') + ' milk for ' + c.name + '.';
   }
 
-  // ── ADD UDHAR ─────────────────────────────────────────────────────────────
+  // ADD UDHAR
   if (act.action === 'add_udhar') {
     if (!allCustomers.length) await loadCustomersData();
     const c = vaFindCustomer(hint, allCustomers);
@@ -3314,7 +3344,7 @@ async function vaExecuteAction(act) {
     return 'Done! Rs.' + amount + ' udhar for ' + c.name + (act.note?' ('+act.note+')':'') + '.';
   }
 
-  // ── RECORD PAYMENT ────────────────────────────────────────────────────────
+  // RECORD PAYMENT
   if (act.action === 'record_payment') {
     if (!allCustomers.length) await loadCustomersData();
     const c = vaFindCustomer(hint, allCustomers);
@@ -3329,105 +3359,130 @@ async function vaExecuteAction(act) {
     return 'Done! Rs.' + amount + ' payment from ' + c.name + '.';
   }
 
-  // ── DELETE SPECIFIC UDHAR ENTRY ───────────────────────────────────────────
+  // DELETE SPECIFIC UDHAR
   if (act.action === 'delete_udhar') {
     if (!allCustomers.length) await loadCustomersData();
     const c = vaFindCustomer(hint, allCustomers);
     if (!c) return 'Customer "' + hint + '" not found.';
     const cid = c.customerId||c.id;
-    const r = await fetch('/api/admin/customers/' + cid, { headers:ah() });
+    const r = await fetch('/api/admin/customers/'+cid, { headers:ah() });
     if (!r.ok) return 'Could not load data.';
     const data = await r.json();
     const entries = (data.ledgerEntries||data.credits||[]).filter(e => e.type==='credit'||!e.type);
     if (!entries.length) return c.name + ' has no udhar entries.';
-    // Find by amount or take latest
-    let entry = act.amount
-      ? entries.find(e => Math.abs(parseFloat(e.amount) - parseFloat(act.amount)) < 0.01)
-      : entries[entries.length-1];
+    let entry = act.amount ? entries.find(e => Math.abs(parseFloat(e.amount)-parseFloat(act.amount))<0.01) : null;
     if (!entry) entry = entries[entries.length-1];
-    await fetch('/api/admin/ledger/' + entry.id, { method:'DELETE', headers:ah() });
+    await fetch('/api/admin/ledger/'+entry.id, { method:'DELETE', headers:ah() });
     if(accountSelectedId===cid) await refreshProfile(cid);
     else { await loadCustomersData(); if(currentPage==='udhar') renderUdhar(); }
-    return 'Deleted Rs.' + entry.amount + ' udhar entry for ' + c.name + '.';
+    return 'Deleted Rs.' + entry.amount + ' udhar for ' + c.name + '.';
   }
 
-  // ── DELETE ALL UDHAR ENTRIES ──────────────────────────────────────────────
+  // DELETE ALL UDHAR
   if (act.action === 'delete_all_udhar') {
     if (!allCustomers.length) await loadCustomersData();
     const c = vaFindCustomer(hint, allCustomers);
     if (!c) return 'Customer "' + hint + '" not found.';
     const cid = c.customerId||c.id;
-    const r = await fetch('/api/admin/customers/' + cid, { headers:ah() });
+    const r = await fetch('/api/admin/customers/'+cid, { headers:ah() });
     if (!r.ok) return 'Could not load data.';
     const data = await r.json();
     const entries = (data.ledgerEntries||data.credits||[]).filter(e => e.type==='credit'||!e.type);
-    if (!entries.length) return c.name + ' has no udhar entries to delete.';
+    if (!entries.length) return c.name + ' has no udhar entries.';
     let deleted = 0;
-    for (const e of entries) {
-      const dr = await fetch('/api/admin/ledger/' + e.id, { method:'DELETE', headers:ah() });
-      if (dr.ok) deleted++;
-    }
+    for (const e of entries) { const dr = await fetch('/api/admin/ledger/'+e.id,{method:'DELETE',headers:ah()}); if(dr.ok) deleted++; }
     if(accountSelectedId===cid) await refreshProfile(cid);
     else { await loadCustomersData(); if(currentPage==='udhar') renderUdhar(); }
     return 'Deleted all ' + deleted + ' udhar entries for ' + c.name + '.';
   }
 
-  // ── CHECK BALANCE ─────────────────────────────────────────────────────────
+  // CHECK BALANCE
   if (act.action === 'check_balance') {
     if (!allCustomers.length) await loadCustomersData();
     const c = vaFindCustomer(hint, allCustomers);
     if (!c) return 'Customer "' + hint + '" not found.';
     const cid = c.customerId||c.id;
-    const r = await fetch('/api/admin/customers/' + cid, { headers:ah() });
+    const r = await fetch('/api/admin/customers/'+cid, { headers:ah() });
     if (!r.ok) return 'Could not load data.';
     const data = await r.json();
     const bal = data.balance||0;
-    return c.name + ': ' + (bal>0 ? 'Rs.'+bal.toFixed(0)+' due' : bal<0 ? 'Advance Rs.'+Math.abs(bal).toFixed(0) : 'Settled.');
+    return c.name + ': ' + (bal>0?'Rs.'+bal.toFixed(0)+' due':bal<0?'Advance Rs.'+Math.abs(bal).toFixed(0):'Settled.');
   }
 
-  // ── OPEN CUSTOMER PROFILE ─────────────────────────────────────────────────
+  // SHOW ALL UDHAR
+  if (act.action === 'show_all_udhar') {
+    const overdue = (udharSummaries||[]).filter(s => (s.balance||0) > 0).sort((a,b) => b.balance-a.balance);
+    if (!overdue.length) return 'No pending udhar! All customers are settled.';
+    return overdue.length + ' customers with udhar: ' +
+      overdue.map(s => s.customer.name + ' Rs.' + Math.round(s.balance)).join(', ') + '.';
+  }
+
+  // OPEN CUSTOMER PROFILE
   if (act.action === 'open_customer') {
     if (!allCustomers.length) await loadCustomersData();
     const c = vaFindCustomer(hint, allCustomers);
     if (!c) return 'Customer "' + hint + '" not found.';
     const cid = c.customerId||c.id;
-    if (currentPage !== 'customers') { goTo('customers'); await new Promise(r=>setTimeout(r,400)); }
-    await openCustomerProfile(cid);
-    return 'Opened ' + c.name + "'s profile!";
+    try {
+      if (currentPage !== 'customers') {
+        goTo('customers');
+        await new Promise(r => setTimeout(r, 500));
+      }
+      if (typeof openCustomerProfile === 'function') {
+        await openCustomerProfile(cid);
+        return 'Opened ' + c.name + "'s profile!";
+      } else if (typeof showCustomerDetails === 'function') {
+        await showCustomerDetails(cid);
+        return 'Opened ' + c.name + "'s profile!";
+      } else {
+        // Try clicking the customer card
+        const cards = document.querySelectorAll('[data-customer-id]');
+        for (const card of cards) {
+          if (card.dataset.customerId == cid) { card.click(); return 'Opened ' + c.name + "!"; }
+        }
+        return 'Navigated to customers. Find ' + c.name + ' manually.';
+      }
+    } catch(e) {
+      return 'Error opening profile: ' + e.message;
+    }
   }
 
-  // ── MILK STATUS ───────────────────────────────────────────────────────────
+  // MILK STATUS
   if (act.action === 'milk_status') {
     if (!milkCustomers.length) await loadMilkData();
-    const active  = milkCustomers.filter(c=>c.active);
-    const marked  = active.filter(c=>milkLogs.find(l=>l.customerId===c.id&&l.date===today));
+    const active = milkCustomers.filter(c=>c.active);
+    const marked = active.filter(c=>milkLogs.find(l=>l.customerId===c.id&&l.date===today));
     const pending = active.filter(c=>!milkLogs.find(l=>l.customerId===c.id&&l.date===today));
-    let msg = marked.length+'/'+active.length+' delivered today.';
-    if (pending.length) msg += ' Pending: '+pending.slice(0,6).map(c=>c.name+(c.block&&c.villa?' ('+c.block+'-'+c.villa+')':'')).join(', ')+(pending.length>6?' +'+(pending.length-6)+' more':'')+'.';
+    // Calculate total litres delivered
+    const totalL = milkLogs.filter(l=>l.date===today).reduce((sum,l)=>sum+(l.qty||1),0);
+    let msg = marked.length+'/'+active.length+' delivered today. Total: '+totalL.toFixed(1)+'L.';
+    if (pending.length) msg += ' Pending: '+pending.map(c=>c.name+(c.block&&c.villa?'('+c.block+'-'+c.villa+')':'')).join(', ')+'.';
     return msg;
   }
 
-  // ── PENDING ORDERS ────────────────────────────────────────────────────────
+  // PENDING ORDERS
   if (act.action === 'pending_orders') {
     const r = await fetch('/api/admin/orders?date=today', { headers:ah() });
     if (r.ok) ordersData = await r.json();
     const pending = ordersData.filter(o=>o.status==='pending');
     if (!pending.length) return 'No pending orders!';
-    return pending.length+' pending: '+pending.slice(0,5).map(o=>'#'+o.id+' '+o.customerName+' Rs.'+o.total).join(' | ')+(pending.length>5?' +'+(pending.length-5)+' more':'');
+    return pending.length+' pending: '+pending.slice(0,5).map(o=>'#'+o.id+' '+o.customerName+' Rs.'+o.total).join(' | ');
   }
 
-  // ── TODAY SUMMARY ─────────────────────────────────────────────────────────
+  // TODAY SUMMARY
   if (act.action === 'today_summary') {
     const [oR] = await Promise.all([fetch('/api/admin/orders?date=today',{headers:ah()}), loadMilkData()]);
     if (oR.ok) ordersData = await oR.json();
-    const active   = milkCustomers.filter(c=>c.active);
+    const active = milkCustomers.filter(c=>c.active);
     const milkDone = active.filter(c=>milkLogs.find(l=>l.customerId===c.id&&l.date===today)).length;
+    const totalL = milkLogs.filter(l=>l.date===today).reduce((sum,l)=>sum+(l.qty||1),0);
     const pend  = ordersData.filter(o=>o.status==='pending').length;
     const deliv = ordersData.filter(o=>o.status==='delivered').length;
-    return 'Today '+today+' — Milk: '+milkDone+'/'+active.length+'. Orders: '+deliv+' delivered, '+pend+' pending. Customers: '+allCustomers.length+'.';
+    const overdue = (udharSummaries||[]).filter(s=>(s.balance||0)>0).length;
+    return 'Today '+today+': Milk '+milkDone+'/'+active.length+' ('+totalL.toFixed(1)+'L). Orders: '+deliv+' done, '+pend+' pending. Udhar: '+overdue+' customers due.';
   }
 
-  // ── UPDATE ORDER ──────────────────────────────────────────────────────────
+  // UPDATE ORDER
   if (act.action === 'update_order') {
     if (!ordersData.length) { const r=await fetch('/api/admin/orders?date=today',{headers:ah()}); if(r.ok) ordersData=await r.json(); }
     const oh = (act.orderHint||'').toLowerCase();
@@ -3440,7 +3495,7 @@ async function vaExecuteAction(act) {
     return 'Order #'+order.id+' ('+order.customerName+') -> '+act.status+'!';
   }
 
-  // ── NAVIGATE ──────────────────────────────────────────────────────────────
+  // NAVIGATE
   if (act.action === 'navigate') {
     const valid = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'];
     const p = (act.page||'').toLowerCase();
@@ -3456,10 +3511,8 @@ async function sendVoiceCommand(cmdOverride) {
   const cmd = (cmdOverride || inp?.value || '').trim();
   if (!cmd) return;
   if (inp) inp.value = '';
-
   vaAddMsg('user', cmd);
   vaSetStatus('Thinking...');
-
   let reply = '';
   try {
     const result = await vaAskClaude(cmd);
@@ -3469,16 +3522,12 @@ async function sendVoiceCommand(cmdOverride) {
     } else {
       reply = result.text;
     }
-  } catch(e) {
-    reply = 'Error: ' + e.message;
-  }
-
+  } catch(e) { reply = 'Error: ' + e.message; }
   vaAddMsg('ai', reply);
   vaSetStatus('');
-
   if ('speechSynthesis' in window && _vaOpen && reply) {
     try {
-      const clean = reply.replace(/[^\x20-\x7e]/g, '').replace(/\s+/g,' ').trim();
+      const clean = reply.replace(/[^\x20-\x7e]/g,'').replace(/\s+/g,' ').trim();
       if (clean.length > 2) {
         const u = new SpeechSynthesisUtterance(clean);
         u.rate = 1.05;
@@ -3529,7 +3578,6 @@ function stopMic() {
   document.getElementById('vaDot')?.classList.remove('listening');
   vaSetStatus('');
 }
-
 document.addEventListener('keydown', e => {
   if (e.altKey && e.key === 'v') { e.preventDefault(); toggleVoicePanel(); }
   if (e.altKey && e.key === 'm') { e.preventDefault(); if (_vaOpen) toggleMic(); }
