@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_SECRET   = process.env.ADMIN_JWT_SECRET  || 'bsc-admin-fallback-change-in-prod';
 const CUSTOMER_SECRET = process.env.CUSTOMER_JWT_SECRET || 'bsc-customer-fallback-change-in-prod';
 const MONGO_URI = process.env.MONGO_URI;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 
 // ── SECURITY: Rate limiting on login (#2) ─────────────────────────────────────
 // Simple in-memory rate limiter (no extra package needed)
@@ -1635,6 +1636,39 @@ app.get('/api/customer/ledger/months', customerAuth, async (req, res) => {
 });
 
 // ── SERVE PAGES ───────────────────────────────────────────────────────────────
+// ── CLAUDE AI PROXY — forwards assistant requests to Anthropic API ────────────
+app.post('/api/admin/ai-chat', adminAuth, async (req, res) => {
+  try {
+    const { system, messages } = req.body;
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set in environment variables.' });
+    }
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        system,
+        messages
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Anthropic API error:', data);
+      return res.status(response.status).json({ error: data?.error?.message || 'Anthropic API error' });
+    }
+    res.json(data);
+  } catch (e) {
+    console.error('AI proxy error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'public', 'manifest.json')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));

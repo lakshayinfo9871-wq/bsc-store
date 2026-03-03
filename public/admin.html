@@ -3256,29 +3256,22 @@ CRITICAL: For add_udhar, the customerHint is the PERSON (A-38, Ramesh etc), NOT 
 
   let result;
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const proxyRes = await fetch('/api/admin/ai-chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...ah() },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 150,
         system: systemPrompt,
-        messages: [
-          ..._vaConversation.slice(-8),
-          { role: 'user', content: userMessage }
-        ]
+        messages: [ ..._vaConversation.slice(-8), { role: 'user', content: userMessage } ]
       })
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(()=>({}));
-      console.error('Claude API error:', response.status, err);
-      return { type: 'text', text: 'AI error ' + response.status + '. Check console.' };
+    if (!proxyRes.ok) {
+      const e = await proxyRes.json().catch(()=>({}));
+      console.error('AI proxy error:', proxyRes.status, e);
+      return { type: 'text', text: 'AI error: ' + (e.error || proxyRes.status) };
     }
-
-    const data = await response.json();
-    const text = (data.content?.[0]?.text || '').trim();
-    console.log('Claude raw response:', text);
+    const data = await proxyRes.json();
+    const text = (data.content?.[0]?.text || data.text || '').trim();
+    console.log('Claude response:', text);
 
     // Try parse as JSON action
     try {
