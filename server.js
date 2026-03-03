@@ -13,7 +13,19 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_SECRET   = process.env.ADMIN_JWT_SECRET  || 'bsc-admin-fallback-change-in-prod';
 const CUSTOMER_SECRET = process.env.CUSTOMER_JWT_SECRET || 'bsc-customer-fallback-change-in-prod';
 const MONGO_URI = process.env.MONGO_URI;
-const GEMINI_API_KEY = process.env.GEMINI_KEY || process.env.GEMINI_API_KEY || '';
+// Rotate between multiple Gemini API keys to maximize free quota
+// Add GEMINI_KEY_1, GEMINI_KEY_2, GEMINI_KEY_3 in Render environment
+const GEMINI_KEYS = [
+  process.env.GEMINI_KEY_1 || process.env.GEMINI_KEY || process.env.GEMINI_API_KEY || '',
+  process.env.GEMINI_KEY_2 || '',
+  process.env.GEMINI_KEY_3 || '',
+].filter(k => k.length > 0);
+let _geminiKeyIdx = 0;
+function getGeminiKey() {
+  const key = GEMINI_KEYS[_geminiKeyIdx % GEMINI_KEYS.length];
+  _geminiKeyIdx++;
+  return key;
+}
 
 // ── SECURITY: Rate limiting on login (#2) ─────────────────────────────────────
 // Simple in-memory rate limiter (no extra package needed)
@@ -1640,7 +1652,8 @@ app.get('/api/customer/ledger/months', customerAuth, async (req, res) => {
 app.post('/api/admin/ai-chat', adminAuth, async (req, res) => {
   try {
     const { system, messages } = req.body;
-    if (!GEMINI_API_KEY) return res.status(500).json({ error: 'GEMINI_KEY not set in environment.' });
+    if (!GEMINI_KEYS.length) return res.status(500).json({ error: 'No GEMINI_KEY set in environment.' });
+    const GEMINI_API_KEY = getGeminiKey();
 
     const contents = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
@@ -1648,14 +1661,14 @@ app.post('/api/admin/ai-chat', adminAuth, async (req, res) => {
     }));
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: system }] },
           contents,
-          generationConfig: { maxOutputTokens: 300, temperature: 0.2 }
+          generationConfig: { maxOutputTokens: 150, temperature: 0.2 }
         })
       }
     );
