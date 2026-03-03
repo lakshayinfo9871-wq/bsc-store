@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_SECRET   = process.env.ADMIN_JWT_SECRET  || 'bsc-admin-fallback-change-in-prod';
 const CUSTOMER_SECRET = process.env.CUSTOMER_JWT_SECRET || 'bsc-customer-fallback-change-in-prod';
 const MONGO_URI = process.env.MONGO_URI;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 // ── SECURITY: Rate limiting on login (#2) ─────────────────────────────────────
 // Simple in-memory rate limiter (no extra package needed)
@@ -1636,36 +1636,35 @@ app.get('/api/customer/ledger/months', customerAuth, async (req, res) => {
 });
 
 // ── SERVE PAGES ───────────────────────────────────────────────────────────────
-// ── OPENAI AI PROXY ───────────────────────────────────────────────────────────
+// ── GEMINI AI PROXY (free) ────────────────────────────────────────────────────
 app.post('/api/admin/ai-chat', adminAuth, async (req, res) => {
   try {
     const { system, messages } = req.body;
-    if (!OPENAI_API_KEY) {
-      return res.status(500).json({ error: 'OPENAI_API_KEY not set in environment variables.' });
-    }
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        max_tokens: 300,
-        temperature: 0.2,
-        messages: [
-          { role: 'system', content: system },
-          ...messages
-        ]
-      })
-    });
+    if (!GEMINI_API_KEY) return res.status(500).json({ error: 'GEMINI_API_KEY not set.' });
+
+    const contents = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: system }] },
+          contents,
+          generationConfig: { maxOutputTokens: 300, temperature: 0.2 }
+        })
+      }
+    );
     const data = await response.json();
     if (!response.ok) {
-      console.error('OpenAI error:', data);
-      return res.status(response.status).json({ error: data?.error?.message || 'OpenAI error' });
+      console.error('Gemini error:', data);
+      return res.status(response.status).json({ error: data?.error?.message || 'Gemini error' });
     }
-    // Return in same format as Anthropic so frontend works unchanged
-    const text = data.choices?.[0]?.message?.content || '';
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     res.json({ content: [{ type: 'text', text }] });
   } catch (e) {
     console.error('AI proxy error:', e);
