@@ -139,17 +139,17 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .see-all{font-size:11px;font-weight:700;color:var(--green);cursor:pointer;}
 
 /* ══════════ PERSONALISED HOME ══════════ */
-/* Animated scene banner */
-.scene-banner{margin:14px 14px 0;border-radius:20px;height:160px;position:relative;overflow:hidden;cursor:default;}
-.scene-banner-sm{height:100px !important;margin-top:18px;}
+/* Animated scene banner — canvas powered */
+.scene-banner{margin:14px 14px 0;border-radius:20px;height:162px;position:relative;overflow:hidden;cursor:pointer;}
+.scene-banner-sm{height:104px !important;}
 .scene-canvas{width:100%;height:100%;position:absolute;inset:0;}
 /* Text overlay on scene */
-.scene-text{position:absolute;bottom:0;left:0;right:0;padding:14px 18px;background:linear-gradient(to top,rgba(0,0,0,.55) 0%,transparent 100%);pointer-events:none;}
-.scene-greeting{font-size:1.05rem;font-weight:900;color:#fff;line-height:1.3;text-shadow:0 1px 4px rgba(0,0,0,.4);}
-.scene-sub{font-size:.72rem;color:rgba(255,255,255,.7);margin-top:3px;text-shadow:0 1px 3px rgba(0,0,0,.4);}
-/* Context tag (no AI mention) */
-.scene-tag{position:absolute;top:12px;left:12px;display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(6px);border-radius:20px;padding:4px 10px;font-size:.6rem;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.9);}
-/* Section header (no AI label) */
+.scene-text{position:absolute;bottom:0;left:0;right:0;padding:14px 18px;background:linear-gradient(to top,rgba(0,0,0,.58) 0%,transparent 100%);pointer-events:none;}
+.scene-greeting{font-size:1.1rem;font-weight:900;color:#fff;line-height:1.3;text-shadow:0 2px 8px rgba(0,0,0,.5);}
+.scene-sub{font-size:.72rem;color:rgba(255,255,255,.72);margin-top:3px;text-shadow:0 1px 4px rgba(0,0,0,.4);}
+/* Context tag */
+.scene-tag{position:absolute;top:13px;left:14px;display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:3px 10px;font-size:.58rem;font-weight:800;letter-spacing:.05em;color:rgba(255,255,255,.92);z-index:3;}
+/* Section header */
 .ctx-sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .ctx-sec-title{font-size:15px;font-weight:800;letter-spacing:-.3px;}
 /* Coming soon festival banner */
@@ -1949,17 +1949,631 @@ function _festComingHtml(fest) {
   </div>`;
 }
 
-// ── SCENE BANNER (replaces pers-hero) ─────────────────────────────────────────
-function _sceneBannerHtml(sec) {
-  const svg = _buildScene(sec.scene || 'default', sec.grad, sec.glow);
-  return `<div class="scene-banner" style="background:${sec.grad}">
-    ${svg}
-    <div class="scene-tag">${sec.tag}</div>
-    <div class="scene-text">
-      <div class="scene-greeting">${sec.greeting}</div>
-      <div class="scene-sub">${sec.sub}</div>
-    </div>
-  </div>`;
+// ══════════════════════════════════════════════════════════════════════════════
+// ── ANIMATED CANVAS SMART BANNERS ─────────────────────────────────────────────
+// Two banners: Banner1=Festival/Weather  Banner2=Time-of-day
+// Each has a dedicated <canvas> with requestAnimationFrame animation loop,
+// plus text overlay and shimmer pill tag.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Registry of running RAF loops so we can cancel them on re-render
+window._bannerRAFs = window._bannerRAFs || {};
+function _stopBannerRAF(id) {
+  if (window._bannerRAFs[id]) { cancelAnimationFrame(window._bannerRAFs[id]); delete window._bannerRAFs[id]; }
+}
+
+// ── HTML shell for a smart banner ────────────────────────────────────────────
+function _smartBannerHtml(id, sec, tall) {
+  const h = tall ? 160 : 100;
+  return `<div class="smart-ani-banner" id="sab_${id}" style="height:${h}px;border-radius:20px;overflow:hidden;position:relative;cursor:pointer;margin:14px 14px 0;flex-shrink:0;" onclick="openCtxPage(${JSON.stringify(sec.title)},${JSON.stringify(JSON.stringify(sec.kw||[]))},${JSON.stringify(sec.id||'')})">
+  <canvas id="sab_canvas_${id}" style="position:absolute;inset:0;width:100%;height:100%;display:block;"></canvas>
+  <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.72) 0%,rgba(0,0,0,.18) 60%,transparent 100%);pointer-events:none;"></div>
+  <div style="position:absolute;top:${tall?13:9}px;left:14px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:3px 10px;font-size:.58rem;font-weight:800;letter-spacing:.05em;color:rgba(255,255,255,.92);pointer-events:none;" id="sab_tag_${id}">${sec.tag||''}</div>
+  <div style="position:absolute;bottom:0;left:0;right:0;padding:${tall?'0 16px 16px':'0 14px 12px'};pointer-events:none;">
+    <div style="font-size:${tall?'1.15rem':'.92rem'};font-weight:900;color:#fff;line-height:1.25;text-shadow:0 2px 8px rgba(0,0,0,.5);" id="sab_title_${id}">${sec.greeting}</div>
+    <div style="font-size:${tall?'.72rem':'.65rem'};color:rgba(255,255,255,.72);margin-top:3px;text-shadow:0 1px 4px rgba(0,0,0,.4);" id="sab_sub_${id}">${sec.sub}</div>
+  </div>
+</div>`;
+}
+
+// ── Canvas animation launcher ─────────────────────────────────────────────────
+function _launchBannerCanvas(id, scene, grad, glow) {
+  const canvas = document.getElementById('sab_canvas_' + id);
+  if (!canvas) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const rect = canvas.getBoundingClientRect();
+  const W = rect.width || canvas.offsetWidth || 360;
+  const H = rect.height || canvas.offsetHeight || 160;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  _stopBannerRAF(id);
+
+  // Parse gradient colors from CSS gradient string for canvas
+  function parseGradColors(g) {
+    const matches = g.match(/#[0-9a-fA-F]{3,6}/g) || ['#111','#222'];
+    return matches.slice(0,2);
+  }
+  const [c1, c2] = parseGradColors(grad);
+  const glowColor = glow || '#ffffff';
+
+  const scenes_fn = {
+    festival: _canvasFestival,
+    holi:     _canvasHoli,
+    diwali:   _canvasDiwali,
+    christmas:_canvasChristmas,
+    newyear:  _canvasNewYear,
+    eid:      _canvasEid,
+    rain:     _canvasRain,
+    sun:      _canvasSun,
+    cloud:    _canvasCloud,
+    sunrise:  _canvasSunrise,
+    sunset:   _canvasSunset,
+    night:    _canvasNight,
+    default:  _canvasDefault,
+  };
+  const fn = scenes_fn[scene] || scenes_fn.default;
+  fn(ctx, W, H, c1, c2, glowColor, id);
+}
+
+// ── SCENE: HOLI — colorful powder bursts, flying gulal ───────────────────────
+function _canvasHoli(ctx, W, H, c1, c2, glow, id) {
+  const particles = Array.from({length:80}, () => ({
+    x: Math.random()*W, y: Math.random()*H,
+    vx: (Math.random()-0.5)*1.2, vy: (Math.random()-0.5)*0.8 - 0.3,
+    r: 2+Math.random()*5, alpha: 0.4+Math.random()*0.6,
+    color: `hsl(${Math.random()*360},85%,65%)`,
+    life: Math.random(), lifeSpeed: 0.004+Math.random()*0.006,
+  }));
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    // bg
+    const bg = ctx.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0,'#2d0520'); bg.addColorStop(1,'#1a0033');
+    ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+    // powder clouds
+    for (let i=0; i<4; i++) {
+      const cx = (W*0.15 + i*W*0.25 + Math.sin(t*0.6+i)*18)%W;
+      const cy = H*0.3 + Math.sin(t*0.4+i*1.3)*15;
+      const rg = ctx.createRadialGradient(cx,cy,0,cx,cy,60+Math.sin(t+i)*20);
+      rg.addColorStop(0,`hsla(${(t*40+i*90)%360},90%,60%,.35)`);
+      rg.addColorStop(1,'transparent');
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(cx,cy,80,0,Math.PI*2); ctx.fill();
+    }
+    // particles
+    particles.forEach(p => {
+      p.life += p.lifeSpeed; if(p.life>1){p.life=0;p.x=Math.random()*W;p.y=H+10;}
+      p.x += p.vx; p.y += p.vy - 0.2;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle = p.color; ctx.globalAlpha = p.alpha*(1-p.life*0.5);
+      ctx.fill(); ctx.globalAlpha=1;
+    });
+    t += 0.018;
+    window._bannerRAFs[id] = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: DIWALI — floating diyas, sparkles, warm glow ──────────────────────
+function _canvasDiwali(ctx, W, H, c1, c2, glow, id) {
+  const sparks = Array.from({length:60}, (_,i) => ({
+    x: Math.random()*W, y: H + Math.random()*H,
+    vx:(Math.random()-0.5)*0.6, vy:-(0.6+Math.random()*1.2),
+    r:1+Math.random()*2.5, alpha:0.6+Math.random()*0.4,
+    color:`hsl(${30+Math.random()*40},100%,${65+Math.random()*20}%)`,
+    flicker: Math.random()*Math.PI*2, flickerSpeed: 0.08+Math.random()*0.12,
+  }));
+  const diyas = Array.from({length:5}, (_,i) => ({
+    x: W*0.1 + i*(W*0.2), y: H*0.72 + Math.sin(i)*8,
+    phase: i*0.8,
+  }));
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    const bg = ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#0a0508'); bg.addColorStop(1,'#1a0a02');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    // diya glows
+    diyas.forEach(d => {
+      d.phase += 0.02;
+      const fy = d.y - 6 + Math.sin(d.phase)*3;
+      const rg = ctx.createRadialGradient(d.x,fy,0,d.x,fy,40+Math.sin(d.phase)*8);
+      rg.addColorStop(0,'rgba(255,180,40,.55)');
+      rg.addColorStop(0.4,'rgba(255,120,20,.18)');
+      rg.addColorStop(1,'transparent');
+      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(d.x,fy,50,0,Math.PI*2); ctx.fill();
+      // flame
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y-4);
+      ctx.quadraticCurveTo(d.x+4+Math.sin(d.phase*2)*3, fy-6, d.x, fy-14-Math.sin(d.phase)*4);
+      ctx.quadraticCurveTo(d.x-4+Math.sin(d.phase*2)*2, fy-6, d.x, d.y-4);
+      const fg = ctx.createLinearGradient(d.x,d.y-4,d.x,fy-16);
+      fg.addColorStop(0,'#ff8c00'); fg.addColorStop(0.5,'#ffcc44'); fg.addColorStop(1,'rgba(255,255,200,.1)');
+      ctx.fillStyle=fg; ctx.fill();
+      // diya body
+      ctx.beginPath(); ctx.ellipse(d.x,d.y,10,5,0,0,Math.PI);
+      ctx.fillStyle='#c2550a'; ctx.fill();
+    });
+    // sparks
+    sparks.forEach(s => {
+      s.y += s.vy; s.x += s.vx + Math.sin(t+s.flicker)*0.3;
+      if(s.y < -5){s.y=H+5;s.x=Math.random()*W;}
+      s.flicker += s.flickerSpeed;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=s.color;
+      ctx.globalAlpha = s.alpha*(0.5+0.5*Math.sin(s.flicker));
+      ctx.fill(); ctx.globalAlpha=1;
+    });
+    t+=0.02;
+    window._bannerRAFs[id] = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: CHRISTMAS — falling snow, tree glow, stars ────────────────────────
+function _canvasChristmas(ctx, W, H, c1, c2, glow, id) {
+  const flakes = Array.from({length:55}, (_,i) => ({
+    x:Math.random()*W, y:Math.random()*H,
+    r:0.8+Math.random()*2.5, speed:0.5+Math.random()*1.2,
+    drift:(Math.random()-0.5)*0.4, alpha:0.5+Math.random()*0.5, phase:Math.random()*Math.PI*2,
+  }));
+  let t=0;
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#021a0a'); bg.addColorStop(1,'#001205');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    // star glow top
+    const sg=ctx.createRadialGradient(W*0.5,H*0.12,0,W*0.5,H*0.12,60);
+    sg.addColorStop(0,'rgba(255,240,100,.3)'); sg.addColorStop(1,'transparent');
+    ctx.fillStyle=sg; ctx.fillRect(0,0,W,H);
+    // tree silhouette
+    ctx.beginPath(); ctx.moveTo(W*0.5,H*0.05); ctx.lineTo(W*0.5+55,H*0.9); ctx.lineTo(W*0.5-55,H*0.9); ctx.closePath();
+    const tg=ctx.createLinearGradient(W*0.5,0,W*0.5,H);
+    tg.addColorStop(0,'#0a4a1a'); tg.addColorStop(1,'#021a08');
+    ctx.fillStyle=tg; ctx.fill();
+    // ornament lights
+    const ornColors=['#ef4444','#fbbf24','#34d399','#60a5fa','#f472b6','#a78bfa'];
+    Array.from({length:14},(_,i)=>{
+      const row=Math.floor(i/4)+1; const col=i%4-1.5;
+      const ox=W*0.5+col*(row*14); const oy=H*(0.12+row*0.16);
+      const pulse=Math.sin(t*2+i)*0.4+0.8;
+      const rg=ctx.createRadialGradient(ox,oy,0,ox,oy,7);
+      rg.addColorStop(0,ornColors[i%6]); rg.addColorStop(1,'transparent');
+      ctx.fillStyle=rg; ctx.globalAlpha=pulse*0.9; ctx.beginPath(); ctx.arc(ox,oy,6,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+    });
+    // snowflakes
+    flakes.forEach(f => {
+      f.y+=f.speed; f.x+=f.drift+Math.sin(t*0.5+f.phase)*0.3;
+      if(f.y>H+5){f.y=-5;f.x=Math.random()*W;}
+      if(f.x<0)f.x=W; if(f.x>W)f.x=0;
+      ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,'+f.alpha+')'; ctx.fill();
+    });
+    t+=0.02;
+    window._bannerRAFs[id]=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: NEW YEAR — fireworks bursts, confetti rain ────────────────────────
+function _canvasNewYear(ctx, W, H, c1, c2, glow, id) {
+  const fwColors=['#f472b6','#fbbf24','#34d399','#818cf8','#fb923c','#67e8f9','#ef4444'];
+  const fireworks = Array.from({length:6},(_,i)=>({
+    x:W*(0.12+i*0.16), y:H*(0.15+Math.random()*0.35),
+    phase:i*(Math.PI*2/6), speed:0.018+Math.random()*0.01,
+    color:fwColors[i%fwColors.length],
+  }));
+  const confetti = Array.from({length:40},()=>({
+    x:Math.random()*W, y:Math.random()*H*0.8-H*0.2,
+    vx:(Math.random()-0.5)*1.2, vy:0.8+Math.random()*1.4,
+    r:2+Math.random()*3, angle:Math.random()*Math.PI*2, spin:( Math.random()-0.5)*0.15,
+    color:fwColors[Math.floor(Math.random()*fwColors.length)],
+  }));
+  let t=0;
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#020617'); bg.addColorStop(1,'#0f0a1e');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    // city silhouette
+    ctx.fillStyle='#0a0d1a';
+    ctx.beginPath();
+    [0,28,50,65,80,100,120,135,150,165,185,200,215,230,250,265,280,300,315,330,350,370,390,W].forEach((bx,i,arr)=>{
+      if(i===0){ctx.moveTo(bx,H);}
+      else {const bh=H*0.6+Math.sin(i*1.3)*H*0.18; ctx.lineTo(arr[i-1],bh); ctx.lineTo(bx,bh);}
+    });
+    ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+    // fireworks
+    fireworks.forEach(fw => {
+      fw.phase+=fw.speed;
+      const burst=Math.sin(fw.phase);
+      if(burst>0.6) {
+        const radius=(burst-0.6)*2.5*50;
+        const alpha=Math.min(1,(burst-0.6)*4);
+        for(let ri=0;ri<12;ri++){
+          const a=ri*(Math.PI*2/12);
+          const x2=fw.x+Math.cos(a)*radius, y2=fw.y+Math.sin(a)*radius;
+          ctx.beginPath(); ctx.moveTo(fw.x,fw.y); ctx.lineTo(x2,y2);
+          ctx.strokeStyle=fw.color; ctx.lineWidth=1.5; ctx.globalAlpha=alpha*(1-(burst-0.6)*1.2);
+          ctx.stroke(); ctx.globalAlpha=1;
+        }
+        const rg=ctx.createRadialGradient(fw.x,fw.y,0,fw.x,fw.y,radius*0.5);
+        rg.addColorStop(0,fw.color+'88'); rg.addColorStop(1,'transparent');
+        ctx.fillStyle=rg; ctx.globalAlpha=alpha*0.5;
+        ctx.beginPath(); ctx.arc(fw.x,fw.y,radius*0.5,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+      }
+    });
+    // confetti
+    confetti.forEach(c => {
+      c.y+=c.vy; c.x+=c.vx; c.angle+=c.spin;
+      if(c.y>H+10){c.y=-10;c.x=Math.random()*W;}
+      ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(c.angle);
+      ctx.fillStyle=c.color; ctx.globalAlpha=0.85;
+      ctx.fillRect(-c.r,-c.r/2,c.r*2,c.r);
+      ctx.globalAlpha=1; ctx.restore();
+    });
+    t+=0.02;
+    window._bannerRAFs[id]=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: EID — crescent moon, stars, lanterns ───────────────────────────────
+function _canvasEid(ctx, W, H, c1, c2, glow, id) {
+  const stars = Array.from({length:35},(_,i)=>({x:Math.random()*W,y:Math.random()*H*0.7,r:0.6+Math.random()*1.4,phase:Math.random()*Math.PI*2,speed:0.02+Math.random()*0.03}));
+  const lanterns = Array.from({length:4},(_,i)=>({x:W*0.12+i*W*0.26,y:H*0.22+Math.sin(i)*12,phase:i*1.1,}));
+  let t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#0a0a2e'); bg.addColorStop(1,'#070718');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    stars.forEach(s=>{
+      s.phase+=s.speed;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,220,${0.4+0.5*Math.sin(s.phase)})`; ctx.fill();
+    });
+    // moon
+    const mx=W*0.78, my=H*0.22;
+    const mg=ctx.createRadialGradient(mx,my,0,mx,my,28);
+    mg.addColorStop(0,'#fffde7'); mg.addColorStop(0.7,'#fde68a'); mg.addColorStop(1,'rgba(253,230,138,0)');
+    ctx.fillStyle=mg; ctx.globalAlpha=0.9+0.1*Math.sin(t);
+    ctx.beginPath(); ctx.arc(mx,my,28,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+    ctx.fillStyle='#0a0a2e'; ctx.beginPath(); ctx.arc(mx+12,my-4,22,0,Math.PI*2); ctx.fill();
+    // lanterns
+    lanterns.forEach(l=>{
+      l.phase+=0.015; const swing=Math.sin(l.phase)*6; const ly=l.y+swing;
+      const rg=ctx.createRadialGradient(l.x,ly,0,l.x,ly,22+Math.sin(l.phase)*4);
+      rg.addColorStop(0,'rgba(255,160,40,.5)'); rg.addColorStop(1,'transparent');
+      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(l.x,ly,30,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(200,140,20,.7)'; ctx.lineWidth=1;
+      ctx.strokeRect(l.x-8,ly-12,16,22);
+      ctx.fillStyle='rgba(255,180,40,.8)'; ctx.fillRect(l.x-6,ly-10,12,18);
+    });
+    t+=0.02;
+    window._bannerRAFs[id]=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: RAIN — streaks, puddle ripples, lightning ─────────────────────────
+function _canvasRain(ctx, W, H, c1, c2, glow, id) {
+  const drops = Array.from({length:90},()=>({
+    x:Math.random()*W*1.2-W*0.1, y:Math.random()*H,
+    speed:8+Math.random()*8, len:8+Math.random()*14,
+    alpha:0.2+Math.random()*0.5,
+  }));
+  const ripples = Array.from({length:6},()=>({x:Math.random()*W,y:H*0.85+Math.random()*H*0.12,r:0,maxR:20+Math.random()*20,speed:0.4+Math.random()*0.4,alpha:0}));
+  let t=0, lightningTimer=0, lightningFlash=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    if(lightningFlash>0){
+      ctx.fillStyle=`rgba(200,220,255,${lightningFlash*0.12})`; ctx.fillRect(0,0,W,H);
+      lightningFlash=Math.max(0,lightningFlash-0.08);
+    }
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#060e1a'); bg.addColorStop(1,'#0a1528');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    // clouds
+    [0.2,0.5,0.78].forEach((cx,i)=>{
+      const cxp=W*cx+Math.sin(t*0.15+i)*10;
+      const cg=ctx.createRadialGradient(cxp,H*0.12,0,cxp,H*0.12,80+i*20);
+      cg.addColorStop(0,'rgba(30,50,80,.85)'); cg.addColorStop(1,'transparent');
+      ctx.fillStyle=cg; ctx.beginPath(); ctx.ellipse(cxp,H*0.12,90+i*15,35,0,0,Math.PI*2); ctx.fill();
+    });
+    // rain drops
+    drops.forEach(d=>{
+      d.y+=d.speed; d.x-=d.speed*0.25;
+      if(d.y>H+10){d.y=-10;d.x=Math.random()*W*1.2-W*0.1;}
+      ctx.beginPath(); ctx.moveTo(d.x,d.y); ctx.lineTo(d.x+d.len*0.25,d.y-d.len);
+      ctx.strokeStyle=`rgba(140,180,255,${d.alpha})`; ctx.lineWidth=0.8; ctx.stroke();
+    });
+    // ripples
+    ripples.forEach(r=>{
+      r.r+=r.speed; r.alpha=Math.max(0,0.5*(1-r.r/r.maxR));
+      if(r.r>=r.maxR){r.r=0;r.x=Math.random()*W;r.alpha=0.5;}
+      ctx.beginPath(); ctx.ellipse(r.x,r.y,r.r,r.r*0.35,0,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(140,200,255,${r.alpha})`; ctx.lineWidth=0.8; ctx.stroke();
+    });
+    // lightning
+    lightningTimer++;
+    if(lightningTimer>180+Math.random()*120){lightningFlash=1;lightningTimer=0;}
+    t+=0.02;
+    window._bannerRAFs[id]=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: SUN / SUMMER — hot sun, heat shimmer, rays ────────────────────────
+function _canvasSun(ctx, W, H, c1, c2, glow, id) {
+  let t=0;
+  const heatLines = Array.from({length:20},()=>({x:Math.random()*W,phase:Math.random()*Math.PI*2,speed:0.02+Math.random()*0.02}));
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#3d0808'); bg.addColorStop(0.6,'#8b1a0a'); bg.addColorStop(1,'#1a0400');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    // sun core
+    const sx=W*0.68, sy=H*0.32;
+    const rg=ctx.createRadialGradient(sx,sy,0,sx,sy,65+Math.sin(t)*5);
+    rg.addColorStop(0,'rgba(255,240,150,1)'); rg.addColorStop(0.25,'rgba(255,180,40,.9)');
+    rg.addColorStop(0.6,'rgba(255,120,20,.3)'); rg.addColorStop(1,'transparent');
+    ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(sx,sy,90,0,Math.PI*2); ctx.fill();
+    // bright core
+    ctx.beginPath(); ctx.arc(sx,sy,22+Math.sin(t*2)*2,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,220,0.95)'; ctx.fill();
+    // rays
+    for(let i=0;i<14;i++){
+      const a=i*(Math.PI*2/14)+t*0.08;
+      const r1=28, r2=55+Math.sin(t*1.5+i)*12;
+      ctx.beginPath(); ctx.moveTo(sx+Math.cos(a)*r1,sy+Math.sin(a)*r1);
+      ctx.lineTo(sx+Math.cos(a)*r2,sy+Math.sin(a)*r2);
+      ctx.strokeStyle=`rgba(255,200,80,${0.25+0.2*Math.sin(t+i)})`; ctx.lineWidth=2.5+Math.sin(t+i); ctx.stroke();
+    }
+    // heat shimmer
+    heatLines.forEach(l=>{
+      l.phase+=l.speed;
+      const y=H*0.7+Math.sin(l.phase)*H*0.1;
+      ctx.beginPath(); ctx.moveTo(l.x,y);
+      for(let i=0;i<8;i++) ctx.lineTo(l.x+i*4,y+Math.sin(l.phase*3+i)*3);
+      ctx.strokeStyle='rgba(255,160,40,.06)'; ctx.lineWidth=1; ctx.stroke();
+    });
+    t+=0.025;
+    window._bannerRAFs[id]=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: CLOUD / WINTER ─────────────────────────────────────────────────────
+function _canvasCloud(ctx, W, H, c1, c2, glow, id) {
+  const snowflakes = Array.from({length:40},()=>({
+    x:Math.random()*W, y:Math.random()*H,
+    r:1+Math.random()*2.5, speed:0.4+Math.random()*0.8,
+    drift:(Math.random()-0.5)*0.3, alpha:0.4+Math.random()*0.6, phase:Math.random()*Math.PI*2,
+  }));
+  let t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#0d1f38'); bg.addColorStop(1,'#050e1a');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    // clouds
+    [[W*0.25,H*0.18,110,38],[W*0.68,H*0.12,90,30],[W*0.45,H*0.25,75,26]].forEach(([cx,cy,rx,ry],i)=>{
+      const xo=Math.sin(t*0.12+i)*8;
+      const cg=ctx.createRadialGradient(cx+xo,cy,0,cx+xo,cy,rx);
+      cg.addColorStop(0,'rgba(180,200,240,.18)'); cg.addColorStop(1,'transparent');
+      ctx.fillStyle=cg; ctx.beginPath(); ctx.ellipse(cx+xo,cy,rx,ry,0,0,Math.PI*2); ctx.fill();
+    });
+    // snow
+    snowflakes.forEach(f=>{
+      f.y+=f.speed; f.x+=f.drift+Math.sin(t+f.phase)*0.2;
+      if(f.y>H+5){f.y=-5;f.x=Math.random()*W;}
+      if(f.x<0)f.x=W; if(f.x>W)f.x=0;
+      ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,220,255,${f.alpha})`; ctx.fill();
+    });
+    // moon glow
+    const rg=ctx.createRadialGradient(W*0.82,H*0.15,0,W*0.82,H*0.15,40);
+    rg.addColorStop(0,'rgba(147,197,253,.35)'); rg.addColorStop(1,'transparent');
+    ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(W*0.82,H*0.15,40,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W*0.82,H*0.15,14+Math.sin(t)*1,0,Math.PI*2);
+    ctx.fillStyle='rgba(220,235,255,.8)'; ctx.fill();
+    t+=0.02;
+    window._bannerRAFs[id]=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: SUNRISE / MORNING ──────────────────────────────────────────────────
+function _canvasSunrise(ctx, W, H, c1, c2, glow, id) {
+  let t=0;
+  const birds = Array.from({length:5},(_,i)=>({x:-30+i*-20,y:H*0.35+i*12,speed:1.2+i*0.4}));
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    const phase=0.5+0.5*Math.sin(t*0.008);
+    bg.addColorStop(0,`rgba(15,23,42,1)`);
+    bg.addColorStop(0.35,`rgba(30,58,95,1)`);
+    bg.addColorStop(0.65,`rgba(124,61,18,1)`);
+    bg.addColorStop(1,`rgba(194,65,12,1)`);
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    // horizon halo
+    const hg=ctx.createRadialGradient(W*0.5,H*0.82,0,W*0.5,H*0.82,W*0.7);
+    hg.addColorStop(0,'rgba(251,191,36,.35)');
+    hg.addColorStop(0.4,'rgba(249,115,22,.15)');
+    hg.addColorStop(1,'transparent');
+    ctx.fillStyle=hg; ctx.fillRect(0,0,W,H);
+    // sun
+    const sy=H*0.8+Math.sin(t*0.4)*4;
+    ctx.beginPath(); ctx.arc(W*0.5,sy,28+Math.sin(t*0.3)*2,0,Math.PI*2);
+    ctx.fillStyle='rgba(254,240,138,.92)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(W*0.5,sy,16,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,220,1)'; ctx.fill();
+    // rays
+    for(let i=0;i<8;i++){
+      const a=i*(Math.PI/4)-(Math.PI/2)+(t*0.05);
+      if(Math.sin(a)>0.1) continue;
+      ctx.beginPath(); ctx.moveTo(W*0.5+Math.cos(a)*32,sy+Math.sin(a)*32);
+      ctx.lineTo(W*0.5+Math.cos(a)*(55+Math.sin(t*1.2+i)*8),sy+Math.sin(a)*(55+Math.sin(t*1.2+i)*8));
+      ctx.strokeStyle=`rgba(253,224,71,${0.3+0.2*Math.sin(t+i)})`; ctx.lineWidth=2; ctx.stroke();
+    }
+    // birds
+    birds.forEach(b=>{
+      b.x+=b.speed; if(b.x>W+40) b.x=-20;
+      const flap=Math.sin(t*6+b.y)*5;
+      ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.quadraticCurveTo(b.x+6,b.y+flap,b.x+12,b.y);
+      ctx.quadraticCurveTo(b.x+18,b.y+flap,b.x+24,b.y);
+      ctx.strokeStyle='rgba(148,163,184,.75)'; ctx.lineWidth=1.3; ctx.stroke();
+    });
+    t+=0.8;
+    window._bannerRAFs[id]=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: SUNSET / EVENING ───────────────────────────────────────────────────
+function _canvasSunset(ctx, W, H, c1, c2, glow, id) {
+  let t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#200a00'); bg.addColorStop(0.4,'#7c2d12'); bg.addColorStop(0.7,'#c2410c'); bg.addColorStop(1,'#1a0400');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    // sun near horizon
+    const sy=H*0.72+Math.sin(t*0.3)*3;
+    const rg=ctx.createRadialGradient(W*0.55,sy,0,W*0.55,sy,70);
+    rg.addColorStop(0,'rgba(255,220,100,1)'); rg.addColorStop(0.3,'rgba(255,140,20,.6)'); rg.addColorStop(1,'transparent');
+    ctx.fillStyle=rg; ctx.fillRect(0,0,W,H);
+    ctx.beginPath(); ctx.arc(W*0.55,sy,18+Math.sin(t*0.5)*2,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,240,160,.95)'; ctx.fill();
+    // horizon shimmer
+    const shimmer=ctx.createLinearGradient(0,sy-10,0,sy+25);
+    shimmer.addColorStop(0,'rgba(255,160,40,.25)'); shimmer.addColorStop(1,'transparent');
+    ctx.fillStyle=shimmer; ctx.fillRect(0,sy-10,W,35);
+    // light streaks
+    for(let i=0;i<6;i++){
+      const a=(i*28-60)*Math.PI/180+Math.sin(t*0.05)*0.05;
+      ctx.beginPath(); ctx.moveTo(W*0.55,sy);
+      ctx.lineTo(W*0.55+Math.cos(a)*W*0.8, sy+Math.sin(a)*H*0.8);
+      ctx.strokeStyle=`rgba(255,180,60,${0.04+0.02*Math.sin(t+i)})`; ctx.lineWidth=18; ctx.stroke();
+    }
+    // silhouette hills
+    ctx.beginPath(); ctx.moveTo(0,H);
+    ctx.quadraticCurveTo(W*0.15,H*0.75,W*0.3,H*0.82);
+    ctx.quadraticCurveTo(W*0.5,H*0.7,W*0.65,H*0.78);
+    ctx.quadraticCurveTo(W*0.82,H*0.68,W,H*0.77);
+    ctx.lineTo(W,H); ctx.closePath();
+    ctx.fillStyle='rgba(8,4,2,.95)'; ctx.fill();
+    t+=0.02;
+    window._bannerRAFs[id]=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: NIGHT ──────────────────────────────────────────────────────────────
+function _canvasNight(ctx, W, H, c1, c2, glow, id) {
+  const stars=Array.from({length:55},()=>({x:Math.random()*W,y:Math.random()*H*0.75,r:0.5+Math.random()*1.8,phase:Math.random()*Math.PI*2,speed:0.015+Math.random()*0.025}));
+  const shootingStars=Array.from({length:2},()=>({x:-50,y:Math.random()*H*0.4,speed:5+Math.random()*4,trail:0,active:false,timer:Math.random()*200}));
+  let t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#010208'); bg.addColorStop(0.6,'#0f0a23'); bg.addColorStop(1,'#07051a');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    // moon
+    const mg=ctx.createRadialGradient(W*0.8,H*0.18,0,W*0.8,H*0.18,30);
+    mg.addColorStop(0,'rgba(226,232,240,.9)'); mg.addColorStop(0.6,'rgba(226,232,240,.3)'); mg.addColorStop(1,'transparent');
+    ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(W*0.8,H*0.18,30,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(15,10,35,.9)'; ctx.beginPath(); ctx.arc(W*0.8+10,H*0.18-5,24,0,Math.PI*2); ctx.fill();
+    // stars
+    stars.forEach(s=>{
+      s.phase+=s.speed;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(240,244,255,${0.2+0.7*Math.abs(Math.sin(s.phase))})`; ctx.fill();
+    });
+    // shooting stars
+    shootingStars.forEach(ss=>{
+      if(!ss.active){ss.timer--;if(ss.timer<=0){ss.active=true;ss.x=-20;ss.y=Math.random()*H*0.45;ss.trail=0;}} 
+      else{
+        ss.x+=ss.speed*3; ss.y+=ss.speed; ss.trail++;
+        if(ss.x>W+50){ss.active=false;ss.timer=150+Math.random()*200;}
+        const len=Math.min(ss.trail*3,60);
+        const grad=ctx.createLinearGradient(ss.x-len,ss.y-len*0.35,ss.x,ss.y);
+        grad.addColorStop(0,'transparent'); grad.addColorStop(1,'rgba(200,220,255,.85)');
+        ctx.beginPath(); ctx.moveTo(ss.x-len,ss.y-len*0.35); ctx.lineTo(ss.x,ss.y);
+        ctx.strokeStyle=grad; ctx.lineWidth=1.5; ctx.stroke();
+        ctx.beginPath(); ctx.arc(ss.x,ss.y,2,0,Math.PI*2);
+        ctx.fillStyle='rgba(220,235,255,.9)'; ctx.fill();
+      }
+    });
+    // city lights silhouette
+    ctx.fillStyle='rgba(5,5,15,.95)';
+    ctx.beginPath(); ctx.moveTo(0,H);
+    [0,20,20,40,40,55,55,70,70,85,85,100,100,118,118,135,135,148,148,165,165,180,180,195,195,210,210,225,225,245,245,260,260,275,275,292,292,310,310,325,325,340,340,358,358,375,375,W].forEach((x,i,a)=>{
+      if(i===0)ctx.moveTo(x,H);
+      else if(i%2===0){const bh=H*0.6+Math.sin(i*0.8)*H*0.2;ctx.lineTo(a[i-1],bh);ctx.lineTo(x,bh);}
+    });
+    ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+    // building window lights
+    for(let i=0;i<14;i++){
+      const wx=20+i*26.5, wy=H*0.68+Math.sin(i*1.4)*H*0.12;
+      if(Math.sin(t*0.5+i)>0.3){
+        ctx.fillStyle=`rgba(255,220,120,${0.2+0.15*Math.sin(t+i)})`; ctx.fillRect(wx,wy,4,5);
+      }
+    }
+    t+=0.02;
+    window._bannerRAFs[id]=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCENE: FESTIVAL (generic) ─────────────────────────────────────────────────
+function _canvasFestival(ctx, W, H, c1, c2, glow, id) {
+  _canvasDiwali(ctx, W, H, c1, c2, glow, id);
+}
+
+// ── SCENE: DEFAULT ────────────────────────────────────────────────────────────
+function _canvasDefault(ctx, W, H, c1, c2, glow, id) {
+  const particles=Array.from({length:30},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-0.5)*0.6,vy:(Math.random()-0.5)*0.4,r:1+Math.random()*2.5,alpha:0.2+Math.random()*0.5,color:`hsl(${140+Math.random()*40},60%,55%)`}));
+  let t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0,c1||'#0d0d0d'); bg.addColorStop(1,c2||'#161616');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    particles.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=p.color; ctx.globalAlpha=p.alpha*(0.5+0.5*Math.sin(t+p.x));
+      ctx.fill(); ctx.globalAlpha=1;
+    });
+    t+=0.02;
+    window._bannerRAFs[id]=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── Banner HTML wrapper (replaces _sceneBannerHtml) ───────────────────────────
+function _sceneBannerHtml(sec, small) {
+  const uid = 'b_' + sec.id + '_' + Date.now();
+  const h = small ? 104 : 162;
+  _stopBannerRAF(uid);
+  setTimeout(() => _launchBannerCanvas(uid, sec.scene||'default', sec.grad||'#111', sec.glow||'#fff'), 60);
+  return `<div class="scene-banner${small?' scene-banner-sm':''}" id="sab_${uid}" style="background:${sec.grad||'#111'};height:${h}px;border-radius:20px;overflow:hidden;position:relative;cursor:pointer;margin:14px 14px 0;" onclick="openCtxPage(${JSON.stringify(sec.title)},${JSON.stringify(JSON.stringify(sec.kw||[]))},${JSON.stringify(sec.id||'')})">
+  <canvas id="sab_canvas_${uid}" style="position:absolute;inset:0;width:100%;height:100%;display:block;"></canvas>
+  <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.7) 0%,rgba(0,0,0,.15) 55%,transparent 100%);pointer-events:none;"></div>
+  <div class="scene-tag" style="top:${small?9:13}px;left:14px;">${sec.tag||''}</div>
+  <div class="scene-text" style="padding:${small?'0 14px 12px':'0 16px 16px'};">
+    <div class="scene-greeting" style="font-size:${small?'.9rem':'1.1rem'}">${sec.greeting}</div>
+    <div class="scene-sub" style="font-size:${small?'.68rem':'.72rem'}">${sec.sub}</div>
+  </div>
+</div>`;
 }
 
 // ctxKey = unique string for this section's product set (passed to openCtxPage)
@@ -2077,21 +2691,14 @@ async function buildPersonalisedHome() {
     }
 
     // SLOT 2 — Compact banner + product strip
+    // SLOT 2 — Compact banner + product strip
     if (slot2) {
       // Try to match slot2 keywords; allow overlap with slot1 if few products exist
       let slot2Prods = _matchByKeywords(slot2.kw, 8).slice(0, 5);
       // If no matches at all, fall back to all products (store has very few items)
       if (!slot2Prods.length) slot2Prods = prods.filter(p => !p.disabled).slice(0, 5);
 
-      const svg2 = _buildScene(slot2.scene || 'default', slot2.grad, slot2.glow);
-      h += `<div class="scene-banner scene-banner-sm" style="background:${slot2.grad}">
-        ${svg2}
-        <div class="scene-tag">${slot2.tag}</div>
-        <div class="scene-text">
-          <div class="scene-greeting" style="font-size:.9rem">${slot2.greeting}</div>
-          <div class="scene-sub" style="font-size:.7rem">${slot2.sub}</div>
-        </div>
-      </div>`;
+      h += _sceneBannerHtml(slot2, true);
       h += `<div class="sec">${_ctxSecHd(slot2.title, slot2.kw, slot2.id)}<div class="pstrip">${slot2Prods.map(pCard).join('')}</div></div>`;
     }
 
