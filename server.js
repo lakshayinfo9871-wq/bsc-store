@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_SECRET   = process.env.ADMIN_JWT_SECRET  || 'bsc-admin-fallback-change-in-prod';
 const CUSTOMER_SECRET = process.env.CUSTOMER_JWT_SECRET || 'bsc-customer-fallback-change-in-prod';
 const MONGO_URI = process.env.MONGO_URI;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_API_KEY = process.env.GEMINI_KEY || process.env.GEMINI_API_KEY || '';
 
 // ── SECURITY: Rate limiting on login (#2) ─────────────────────────────────────
 // Simple in-memory rate limiter (no extra package needed)
@@ -1640,7 +1640,7 @@ app.get('/api/customer/ledger/months', customerAuth, async (req, res) => {
 app.post('/api/admin/ai-chat', adminAuth, async (req, res) => {
   try {
     const { system, messages } = req.body;
-    if (!GEMINI_API_KEY) return res.status(500).json({ error: 'GEMINI_API_KEY not set.' });
+    if (!GEMINI_API_KEY) return res.status(500).json({ error: 'GEMINI_KEY not set in environment.' });
 
     const contents = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
@@ -1648,7 +1648,7 @@ app.post('/api/admin/ai-chat', adminAuth, async (req, res) => {
     }));
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
