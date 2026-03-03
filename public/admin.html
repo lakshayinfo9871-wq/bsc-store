@@ -278,7 +278,7 @@ tr:hover td{background:#fafafa;}
       <div class="nav-link" onclick="goTo('milk')"><span class="icon">🥛</span><span>Milk</span></div>
       <div class="nav-link" onclick="goTo('udhar')"><span class="icon">📒</span><span>Udhar</span></div>
       <div class="nav-link" onclick="goTo('products')"><span class="icon">🛍️</span><span>Products</span></div>
-      <div class="nav-link" onclick="goTo('scanner')"><span class="icon">📷</span><span>Scanner</span></div>
+      <div class="nav-link" onclick="goTo('scanner')"><span class="icon">📷</span><span>Quick Add</span></div>
       <div class="nav-link" onclick="goTo('categories')"><span class="icon">📂</span><span>Categories</span></div>
       <div class="nav-link" onclick="goTo('subcategories')"><span class="icon">🗂️</span><span>Subcategories</span></div>
       <div class="nav-link" onclick="goTo('banners')"><span class="icon">🖼️</span><span>Banners</span></div>
@@ -384,7 +384,7 @@ tr:hover td{background:#fafafa;}
     </div>
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeModal('productModal')">Cancel</button>
-      <button class="btn btn-green" onclick="saveProduct()">Save Product</button>
+      <button class="btn btn-green" id="saveProductBtn" onclick="saveProduct()">Save Product</button>
     </div>
   </div>
 </div>
@@ -2381,6 +2381,11 @@ function openProductModal(id) {
   _editVariants = p?.variants ? JSON.parse(JSON.stringify(p.variants)) : [{ id:'v1', label:'1 unit', imageUrl:'', mrp:null, inStock:true, priceTiers:[{minQty:1,price:0}] }];
   renderVariantEditor();
   document.getElementById('productModal').classList.add('open');
+  // Reset save button label (in case it was changed by quick add)
+  setTimeout(() => {
+    const btn = document.getElementById('saveProductBtn');
+    if (btn) btn.textContent = 'Save Product';
+  }, 50);
 }
 
 function updateSubcatDropdown(selectedSubCatId) {
@@ -2466,8 +2471,19 @@ async function saveProduct() {
   };
   const r = await fetch(id?`/api/admin/products/${id}`:'/api/admin/products',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
   if (!r.ok) { const err=await r.json(); return toast(err.error||'Save failed'); }
-  await loadAll(true); closeModal('productModal'); renderProducts();
-  toast(id?'Product updated!':'Product added!');
+  await loadAll(true); closeModal('productModal');
+  if (currentPage === 'scanner') {
+    // Quick add flow: stay on scanner, clear result, focus for next scan
+    renderScanner();
+    toast('✅ Product saved! Scan next item.');
+    setTimeout(() => {
+      const inp = document.getElementById('scanInput');
+      if (inp) inp.focus();
+    }, 200);
+  } else {
+    renderProducts();
+    toast(id?'Product updated!':'Product added!');
+  }
 }
 
 async function deleteProduct(id) {
@@ -2521,31 +2537,39 @@ function renderScanner() {
     <div class="scan-wrapper">
       <div class="scan-card">
         <div class="scan-title">📷 Barcode Scanner</div>
-        <div class="scan-subtitle">Focus on the input below, then scan a product. USB barcode scanners work automatically — just scan!</div>
+        <div class="scan-subtitle">
+          Scan a barcode with your USB scanner. If already in your store you can edit it. If not, product info is looked up online and the <b>Add Product</b> form opens pre-filled — just set the prices and save.
+        </div>
         <div class="scan-input-wrap">
           <input type="text" id="scanInput" class="scan-input" placeholder="Scan barcode or type SKU / name..." autocomplete="off" autocorrect="off" spellcheck="false"
             onkeydown="handleScanKey(event)" oninput="handleScanInput(event)">
-          <span class="scan-icon">⌨️</span>
+          <span class="scan-icon" id="scanIcon">⌨️</span>
         </div>
         <div id="scanResult" style="display:none"></div>
-        <div style="display:flex;gap:.6rem;margin-top:.8rem;flex-wrap:wrap">
+        <div style="display:flex;gap:.6rem;margin-top:.8rem;flex-wrap:wrap;align-items:center">
           <button class="btn btn-gray" onclick="clearScan()">Clear</button>
           <button class="btn btn-green" onclick="doScanSearch()">🔍 Search</button>
-          <span style="font-size:.78rem;color:var(--text2);align-self:center">Press Enter to search</span>
+          <span style="font-size:.78rem;color:var(--text2)">Press Enter or scan to search</span>
+        </div>
+        <div style="margin-top:1rem;padding:.7rem 1rem;background:rgba(45,211,111,.07);border:1px solid rgba(45,211,111,.2);border-radius:10px;font-size:.78rem;color:var(--text2);line-height:1.6">
+          ⚡ <b style="color:var(--green)">Quick Add Flow:</b> Scan barcode → if not in your store, product info auto-fetched from internet → form opens pre-filled with name, brand, weight → you set MRP + price + variants → Save → scan next item immediately.
         </div>
       </div>
       <div class="scan-history" id="scanHistoryPanel" style="${scanHistory.length?'':'display:none'}">
-        <div class="scan-history-head">Recent Scans</div>
+        <div class="scan-history-head">Recent Scans <span id="scanSessionCount" style="font-size:.75rem;font-weight:600;color:var(--green);margin-left:.5rem"></span></div>
         <div id="scanHistoryList"></div>
       </div>
     </div>`;
-  // Auto-focus the input
-  setTimeout(() => {
-    const inp = document.getElementById('scanInput');
-    if (inp) inp.focus();
-  }, 80);
+  setTimeout(() => { const inp = document.getElementById('scanInput'); if (inp) inp.focus(); }, 80);
   renderScanHistory();
+  updateScanSessionCount();
 }
+
+function updateScanSessionCount() {
+  const el = document.getElementById('scanSessionCount');
+  if (el && scanHistory.length) el.textContent = scanHistory.length + ' scanned this session';
+}
+
 
 function handleScanKey(e) {
   if (e.key === 'Enter') {
@@ -2572,22 +2596,142 @@ async function doScanSearch() {
   inp.classList.add('scanning');
   setTimeout(() => inp.classList.remove('scanning'), 600);
 
-  showScanResult('loading', '🔍 Searching...', '');
+  showScanResult('loading', '🔍 Searching your store...', '');
   try {
     const r = await fetch(`/api/admin/products/search?q=${encodeURIComponent(q)}`, {headers:ah()});
     const data = await r.json();
     if (data.results && data.results.length > 0) {
       const p = data.results[0];
       const matchType = data.matchType || 'name';
-      addToScanHistory(q, p);
+      addToScanHistory(q, p, 'found');
       showScanResultProduct(p, matchType, data.results.length > 1 ? data.results.slice(1, 5) : []);
     } else {
-      showScanResult('not-found', '❌ Product Not Found', `No product matched: "${q}"`);
+      // Product not in store — check if it's a barcode and look up online
+      const isBarcode = /^\d{8,14}$/.test(q);
+      if (isBarcode) {
+        showScanResult('loading', '🌐 Not in your store. Looking up online...', 'Fetching product info from Open Food Facts...');
+        await lookupBarcodeOnline(q);
+      } else {
+        showScanResult('not-found', '❌ Product Not Found', `No product matched: "${q}"`);
+        showQuickAddButton(q, null);
+      }
     }
   } catch(e) {
     showScanResult('not-found', '⚠️ Error', 'Could not connect to server.');
   }
 }
+
+// Fetch product info from Open Food Facts (free Indian grocery database)
+async function lookupBarcodeOnline(barcode) {
+  try {
+    const r = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+    const data = await r.json();
+    if (data.status === 1 && data.product) {
+      const p = data.product;
+      const name = p.product_name_en || p.product_name || p.abbreviated_product_name || '';
+      const brand = p.brands || '';
+      const weight = p.quantity || p.net_weight || '';
+      const imageUrl = p.image_front_url || p.image_url || '';
+      const ingredients = p.ingredients_text_en || '';
+
+      if (!name) {
+        showScanResult('not-found', '❌ Barcode not found online', `Barcode ${barcode} not in database. You can still add it manually.`);
+        showQuickAddButton(barcode, { barcode });
+        return;
+      }
+
+      addToScanHistory(barcode, { name, id: null }, 'new');
+      showScanResultNew(barcode, name, brand, weight, imageUrl);
+    } else {
+      showScanResult('not-found', '❌ Barcode not found online', `Barcode ${barcode} not found in any database. Add it manually.`);
+      showQuickAddButton(barcode, { barcode });
+    }
+  } catch(e) {
+    showScanResult('not-found', '⚠️ Offline', 'Could not reach product database. Check internet connection.');
+    showQuickAddButton(barcode, { barcode });
+  }
+}
+
+// Show result when product found online but not in store — offer to add it
+function showScanResultNew(barcode, name, brand, weight, imageUrl) {
+  const el = document.getElementById('scanResult');
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = 'scan-result';
+  el.style.border = '1.5px solid rgba(251,191,36,.4)';
+  el.style.background = 'rgba(251,191,36,.06)';
+  el.innerHTML = `
+    <div class="scan-status" style="color:#f59e0b">🆕 Found Online — Not in Your Store Yet</div>
+    <div style="display:flex;gap:1rem;margin-top:.8rem;align-items:flex-start">
+      ${imageUrl ? `<img src="${imageUrl}" style="width:70px;height:70px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:var(--bg3);flex-shrink:0" onerror="this.style.display='none'">` : `<div style="width:70px;height:70px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">📦</div>`}
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:var(--text);margin-bottom:.2rem">${name}</div>
+        ${brand ? `<div style="font-size:.82rem;color:var(--text2);margin-bottom:.15rem">Brand: <b>${brand}</b></div>` : ''}
+        ${weight ? `<div style="font-size:.82rem;color:var(--text2);margin-bottom:.15rem">Weight / Size: <b>${weight}</b></div>` : ''}
+        <div style="font-size:.78rem;color:var(--text3);margin-top:.2rem">Barcode: ${barcode}</div>
+      </div>
+    </div>
+    <div style="margin-top:.9rem;padding:.6rem .8rem;background:rgba(45,211,111,.08);border-radius:8px;font-size:.78rem;color:var(--text2)">
+      ✅ Name, brand & weight pre-filled. You just need to set the <b>price, MRP and variants</b>.
+    </div>
+    <div style="display:flex;gap:.6rem;margin-top:.8rem;flex-wrap:wrap">
+      <button class="btn btn-green" style="font-size:.85rem;font-weight:800" onclick="openQuickAdd('${barcode}','${name.replace(/'/g,"\'")}','${brand.replace(/'/g,"\'")}','${weight.replace(/'/g,"\'")}','${imageUrl.replace(/'/g,"\'")}')">
+        ⚡ Add to Store
+      </button>
+      <button class="btn btn-gray" onclick="clearScanAndFocus()">🔄 Scan Next</button>
+    </div>`;
+}
+
+function showQuickAddButton(barcode, prefill) {
+  const el = document.getElementById('scanResult');
+  if (!el) return;
+  const existing = el.innerHTML;
+  el.innerHTML += `<div style="margin-top:.8rem"><button class="btn btn-green" onclick="openQuickAdd('${barcode}','','','','')">⚡ Add Manually</button></div>`;
+}
+
+// Opens the existing product modal with all fields pre-filled from scan
+function openQuickAdd(barcode, name, brand, weight, imageUrl) {
+  // Build a smart label from weight
+  const label = weight ? weight : '1 unit';
+  // Pre-build variant with label from weight
+  _editVariants = [{ id:'v1', label: label, imageUrl: imageUrl||'', mrp: null, inStock: true, priceTiers:[{minQty:1, price:0}] }];
+
+  // Open modal
+  document.getElementById('productModalTitle').textContent = '⚡ Quick Add Product';
+  document.getElementById('pEditId').value = '';
+  document.getElementById('pName').value = name || '';
+  document.getElementById('pBrand').value = brand || '';
+  document.getElementById('pKeywords').value = '';
+  document.getElementById('pSku').value = '';
+  document.getElementById('pBarcode').value = barcode || '';
+  document.getElementById('pMrp').value = '';
+  document.getElementById('pStock').value = '';
+  document.getElementById('pLowStock').value = 5;
+  document.getElementById('pDisabled').checked = false;
+  document.getElementById('pTag').value = '';
+  document.getElementById('pImgUrl').value = imageUrl || '';
+  previewUrlImg('pImgPreview', imageUrl || '');
+  document.getElementById('pCat').innerHTML = `<option value="0">No Category</option>` + allCategories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  updateSubcatDropdown(null);
+  renderVariantEditor();
+  document.getElementById('productModal').classList.add('open');
+
+  // After modal opens, change button label and focus name
+  setTimeout(() => {
+    const btn = document.getElementById('saveProductBtn');
+    if (btn) btn.textContent = '⚡ Save & Scan Next';
+    const nameEl = document.getElementById('pName');
+    if (nameEl) { nameEl.focus(); if (name) nameEl.select(); }
+  }, 150);
+}
+
+function clearScanAndFocus() {
+  const inp = document.getElementById('scanInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+  const el = document.getElementById('scanResult');
+  if (el) { el.style.display = 'none'; el.style.border = ''; el.style.background = ''; }
+}
+
 
 function showScanResult(type, title, msg) {
   const el = document.getElementById('scanResult');
@@ -2655,13 +2799,14 @@ function clearScan() {
   const inp = document.getElementById('scanInput');
   if (inp) { inp.value = ''; inp.focus(); }
   const el = document.getElementById('scanResult');
-  if (el) el.style.display = 'none';
+  if (el) { el.style.display = 'none'; el.style.border = ''; el.style.background = ''; }
 }
 
-function addToScanHistory(barcode, product) {
-  scanHistory.unshift({ barcode, name: product.name, id: product.id, time: new Date().toLocaleTimeString() });
-  if (scanHistory.length > 10) scanHistory.pop();
+function addToScanHistory(barcode, product, type) {
+  scanHistory.unshift({ barcode, name: product.name, id: product.id, type: type||'found', time: new Date().toLocaleTimeString() });
+  if (scanHistory.length > 20) scanHistory.pop();
   renderScanHistory();
+  updateScanSessionCount();
 }
 
 function renderScanHistory() {
@@ -2671,9 +2816,10 @@ function renderScanHistory() {
   if (!scanHistory.length) { panel.style.display='none'; return; }
   panel.style.display = 'block';
   list.innerHTML = scanHistory.map(h=>`
-    <div class="scan-history-item" onclick="goTo('products');setTimeout(()=>editProduct(${h.id}),150)">
+    <div class="scan-history-item" ${h.id ? `onclick="goTo('products');setTimeout(()=>editProduct(${h.id}),150)"` : 'style="opacity:.7"'}>
       <span class="shi-barcode">${h.barcode}</span>
-      <span class="shi-name">${h.name}</span>
+      <span class="shi-name">${h.name||'Unknown'}</span>
+      <span style="font-size:.68rem;font-weight:700;padding:2px 6px;border-radius:4px;background:${h.type==='new'?'rgba(251,191,36,.15)':'rgba(45,211,111,.12)'};color:${h.type==='new'?'#f59e0b':'var(--green)'}">${h.type==='new'?'NEW':'✓'}</span>
       <span class="shi-time">${h.time}</span>
     </div>`).join('');
 }
