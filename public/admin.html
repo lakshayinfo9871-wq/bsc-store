@@ -127,6 +127,33 @@ tr:hover td{background:#fafafa;}
 .search-input{border:1.5px solid var(--border);border-radius:8px;padding:.48rem .9rem;font-size:.85rem;background:var(--white);min-width:200px;}
 .search-input:focus{outline:none;border-color:var(--green);}
 
+/* ── VOICE ASSISTANT ─────────────────────────────────────────────────────── */
+#voiceBtn{position:fixed;bottom:1.5rem;right:1.5rem;z-index:500;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#15803d);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.4rem;box-shadow:0 4px 20px rgba(22,163,74,.45);transition:transform .2s,box-shadow .2s;}
+#voiceBtn:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(22,163,74,.6);}
+#voiceBtn.listening{animation:voicePulse 1.2s ease-in-out infinite;background:linear-gradient(135deg,#dc2626,#b91c1c);}
+@keyframes voicePulse{0%,100%{box-shadow:0 4px 20px rgba(220,38,38,.45)}50%{box-shadow:0 4px 36px rgba(220,38,38,.8),0 0 0 12px rgba(220,38,38,.1)}}
+#voicePanel{position:fixed;bottom:5rem;right:1.5rem;z-index:499;width:min(380px,calc(100vw - 2rem));background:#fff;border-radius:20px;box-shadow:0 12px 48px rgba(0,0,0,.18);border:1px solid var(--border);display:none;flex-direction:column;overflow:hidden;max-height:520px;}
+#voicePanel.open{display:flex;}
+.vp-head{padding:1rem 1.2rem .75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.vp-head-title{font-size:.95rem;font-weight:800;display:flex;align-items:center;gap:.5rem;}
+.vp-head-title .va-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;}
+.vp-head-title .va-dot.listening{background:#ef4444;animation:blink .6s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.vp-close{background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text2);padding:.2rem;}
+.vp-messages{flex:1;overflow-y:auto;padding:.75rem 1rem;display:flex;flex-direction:column;gap:.6rem;min-height:120px;max-height:320px;}
+.vp-msg{padding:.55rem .85rem;border-radius:12px;font-size:.83rem;line-height:1.5;max-width:95%;word-break:break-word;}
+.vp-msg.user{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;align-self:flex-end;border-radius:12px 12px 2px 12px;}
+.vp-msg.ai{background:var(--bg);border:1px solid var(--border);color:var(--text);align-self:flex-start;border-radius:12px 12px 12px 2px;}
+.vp-msg.system{background:#fffbeb;border:1px solid #fde68a;color:#92400e;align-self:center;font-size:.75rem;text-align:center;padding:.4rem .7rem;}
+.vp-status{padding:.4rem 1rem;font-size:.73rem;color:var(--text2);font-weight:600;min-height:1.4rem;}
+.vp-controls{padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;gap:.5rem;}
+.vp-text-input{flex:1;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .85rem;font-size:.85rem;font-family:inherit;color:var(--text);background:#fff;transition:border-color .2s;}
+.vp-text-input:focus{outline:none;border-color:var(--green);}
+.vp-send{background:var(--green);color:#fff;border:none;border-radius:10px;padding:.5rem .9rem;font-size:.85rem;font-weight:700;cursor:pointer;transition:filter .15s;flex-shrink:0;}
+.vp-send:hover{filter:brightness(1.1);}
+.vp-mic{background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:.5rem .75rem;font-size:1rem;cursor:pointer;flex-shrink:0;transition:all .15s;}
+.vp-mic.active{background:#fef2f2;border-color:#fca5a5;}
+
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--sidebar);color:#fff;padding:.7rem 1.2rem;border-radius:10px;font-size:.84rem;font-weight:500;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s;box-shadow:0 4px 20px rgba(0,0,0,.3);}
 .toast.show{opacity:1;}
 
@@ -471,6 +498,27 @@ tr:hover td{background:#fafafa;}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- AI VOICE ASSISTANT -->
+<button id="voiceBtn" onclick="toggleVoicePanel()" title="AI Voice Assistant">🎙️</button>
+<div id="voicePanel">
+  <div class="vp-head">
+    <div class="vp-head-title">
+      <span class="va-dot" id="vaDot"></span>
+      AI Admin Assistant
+    </div>
+    <button class="vp-close" onclick="toggleVoicePanel()">✕</button>
+  </div>
+  <div class="vp-messages" id="vaMessages">
+    <div class="vp-msg system">👋 Hi! I can control the admin panel for you. Say or type commands like:<br>"Go to orders", "Show pending orders", "Add product Amul Milk ₹25", "Show customers", "Go to settings"</div>
+  </div>
+  <div class="vp-status" id="vaStatus"></div>
+  <div class="vp-controls">
+    <input type="text" class="vp-text-input" id="vaInput" placeholder="Type a command..." onkeydown="if(event.key==='Enter')sendVoiceCommand()">
+    <button class="vp-mic" id="vaMicBtn" onclick="toggleMic()" title="Hold to speak">🎤</button>
+    <button class="vp-send" onclick="sendVoiceCommand()">Send</button>
+  </div>
+</div>
 
 <script>
 let token = localStorage.getItem('bsc_token');
@@ -3006,6 +3054,234 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 
 let toastTimer;
 function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800); }
+
+// ═══════════════════════════════════════
+// AI VOICE ASSISTANT
+// ═══════════════════════════════════════
+let _vaOpen = false;
+let _vaConversation = [];
+let _vaRecognition = null;
+let _vaListening = false;
+
+function toggleVoicePanel() {
+  _vaOpen = !_vaOpen;
+  document.getElementById('voicePanel').classList.toggle('open', _vaOpen);
+  if (_vaOpen) {
+    setTimeout(() => document.getElementById('vaInput')?.focus(), 100);
+    vaScrollBottom();
+  }
+}
+
+function vaAddMsg(role, text) {
+  const el = document.getElementById('vaMessages');
+  const div = document.createElement('div');
+  div.className = `vp-msg ${role}`;
+  div.textContent = text;
+  el.appendChild(div);
+  vaScrollBottom();
+  if (role !== 'system') {
+    _vaConversation.push({ role: role === 'user' ? 'user' : 'assistant', content: text });
+  }
+}
+
+function vaScrollBottom() {
+  const el = document.getElementById('vaMessages');
+  if (el) el.scrollTop = el.scrollHeight;
+}
+
+function vaSetStatus(msg) {
+  const el = document.getElementById('vaStatus');
+  if (el) el.textContent = msg;
+}
+
+// Build a compact state snapshot for AI context
+function vaGetAdminContext() {
+  const page = currentPage;
+  const prodCount = allProducts.length;
+  const catCount = allCategories.length;
+  const pages = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'];
+  const cats = allCategories.slice(0,10).map(c=>c.name).join(', ');
+  const recentProds = allProducts.slice(0,8).map(p=>p.name).join(', ');
+  return `Current page: ${page}. Products: ${prodCount}. Categories (${catCount}): ${cats}. Sample products: ${recentProds}. Pages available: ${pages.join(', ')}.`;
+}
+
+// Map of admin actions the AI can trigger
+const VA_ACTIONS = {
+  navigate: (page) => { goTo(page); return `✅ Navigated to ${page}`; },
+  openAddProduct: () => { goTo('products'); setTimeout(()=>openProductModal(), 200); return '✅ Opened Add Product form'; },
+  openAddCategory: () => { goTo('categories'); setTimeout(()=>openCatModal(), 200); return '✅ Opened Add Category form'; },
+  openAddBanner: () => { goTo('banners'); setTimeout(()=>openBannerModal(), 200); return '✅ Opened Add Banner form'; },
+  filterOrders: (status) => {
+    goTo('orders');
+    setTimeout(()=>{
+      const btns = document.querySelectorAll('.filter-chip, [data-status]');
+      btns.forEach(b=>{ if(b.textContent.toLowerCase().includes(status.toLowerCase())) b.click(); });
+    }, 300);
+    return `✅ Filtered orders by: ${status}`;
+  },
+  searchProducts: (q) => {
+    goTo('products');
+    setTimeout(()=>{
+      const inp = document.querySelector('.search-input');
+      if(inp) { inp.value = q; inp.dispatchEvent(new Event('input')); }
+    }, 200);
+    return `✅ Searching products for: ${q}`;
+  },
+  scrollTop: () => { document.querySelector('.main')?.scrollTo({top:0,behavior:'smooth'}); return '✅ Scrolled to top'; },
+  refresh: () => { loadAll(true).then(()=>{ const fn = {dashboard:renderDashboard,orders:renderOrders,customers:renderCustomers,products:renderProducts}[currentPage]; if(fn)fn(); }); return '✅ Refreshed data'; },
+};
+
+async function sendVoiceCommand(cmdOverride) {
+  const inp = document.getElementById('vaInput');
+  const cmd = (cmdOverride || inp?.value || '').trim();
+  if (!cmd) return;
+  if (inp) inp.value = '';
+
+  vaAddMsg('user', cmd);
+  vaSetStatus('🤔 Thinking...');
+
+  // Build system prompt
+  const systemPrompt = `You are an AI admin assistant for BSC Store admin panel. You control the panel by responding with JSON actions.
+
+Admin context: ${vaGetAdminContext()}
+
+When the user gives a command, respond in this exact JSON format:
+{
+  "reply": "Short friendly message to show the user (1-2 sentences)",
+  "action": "navigate|openAddProduct|openAddCategory|openAddBanner|filterOrders|searchProducts|scrollTop|refresh|none",
+  "params": "parameter for action if needed (e.g. page name for navigate, status for filterOrders, query for searchProducts)"
+}
+
+Action guide:
+- navigate: goes to a page. params = one of: dashboard, customers, orders, milk, udhar, products, scanner, categories, subcategories, banners, settings
+- openAddProduct: opens the add product modal
+- openAddCategory: opens the add category modal  
+- openAddBanner: opens the add banner modal
+- filterOrders: filters order list. params = pending|accepted|packed|delivered|cancelled
+- searchProducts: searches product list. params = search term
+- scrollTop: scrolls page to top
+- refresh: reloads data from server
+- none: just reply without any action
+
+Examples:
+User: "go to orders" → {"reply":"Heading to Orders now!","action":"navigate","params":"orders"}
+User: "show me pending orders" → {"reply":"Showing pending orders!","action":"filterOrders","params":"pending"}
+User: "add a new product" → {"reply":"Opening the add product form for you!","action":"openAddProduct","params":""}
+User: "search for milk" → {"reply":"Searching for milk in products!","action":"searchProducts","params":"milk"}
+User: "how many products?" → {"reply":"You have ${allProducts.length} products across ${allCategories.length} categories.","action":"none","params":""}
+
+Always respond with valid JSON only, no markdown.`;
+
+  try {
+    const messages = [
+      ..._vaConversation.slice(-6).filter(m=>m.role==='user'||m.role==='assistant'),
+      { role: 'user', content: cmd }
+    ];
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        system: systemPrompt,
+        messages
+      })
+    });
+
+    const data = await response.json();
+    const rawText = data.content?.find(b => b.type === 'text')?.text || '{}';
+
+    let parsed;
+    try {
+      const clean = rawText.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch {
+      parsed = { reply: rawText.slice(0, 200), action: 'none', params: '' };
+    }
+
+    const reply = parsed.reply || 'Done!';
+    vaAddMsg('ai', reply);
+
+    // Execute action
+    if (parsed.action && parsed.action !== 'none' && VA_ACTIONS[parsed.action]) {
+      try {
+        const result = VA_ACTIONS[parsed.action](parsed.params || '');
+        if (result) vaSetStatus(result);
+        else vaSetStatus('');
+      } catch(e) {
+        vaSetStatus('⚠️ Could not execute action');
+      }
+    } else {
+      vaSetStatus('');
+    }
+
+    // Speak reply if TTS available
+    if ('speechSynthesis' in window && _vaOpen) {
+      const utter = new SpeechSynthesisUtterance(reply.replace(/[✅❌⚠️🎙️]/g,''));
+      utter.rate = 1.05;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }
+
+  } catch(e) {
+    vaAddMsg('system', '⚠️ Could not connect to AI. Check your connection.');
+    vaSetStatus('');
+  }
+}
+
+// Speech recognition (mic)
+function toggleMic() {
+  if (_vaListening) { stopMic(); return; }
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    vaAddMsg('system', '⚠️ Speech recognition not supported in this browser. Use Chrome.');
+    return;
+  }
+  startMic();
+}
+
+function startMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  _vaRecognition = new SR();
+  _vaRecognition.lang = 'en-IN';
+  _vaRecognition.continuous = false;
+  _vaRecognition.interimResults = true;
+
+  _vaListening = true;
+  document.getElementById('vaMicBtn').classList.add('active');
+  document.getElementById('voiceBtn').classList.add('listening');
+  document.getElementById('vaDot').classList.add('listening');
+  vaSetStatus('🎙️ Listening...');
+
+  _vaRecognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r=>r[0].transcript).join('');
+    const inp = document.getElementById('vaInput');
+    if (inp) inp.value = transcript;
+    if (e.results[e.results.length-1].isFinal) {
+      stopMic();
+      sendVoiceCommand(transcript);
+    }
+  };
+
+  _vaRecognition.onerror = () => stopMic();
+  _vaRecognition.onend = () => stopMic();
+  _vaRecognition.start();
+}
+
+function stopMic() {
+  _vaListening = false;
+  if (_vaRecognition) { try { _vaRecognition.stop(); } catch {} _vaRecognition = null; }
+  document.getElementById('vaMicBtn').classList.remove('active');
+  document.getElementById('voiceBtn').classList.remove('listening');
+  document.getElementById('vaDot').classList.remove('listening');
+  vaSetStatus('');
+}
+
+// Keyboard shortcut: Alt+V to toggle voice panel
+document.addEventListener('keydown', e => {
+  if (e.altKey && e.key === 'v') { e.preventDefault(); toggleVoicePanel(); }
+  if (e.altKey && e.key === 'm') { e.preventDefault(); if(_vaOpen) toggleMic(); }
+});
 </script>
 </body>
 </html>
