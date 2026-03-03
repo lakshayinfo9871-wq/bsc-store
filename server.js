@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_SECRET   = process.env.ADMIN_JWT_SECRET  || 'bsc-admin-fallback-change-in-prod';
 const CUSTOMER_SECRET = process.env.CUSTOMER_JWT_SECRET || 'bsc-customer-fallback-change-in-prod';
 const MONGO_URI = process.env.MONGO_URI;
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 
 // ── SECURITY: Rate limiting on login (#2) ─────────────────────────────────────
 // Simple in-memory rate limiter (no extra package needed)
@@ -1636,33 +1636,37 @@ app.get('/api/customer/ledger/months', customerAuth, async (req, res) => {
 });
 
 // ── SERVE PAGES ───────────────────────────────────────────────────────────────
-// ── CLAUDE AI PROXY — forwards assistant requests to Anthropic API ────────────
+// ── OPENAI AI PROXY ───────────────────────────────────────────────────────────
 app.post('/api/admin/ai-chat', adminAuth, async (req, res) => {
   try {
     const { system, messages } = req.body;
-    if (!ANTHROPIC_API_KEY) {
-      return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set in environment variables.' });
+    if (!OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'OPENAI_API_KEY not set in environment variables.' });
     }
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'gpt-4o-mini',
         max_tokens: 300,
-        system,
-        messages
+        temperature: 0.2,
+        messages: [
+          { role: 'system', content: system },
+          ...messages
+        ]
       })
     });
     const data = await response.json();
     if (!response.ok) {
-      console.error('Anthropic API error:', data);
-      return res.status(response.status).json({ error: data?.error?.message || 'Anthropic API error' });
+      console.error('OpenAI error:', data);
+      return res.status(response.status).json({ error: data?.error?.message || 'OpenAI error' });
     }
-    res.json(data);
+    // Return in same format as Anthropic so frontend works unchanged
+    const text = data.choices?.[0]?.message?.content || '';
+    res.json({ content: [{ type: 'text', text }] });
   } catch (e) {
     console.error('AI proxy error:', e);
     res.status(500).json({ error: e.message });

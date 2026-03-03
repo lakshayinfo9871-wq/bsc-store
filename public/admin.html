@@ -3266,12 +3266,11 @@ CRITICAL: For add_udhar, the customerHint is the PERSON (A-38, Ramesh etc), NOT 
     });
     if (!proxyRes.ok) {
       const e = await proxyRes.json().catch(()=>({}));
-      console.error('AI proxy error:', proxyRes.status, e);
       return { type: 'text', text: 'AI error: ' + (e.error || proxyRes.status) };
     }
     const data = await proxyRes.json();
     const text = (data.content?.[0]?.text || data.text || '').trim();
-    console.log('Claude response:', text);
+    console.log('AI response:', text);
 
     // Try parse as JSON action
     try {
