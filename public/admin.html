@@ -510,7 +510,7 @@ tr:hover td{background:#fafafa;}
     <button class="vp-close" onclick="toggleVoicePanel()">✕</button>
   </div>
   <div class="vp-messages" id="vaMessages">
-    <div class="vp-msg system">👋 Hi! I can control the admin panel for you. Say or type commands like:<br>"Go to orders", "Show pending orders", "Add product Amul Milk ₹25", "Show customers", "Go to settings"</div>
+    <div class="vp-msg system">👋 Hi! Say or type a command to control the admin panel.<br><span style="font-size:.72rem;opacity:.85">Try: "go to orders" · "show pending orders" · "add product" · "search milk" · "low stock" · "how many products?" · "settings"</span></div>
   </div>
   <div class="vp-status" id="vaStatus"></div>
   <div class="vp-controls">
@@ -3094,15 +3094,9 @@ function vaSetStatus(msg) {
   if (el) el.textContent = msg;
 }
 
-// Build a compact state snapshot for AI context
+// Build a compact state snapshot for context (used in replies)
 function vaGetAdminContext() {
-  const page = currentPage;
-  const prodCount = allProducts.length;
-  const catCount = allCategories.length;
-  const pages = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'];
-  const cats = allCategories.slice(0,10).map(c=>c.name).join(', ');
-  const recentProds = allProducts.slice(0,8).map(p=>p.name).join(', ');
-  return `Current page: ${page}. Products: ${prodCount}. Categories (${catCount}): ${cats}. Sample products: ${recentProds}. Pages available: ${pages.join(', ')}.`;
+  return { page: currentPage, products: allProducts.length, categories: allCategories.length };
 }
 
 // Map of admin actions the AI can trigger
@@ -3131,103 +3125,248 @@ const VA_ACTIONS = {
   refresh: () => { loadAll(true).then(()=>{ const fn = {dashboard:renderDashboard,orders:renderOrders,customers:renderCustomers,products:renderProducts}[currentPage]; if(fn)fn(); }); return '✅ Refreshed data'; },
 };
 
-async function sendVoiceCommand(cmdOverride) {
+// ── LOCAL NLP ENGINE — no API, works 100% offline ─────────────────────────────
+// Intent matching with keyword patterns + live data awareness
+
+const VA_NLP = {
+  // Each rule: { patterns: [regex...], handler: fn → {reply, action, params} }
+  rules: [
+
+    // ── NAVIGATION ─────────────────────────────────────────────────────────────
+    { patterns: [/\b(go|open|show|take me|navigate|switch)\b.*\b(dashboard|home|main)\b/i, /^dashboard$/i],
+      handler: () => ({ reply: `Opening Dashboard! You have ${allProducts.length} products and ${allCategories.length} categories.`, action:'navigate', params:'dashboard' }) },
+
+    { patterns: [/\b(go|open|show|view)\b.*\border(s)?\b/i, /^orders?$/i, /\bmy orders?\b/i],
+      handler: () => ({ reply: `Opening Orders page!`, action:'navigate', params:'orders' }) },
+
+    { patterns: [/\b(go|open|show)\b.*\bcustomer(s)?\b/i, /^customers?$/i],
+      handler: () => ({ reply: `Here are your customers!`, action:'navigate', params:'customers' }) },
+
+    { patterns: [/\b(go|open|show)\b.*\bmilk\b/i, /^milk$/i, /\bmilk (delivery|log|subs)\b/i],
+      handler: () => ({ reply: `Opening Milk Delivery section!`, action:'navigate', params:'milk' }) },
+
+    { patterns: [/\b(go|open|show)\b.*\b(udhar|credit|khata|ledger)\b/i, /^udhar$/i],
+      handler: () => ({ reply: `Opening Udhar & Credit section!`, action:'navigate', params:'udhar' }) },
+
+    { patterns: [/\b(go|open|show)\b.*\bproduct(s)?\b/i, /^products?$/i],
+      handler: () => ({ reply: `Opening Products! You have ${allProducts.length} products total.`, action:'navigate', params:'products' }) },
+
+    { patterns: [/\b(go|open|show)\b.*\b(scanner|barcode|scan)\b/i, /^scanner?$/i],
+      handler: () => ({ reply: `Opening Barcode Scanner!`, action:'navigate', params:'scanner' }) },
+
+    { patterns: [/\b(go|open|show)\b.*\bcategor(y|ies)\b/i, /^categor(y|ies)$/i],
+      handler: () => ({ reply: `Opening Categories! You have ${allCategories.length} categories.`, action:'navigate', params:'categories' }) },
+
+    { patterns: [/\b(go|open|show)\b.*\bsubcategor(y|ies)\b/i, /^subcategor(y|ies)$/i],
+      handler: () => ({ reply: `Opening Subcategories!`, action:'navigate', params:'subcategories' }) },
+
+    { patterns: [/\b(go|open|show)\b.*\bbanner(s)?\b/i, /^banners?$/i],
+      handler: () => ({ reply: `Opening Banners!`, action:'navigate', params:'banners' }) },
+
+    { patterns: [/\b(go|open|show)\b.*\bsetting(s)?\b/i, /^settings?$/i, /\bconfig\b/i],
+      handler: () => ({ reply: `Opening Settings!`, action:'navigate', params:'settings' }) },
+
+    // ── ADD / CREATE ────────────────────────────────────────────────────────────
+    { patterns: [/\b(add|create|new|plus)\b.*\bproduct\b/i, /\bproduct.*\b(add|create|new)\b/i],
+      handler: () => ({ reply: `Opening the Add Product form!`, action:'openAddProduct', params:'' }) },
+
+    { patterns: [/\b(add|create|new)\b.*\bcategor(y|ies)\b/i],
+      handler: () => ({ reply: `Opening Add Category form!`, action:'openAddCategory', params:'' }) },
+
+    { patterns: [/\b(add|create|new)\b.*\bbanner\b/i],
+      handler: () => ({ reply: `Opening Add Banner form!`, action:'openAddBanner', params:'' }) },
+
+    // ── FILTER ORDERS ───────────────────────────────────────────────────────────
+    { patterns: [/\b(pending|new|fresh)\b.*order/i, /order.*\bpending\b/i, /\bshow pending\b/i],
+      handler: () => {
+        const n = _vaCountOrdersByStatus('pending');
+        return { reply: `Showing pending orders! ${n !== null ? `You have ${n} pending order${n!==1?'s':''}.` : ''}`, action:'filterOrders', params:'pending' };
+      }},
+
+    { patterns: [/\b(accepted|confirmed|approve)\b.*order/i, /order.*\baccepted\b/i],
+      handler: () => ({ reply: `Showing accepted orders!`, action:'filterOrders', params:'accepted' }) },
+
+    { patterns: [/\b(packed|packing|ready)\b.*order/i, /order.*\bpacked\b/i],
+      handler: () => ({ reply: `Showing packed orders!`, action:'filterOrders', params:'packed' }) },
+
+    { patterns: [/\b(delivered|complete|done)\b.*order/i, /order.*\bdelivered\b/i],
+      handler: () => ({ reply: `Showing delivered orders!`, action:'filterOrders', params:'delivered' }) },
+
+    { patterns: [/\b(cancel|cancelled|rejected)\b.*order/i, /order.*\bcancell?ed\b/i],
+      handler: () => ({ reply: `Showing cancelled orders!`, action:'filterOrders', params:'cancelled' }) },
+
+    // ── SEARCH PRODUCTS ─────────────────────────────────────────────────────────
+    { patterns: [/\b(find|search|look|locate)\b.*\bproduct\b.*?([a-z][a-z ]+)/i,
+                 /\bsearch\b.*?\bfor\b\s+(.+)/i,
+                 /\bfind\b\s+(.+)/i],
+      handler: (cmd) => {
+        // Extract search term
+        let q = cmd.replace(/\b(find|search|look for|locate|product|products)\b/gi,'').replace(/\bfor\b/gi,'').trim();
+        q = q.replace(/[^a-z0-9 ]/gi,'').trim();
+        if (!q) return { reply: `Opening Products — type in the search box!`, action:'navigate', params:'products' };
+        const matches = allProducts.filter(p => p.name?.toLowerCase().includes(q.toLowerCase())).length;
+        return { reply: `Searching products for "${q}"! Found ${matches} match${matches!==1?'es':''}.`, action:'searchProducts', params:q };
+      }},
+
+    // ── STATS & INFO ────────────────────────────────────────────────────────────
+    { patterns: [/how many product/i, /product count/i, /total product/i],
+      handler: () => ({ reply: `You have ${allProducts.length} products across ${allCategories.length} categories.`, action:'none', params:'' }) },
+
+    { patterns: [/how many customer/i, /customer count/i, /total customer/i],
+      handler: () => ({ reply: `I see ${allCategories.length} categories loaded. Open Customers page to see the full list!`, action:'navigate', params:'customers' }) },
+
+    { patterns: [/how many order/i, /order count/i, /today.*order/i, /order.*today/i],
+      handler: () => ({ reply: `Opening Orders to check — your latest orders are there!`, action:'navigate', params:'orders' }) },
+
+    { patterns: [/how many categor/i, /categor.*count/i],
+      handler: () => ({ reply: `You have ${allCategories.length} categories: ${allCategories.slice(0,4).map(c=>c.name).join(', ')}${allCategories.length>4?'...':''}.`, action:'none', params:'' }) },
+
+    { patterns: [/which page|where am i|current page/i],
+      handler: () => ({ reply: `You're on the ${currentPage} page right now.`, action:'none', params:'' }) },
+
+    { patterns: [/list.*product|show.*all.*product/i],
+      handler: () => {
+        const names = allProducts.slice(0,6).map(p=>p.name).join(', ');
+        return { reply: `Your products include: ${names}${allProducts.length>6?` and ${allProducts.length-6} more`:''}. Opening Products page!`, action:'navigate', params:'products' };
+      }},
+
+    { patterns: [/list.*categor|show.*all.*categor/i],
+      handler: () => {
+        const names = allCategories.map(c=>c.name).join(', ');
+        return { reply: `Your categories: ${names}. Opening Categories!`, action:'navigate', params:'categories' };
+      }},
+
+    // ── LOW STOCK ───────────────────────────────────────────────────────────────
+    { patterns: [/low stock|out of stock|stock alert|running out/i],
+      handler: () => {
+        const low = allProducts.filter(p => typeof p.stockQuantity==='number' && p.stockQuantity<=5 && p.stockQuantity>=0);
+        if (!low.length) return { reply: `No low-stock alerts right now! All products look good.`, action:'none', params:'' };
+        return { reply: `⚠️ ${low.length} product${low.length>1?'s are':' is'} low on stock: ${low.slice(0,3).map(p=>p.name).join(', ')}${low.length>3?'...':''}. Opening Products!`, action:'navigate', params:'products' };
+      }},
+
+    // ── REFRESH ─────────────────────────────────────────────────────────────────
+    { patterns: [/\b(refresh|reload|update|sync)\b/i],
+      handler: () => ({ reply: `Refreshing data from server!`, action:'refresh', params:'' }) },
+
+    // ── SCROLL ──────────────────────────────────────────────────────────────────
+    { patterns: [/scroll (to )?(top|up|back)/i, /go (to )?top/i],
+      handler: () => ({ reply: `Scrolled to top!`, action:'scrollTop', params:'' }) },
+
+    // ── GREETINGS ───────────────────────────────────────────────────────────────
+    { patterns: [/^(hi|hey|hello|helo|hii|sup|yo)\b/i],
+      handler: () => {
+        const hour = new Date().getHours();
+        const greet = hour<12 ? 'Good morning' : hour<17 ? 'Good afternoon' : 'Good evening';
+        return { reply: `${greet}! 👋 I'm your BSC Store assistant. I can navigate pages, show orders, search products, check stock, and more. What can I do for you?`, action:'none', params:'' };
+      }},
+
+    { patterns: [/thank(s| you)|thanks/i, /great|awesome|perfect|nice|good job/i],
+      handler: () => ({ reply: `Happy to help! Anything else you need?`, action:'none', params:'' }) },
+
+    { patterns: [/\b(help|what can you do|commands|options)\b/i],
+      handler: () => ({ reply: `I can: navigate pages (orders, products, customers, settings...), filter orders by status, search products, check stock alerts, show counts, add new items, refresh data. Just say what you need!`, action:'none', params:'' }) },
+
+    // ── LOGOUT ──────────────────────────────────────────────────────────────────
+    { patterns: [/\b(logout|log out|sign out)\b/i],
+      handler: () => { setTimeout(logout, 500); return { reply: `Logging you out...`, action:'none', params:'' }; } },
+  ],
+
+  // Match command to best rule
+  match(cmd) {
+    const lower = cmd.toLowerCase().trim();
+    for (const rule of this.rules) {
+      for (const pat of rule.patterns) {
+        if (pat.test(lower) || pat.test(cmd)) {
+          return rule.handler(cmd);
+        }
+      }
+    }
+    // Fallback: fuzzy page nav — if user just says a page name
+    const pageAliases = {
+      dashboard:['dashboard','dash','home','main','overview'],
+      orders:['orders','order','billing'],
+      customers:['customers','customer','client','clients','user','users'],
+      products:['products','product','items','item','catalogue','catalog','inventory'],
+      milk:['milk','dairy','milkman'],
+      udhar:['udhar','credit','khata','due','dues','ledger'],
+      categories:['categories','category','cat'],
+      subcategories:['subcategories','subcategory','subcat'],
+      banners:['banners','banner','slides','ads'],
+      settings:['settings','setting','config','preferences'],
+      scanner:['scanner','scan','barcode'],
+    };
+    for (const [page, aliases] of Object.entries(pageAliases)) {
+      if (aliases.some(a => lower.includes(a))) {
+        return { reply: `Opening ${page}!`, action:'navigate', params:page };
+      }
+    }
+    return null;
+  }
+};
+
+function _vaCountOrdersByStatus(status) {
+  // Try to read from DOM if orders page is loaded
+  try {
+    const rows = document.querySelectorAll('#ordersTable tbody tr, .order-row');
+    if (rows.length) {
+      let count = 0;
+      rows.forEach(r => { if(r.textContent.toLowerCase().includes(status)) count++; });
+      return count;
+    }
+  } catch {}
+  return null;
+}
+
+function sendVoiceCommand(cmdOverride) {
   const inp = document.getElementById('vaInput');
   const cmd = (cmdOverride || inp?.value || '').trim();
   if (!cmd) return;
   if (inp) inp.value = '';
 
   vaAddMsg('user', cmd);
-  vaSetStatus('🤔 Thinking...');
+  vaSetStatus('⚡ Processing...');
 
-  // Build system prompt
-  const systemPrompt = `You are an AI admin assistant for BSC Store admin panel. You control the panel by responding with JSON actions.
+  // Small artificial delay so it feels responsive, not instant
+  setTimeout(() => {
+    const result = VA_NLP.match(cmd);
 
-Admin context: ${vaGetAdminContext()}
-
-When the user gives a command, respond in this exact JSON format:
-{
-  "reply": "Short friendly message to show the user (1-2 sentences)",
-  "action": "navigate|openAddProduct|openAddCategory|openAddBanner|filterOrders|searchProducts|scrollTop|refresh|none",
-  "params": "parameter for action if needed (e.g. page name for navigate, status for filterOrders, query for searchProducts)"
-}
-
-Action guide:
-- navigate: goes to a page. params = one of: dashboard, customers, orders, milk, udhar, products, scanner, categories, subcategories, banners, settings
-- openAddProduct: opens the add product modal
-- openAddCategory: opens the add category modal  
-- openAddBanner: opens the add banner modal
-- filterOrders: filters order list. params = pending|accepted|packed|delivered|cancelled
-- searchProducts: searches product list. params = search term
-- scrollTop: scrolls page to top
-- refresh: reloads data from server
-- none: just reply without any action
-
-Examples:
-User: "go to orders" → {"reply":"Heading to Orders now!","action":"navigate","params":"orders"}
-User: "show me pending orders" → {"reply":"Showing pending orders!","action":"filterOrders","params":"pending"}
-User: "add a new product" → {"reply":"Opening the add product form for you!","action":"openAddProduct","params":""}
-User: "search for milk" → {"reply":"Searching for milk in products!","action":"searchProducts","params":"milk"}
-User: "how many products?" → {"reply":"You have ${allProducts.length} products across ${allCategories.length} categories.","action":"none","params":""}
-
-Always respond with valid JSON only, no markdown.`;
-
-  try {
-    const messages = [
-      ..._vaConversation.slice(-6).filter(m=>m.role==='user'||m.role==='assistant'),
-      { role: 'user', content: cmd }
-    ];
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        system: systemPrompt,
-        messages
-      })
-    });
-
-    const data = await response.json();
-    const rawText = data.content?.find(b => b.type === 'text')?.text || '{}';
-
-    let parsed;
-    try {
-      const clean = rawText.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(clean);
-    } catch {
-      parsed = { reply: rawText.slice(0, 200), action: 'none', params: '' };
+    let reply, action, params;
+    if (result) {
+      reply = result.reply;
+      action = result.action;
+      params = result.params;
+    } else {
+      // Unknown command — give helpful nudge
+      const suggestions = ['Go to orders', 'Show pending orders', 'Search products', 'Add product', 'Low stock', 'Go to settings'];
+      const random = suggestions[Math.floor(Math.random() * suggestions.length)];
+      reply = `I didn't quite get that. Try saying something like "${random}" — or say "help" to see what I can do!`;
+      action = 'none'; params = '';
     }
 
-    const reply = parsed.reply || 'Done!';
     vaAddMsg('ai', reply);
 
     // Execute action
-    if (parsed.action && parsed.action !== 'none' && VA_ACTIONS[parsed.action]) {
+    if (action && action !== 'none' && VA_ACTIONS[action]) {
       try {
-        const result = VA_ACTIONS[parsed.action](parsed.params || '');
-        if (result) vaSetStatus(result);
-        else vaSetStatus('');
-      } catch(e) {
-        vaSetStatus('⚠️ Could not execute action');
-      }
-    } else {
-      vaSetStatus('');
+        VA_ACTIONS[action](params || '');
+      } catch(e) {}
     }
+    vaSetStatus('');
 
-    // Speak reply if TTS available
+    // Speak reply using browser TTS (no API needed)
     if ('speechSynthesis' in window && _vaOpen) {
-      const utter = new SpeechSynthesisUtterance(reply.replace(/[✅❌⚠️🎙️]/g,''));
-      utter.rate = 1.05;
+      const clean = reply.replace(/[✅❌⚠️🎙️👋]/g,'').replace(/\s+/g,' ').trim();
+      const utter = new SpeechSynthesisUtterance(clean);
+      utter.rate = 1.05; utter.pitch = 1.0;
+      // Prefer a natural voice
+      const voices = window.speechSynthesis.getVoices();
+      const pref = voices.find(v => /Google|Natural|Enhanced|Samantha|Karen|Daniel/i.test(v.name));
+      if (pref) utter.voice = pref;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utter);
     }
 
-  } catch(e) {
-    vaAddMsg('system', '⚠️ Could not connect to AI. Check your connection.');
-    vaSetStatus('');
-  }
+  }, 180);
 }
 
 // Speech recognition (mic)
