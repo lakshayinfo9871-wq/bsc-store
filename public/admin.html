@@ -3185,15 +3185,20 @@ MILK TODAY: ${ctx.milkLine}
 UDHAR BALANCES: ${ctx.udharLine}
 PENDING ORDERS: ${ctx.orderLine}
 
+MILK PRICES (always use these exact prices):
+- Full Cream / full cream / FC / fulcream = Rs.70/L
+- Cow Milk / cow / gaye ka doodh = Rs.60/L
+- Toned / toned milk = Rs.58/L
+
 Return ONLY raw JSON for actions (no markdown, no explanation). Plain text for questions.
 
 ACTIONS:
-Mark milk one customer: {"action":"mark_milk","customerHint":"A-20","qty":1}
-Mark milk custom qty: {"action":"mark_milk","customerHint":"A-17","qty":0.5}
+Mark milk one customer default: {"action":"mark_milk","customerHint":"A-20","qty":1}
+Mark milk specific types: {"action":"mark_milk","customerHint":"A-17","items":[{"type":"Cow Milk","qty":0.5,"price":60},{"type":"Full Cream","qty":1,"price":70}]}
 Mark ALL milk default: {"action":"mark_all_milk"}
-Mark all EXCEPT one not delivered: {"action":"mark_all_except","skipHint":"A-20"}
-Mark all + one with custom qty: {"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
-Remove milk entry: {"action":"remove_milk","customerHint":"A-17"}
+Mark all EXCEPT multiple not delivered: {"action":"mark_all_except","skipHints":["A-20","A-38"]}
+Mark all + some with custom qty: {"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
+Remove/undo milk entry: {"action":"remove_milk","customerHint":"A-17"}
 Pause milk: {"action":"pause_milk","customerHint":"Ramesh"}
 Resume milk: {"action":"resume_milk","customerHint":"Ramesh"}
 Add udhar: {"action":"add_udhar","customerHint":"A-38","amount":300,"note":"butter"}
@@ -3210,19 +3215,27 @@ Pending orders: {"action":"pending_orders"}
 Today summary: {"action":"today_summary"}
 
 EXAMPLES (learn these patterns):
-"ajj A-20 ka doodh nhi gya" -> {"action":"mark_all_except","skipHint":"A-20"}
-"sabka milk done bas A-20 ka nhi gya" -> {"action":"mark_all_except","skipHint":"A-20"}
+"ajj A-38 ka doodh nhi gya" -> {"action":"mark_all_except","skipHints":["A-38"]}
+"sabka milk done bas A-20 aur A-38 ka nhi gya" -> {"action":"mark_all_except","skipHints":["A-20","A-38"]}
+"sabka doodh gya bas A-17 aur A-38 ka nhi gya" -> {"action":"mark_all_except","skipHints":["A-17","A-38"]}
 "sabka doodh gya lekin A-17 ka 0.5L" -> {"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
-"A-17 ka aaj 0.5L gya" -> {"action":"mark_milk","customerHint":"A-17","qty":0.5}
+"A-17 ka aaj aadha liter cow aur 1L full cream gya" -> {"action":"mark_milk","customerHint":"A-17","items":[{"type":"Cow Milk","qty":0.5,"price":60},{"type":"Full Cream","qty":1,"price":70}]}
+"A-17 ka 0.5L gya" -> {"action":"mark_milk","customerHint":"A-17","qty":0.5}
 "sabka milk done" -> {"action":"mark_all_milk"}
+"A-17 ka milk hatao / remove karo" -> {"action":"remove_milk","customerHint":"A-17"}
 "kiska udhar bacha hai" -> {"action":"show_all_udhar"}
-"ajj kitne rs ka doodh deliver hua" -> {"action":"milk_status"}
 "lakshay ka profile open" -> {"action":"open_customer","customerHint":"Lakshay"}
+"open lakshay" -> {"action":"open_customer","customerHint":"Lakshay"}
 "B-12 kholo" -> {"action":"open_customer","customerHint":"B-12"}
 "ramesh ne 500 diya" -> {"action":"record_payment","customerHint":"Ramesh","amount":500}
 "A-38 butter 300 udhar" -> {"action":"add_udhar","customerHint":"A-38","amount":300,"note":"butter"}
 
-RULES: customerHint=person name or address. note=item/product. qty=litres for milk.`;
+RULES:
+- skipHints is ALWAYS an array even for one customer
+- customerHint = person name or block-villa address
+- For milk with specific types, use items[] with correct prices from MILK PRICES above
+- aadha=0.5L, ek=1L, dedh=1.5L, do=2L
+- note = item/product name for udhar`;
 
   try {
     const proxyRes = await fetch('/api/admin/ai-chat', {
@@ -3255,16 +3268,27 @@ async function vaExecuteAction(act) {
   const today = new Date().toISOString().slice(0, 10);
   const hint  = (act.customerHint || act.skipHint || '').trim();
 
-  // MARK MILK SINGLE
+  // MARK MILK SINGLE — supports items[] for specific milk types
   if (act.action === 'mark_milk') {
     if (!milkCustomers.length) await loadMilkData();
     const c = vaFindCustomer(act.customerHint, milkCustomers);
     if (!c) return 'Customer "' + act.customerHint + '" not found in milk list.';
-    const qty = parseFloat(act.qty) || c.defaultQty || 1;
+    let items, qty, replyDesc;
+    if (act.items && act.items.length) {
+      // Specific milk types with prices provided by AI
+      items = act.items;
+      qty = items.reduce((s,i) => s + parseFloat(i.qty||0), 0);
+      const totalAmt = items.reduce((s,i) => s + parseFloat(i.qty||0)*parseFloat(i.price||0), 0);
+      replyDesc = items.map(i => i.qty+'L '+i.type+' @Rs.'+i.price).join(' + ') + ' = Rs.' + totalAmt.toFixed(0);
+    } else {
+      qty = parseFloat(act.qty) || c.defaultQty || 1;
+      items = c.defaultItems || [];
+      replyDesc = qty + 'L';
+    }
     await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
-      body: JSON.stringify({ customerId:c.id, date:today, qty, items:c.defaultItems||[] }) });
+      body: JSON.stringify({ customerId:c.id, date:today, qty, items }) });
     await loadMilkData(); if(currentPage==='milk') renderMilkPage();
-    return 'Done! ' + c.name + ' — ' + qty + 'L marked.';
+    return 'Done! ' + c.name + ' — ' + replyDesc + ' marked.';
   }
 
   // MARK ALL MILK (with optional exceptions)
@@ -3289,14 +3313,17 @@ async function vaExecuteAction(act) {
     return msg;
   }
 
-  // MARK ALL EXCEPT ONE (not delivered)
+  // MARK ALL EXCEPT SOME (not delivered) - supports single skipHint or array skipHints
   if (act.action === 'mark_all_except') {
     if (!milkCustomers.length) await loadMilkData();
-    const skip = vaFindCustomer(act.skipHint, milkCustomers);
+    // Support both old skipHint (string) and new skipHints (array)
+    const rawSkips = act.skipHints || (act.skipHint ? [act.skipHint] : []);
+    const skipCustomers = rawSkips.map(h => vaFindCustomer(h, milkCustomers)).filter(Boolean);
+    const skipIds = new Set(skipCustomers.map(c => c.id));
     const active = milkCustomers.filter(c => c.active);
     let marked = 0;
     for (const c of active) {
-      if (skip && c.id === skip.id) continue;
+      if (skipIds.has(c.id)) continue;
       const already = milkLogs.find(l => l.customerId === c.id && l.date === today);
       if (already) continue;
       await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
@@ -3304,16 +3331,30 @@ async function vaExecuteAction(act) {
       marked++;
     }
     await loadMilkData(); if(currentPage==='milk') renderMilkPage();
-    return 'Done! Marked ' + marked + ' customers.' + (skip ? ' Skipped: ' + skip.name + '.' : '');
+    const skippedNames = skipCustomers.map(c => c.name).join(', ');
+    return 'Done! Marked ' + marked + ' customers.' + (skipCustomers.length ? ' Skipped: ' + skippedNames + '.' : '');
   }
 
-  // REMOVE MILK
+  // REMOVE MILK - tries DELETE by log ID first, falls back to qty:0
   if (act.action === 'remove_milk') {
     if (!milkCustomers.length) await loadMilkData();
     const c = vaFindCustomer(hint, milkCustomers);
     if (!c) return 'Customer "' + hint + '" not found.';
-    await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
-      body: JSON.stringify({ customerId:c.id, date:today, qty:0 }) });
+    // Find the log entry for today
+    const logEntry = milkLogs.find(l => l.customerId === c.id && l.date === today);
+    if (!logEntry) return c.name + ' has no milk entry for today.';
+    // Try DELETE by log ID if available
+    if (logEntry.id) {
+      const dr = await fetch('/api/admin/milk/logs/' + logEntry.id, { method:'DELETE', headers:ah() });
+      if (!dr.ok) {
+        // Fallback: set qty to 0 to effectively remove
+        await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
+          body: JSON.stringify({ customerId:c.id, date:today, qty:0 }) });
+      }
+    } else {
+      await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
+        body: JSON.stringify({ customerId:c.id, date:today, qty:0 }) });
+    }
     await loadMilkData(); if(currentPage==='milk') renderMilkPage();
     return "Removed today's milk for " + c.name + '.';
   }
@@ -3424,24 +3465,19 @@ async function vaExecuteAction(act) {
     if (!c) return 'Customer "' + hint + '" not found.';
     const cid = c.customerId||c.id;
     try {
+      // Navigate to customers page and wait for full render
       if (currentPage !== 'customers') {
         goTo('customers');
-        await new Promise(r => setTimeout(r, 500));
+        // Wait for renderCustomers (async) to finish building the DOM
+        await new Promise(r => setTimeout(r, 800));
       }
-      if (typeof openCustomerProfile === 'function') {
-        await openCustomerProfile(cid);
-        return 'Opened ' + c.name + "'s profile!";
-      } else if (typeof showCustomerDetails === 'function') {
-        await showCustomerDetails(cid);
-        return 'Opened ' + c.name + "'s profile!";
-      } else {
-        // Try clicking the customer card
-        const cards = document.querySelectorAll('[data-customer-id]');
-        for (const card of cards) {
-          if (card.dataset.customerId == cid) { card.click(); return 'Opened ' + c.name + "!"; }
-        }
-        return 'Navigated to customers. Find ' + c.name + ' manually.';
+      // Ensure customer list is rendered (customerProfile div must exist)
+      if (!document.getElementById('customerProfile')) {
+        await renderCustomers();
+        await new Promise(r => setTimeout(r, 400));
       }
+      await openCustomerProfile(cid);
+      return 'Opened ' + c.name + "'s profile!";
     } catch(e) {
       return 'Error opening profile: ' + e.message;
     }
