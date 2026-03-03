@@ -1247,7 +1247,6 @@ async function saveUdharEntry(customerId) {
   if (!amount) return toast('Enter items with prices or a manual total');
   await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId,type:'credit',amount,note:document.getElementById('ud_note')?.value.trim()||(items.length?items.map(i=>i.name).join(', '):''),date:document.getElementById('ud_date')?.value})});
   // Also save to legacy udhar for customer portal compat
-  await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId,items,amount,date:document.getElementById('ud_date')?.value,note:document.getElementById('ud_note')?.value.trim()||''})});
   toast('Udhar ₹'+amount+' saved!');
   await refreshProfile(customerId);
 }
