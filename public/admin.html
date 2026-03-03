@@ -3126,11 +3126,30 @@ function vaFindMilkCustomer(nameHint) {
   if (!nameHint) return null;
   const q = nameHint.toLowerCase().trim();
   const words = q.split(/\s+/).filter(Boolean);
+  // Also match by block+villa combo like "A-38" or "A 38"
   return milkCustomers.find(x =>
     x.name?.toLowerCase() === q ||
     x.name?.toLowerCase().startsWith(q) ||
     words.every(w => x.name?.toLowerCase().includes(w)) ||
-    words.some(w => w.length > 2 && x.name?.toLowerCase().includes(w))
+    words.some(w => w.length > 2 && x.name?.toLowerCase().includes(w)) ||
+    (x.block && x.villa && q.replace(/[\s\-]/g,'') === (x.block+x.villa).toLowerCase().replace(/[\s\-]/g,'')) ||
+    (x.address && x.address.toLowerCase().includes(q))
+  ) || null;
+}
+
+// ── Also enhance allCustomers search to match by block+villa ─────────────────
+function vaFindCustomerByAddressOrName(hint) {
+  if (!hint) return null;
+  const q = hint.toLowerCase().trim();
+  const qFlat = q.replace(/[\s\-]/g,'');
+  const words = q.split(/\s+/).filter(Boolean);
+  return allCustomers.find(x =>
+    x.name?.toLowerCase() === q ||
+    x.name?.toLowerCase().startsWith(q) ||
+    words.every(w => x.name?.toLowerCase().includes(w)) ||
+    words.some(w => w.length > 2 && x.name?.toLowerCase().includes(w)) ||
+    (x.block && x.villa && qFlat === (x.block+x.villa).toLowerCase().replace(/[\s\-]/g,'')) ||
+    (x.address && x.address.toLowerCase().includes(q))
   ) || null;
 }
 
@@ -3350,9 +3369,73 @@ async function vaMilkPayment(nameHint, amount) {
   return `✅ Recorded ₹${amount} milk payment from ${c.name}!`;
 }
 
+// REMOVE TODAY'S MILK ENTRY for a customer
+async function vaRemoveMilkToday(nameHint) {
+  if (!milkCustomers.length) await loadMilkData();
+  const c = vaFindMilkCustomer(nameHint);
+  if (!c) return `❌ Couldn't find milk customer "${nameHint}". Check the name or account code (e.g. A-38).`;
+  const today = vaToday();
+  const existing = milkLogs.find(l => l.customerId===c.id && l.date===today);
+  if (!existing) return `ℹ️ ${c.name}'s milk was not marked today — nothing to remove.`;
+  try {
+    // Set qty=0 to remove the entry (same as the ✕ button in Edit Log)
+    await fetch('/api/admin/milk/logs', {method:'POST', headers:ah(), body:JSON.stringify({customerId:c.id, date:today, qty:0, price:milkPrice})});
+    await loadMilkData(); renderMilkPage();
+    return `✅ Removed today's milk entry for ${c.name}.`;
+  } catch(e) { return `❌ Failed to remove milk entry for ${c.name}.`; }
+}
+
+// DELETE LAST UDHAR ENTRY for a customer
+async function vaDeleteLastUdhar(nameHint) {
+  if (!allCustomers.length) await loadCustomersData();
+  const c = vaFindCustomerByAddressOrName(nameHint) || vaFindCustomer(nameHint);
+  if (!c) return `❌ Customer "${nameHint}" not found.`;
+  const cid = c.customerId || c.id;
+  // Fetch full profile to get ledger entries
+  const r = await fetch('/api/admin/customers/'+cid, {headers:ah()});
+  if (!r.ok) return `❌ Could not fetch customer data.`;
+  const data = await r.json();
+  // Find the most recent credit entry (udhar)
+  const ledgerCredits = (data.ledgerEntries||[]).filter(e=>e.type==='credit').sort((a,b)=>b.id-a.id);
+  const oldCredits = (data.udharEntries||[]).sort((a,b)=>b.id-a.id);
+  if (!ledgerCredits.length && !oldCredits.length) return `ℹ️ No udhar entries found for ${c.name}.`;
+  if (ledgerCredits.length) {
+    const entry = ledgerCredits[0];
+    return new Promise(resolve => {
+      vaConfirm(`Delete last udhar entry for ${c.name}? — ₹${entry.amount} (${entry.note||'no note'}) on ${fmtDate(entry.date)}`, async () => {
+        await fetch('/api/admin/ledger/'+entry.id,{method:'DELETE',headers:ah()});
+        await loadCustomersData();
+        if (currentPage==='customers') renderCustomersPage();
+        else if (currentPage==='udhar') await renderUdhar();
+        resolve(`✅ Deleted udhar entry ₹${entry.amount} for ${c.name}.`);
+      });
+      resolve(`🔔 Confirm deletion above ↑`);
+    });
+  } else {
+    const entry = oldCredits[0];
+    return new Promise(resolve => {
+      vaConfirm(`Delete last udhar entry for ${c.name}? — ₹${entry.amount} on ${fmtDate(entry.date)}`, async () => {
+        await fetch('/api/admin/udhar/'+entry.id,{method:'DELETE',headers:ah()});
+        await loadCustomersData();
+        if (currentPage==='customers') renderCustomersPage();
+        else if (currentPage==='udhar') await renderUdhar();
+        resolve(`✅ Deleted udhar entry ₹${entry.amount} for ${c.name}.`);
+      });
+      resolve(`🔔 Confirm deletion above ↑`);
+    });
+  }
+}
+
 // ── MAIN NLP MATCHER ──────────────────────────────────────────────────────────
 async function vaProcessCommand(cmd) {
   const t = cmd.toLowerCase().trim();
+
+  // ── REMOVE / DELETE TODAY'S MILK ─────────────────────────────────────────────
+  if (/\b(remove|delete|cancel|undo|hatao|mita|wapas).{0,30}(milk|doodh)\b|\b(milk|doodh).{0,20}(remove|delete|cancel|undo|nahi|mat)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'remove','delete','cancel','undo','hatao','mita','wapas','milk','doodh','today','aaj');
+    if (name) return await vaRemoveMilkToday(name);
+    return `Say who — e.g. "remove milk for A-38" or "delete milk for Ramesh"`;
+  }
 
   // ── MARK MILK ───────────────────────────────────────────────────────────────
   if (/\bmark.{0,30}(all|everyone|sabhi|sab)\b.*milk|\bmilk.{0,15}(all|everyone|sabhi|bulk|today)\b/i.test(t) ||
@@ -3425,6 +3508,13 @@ async function vaProcessCommand(cmd) {
     return await vaAddUdhar(name, amount, '');
   }
 
+  // ── DELETE UDHAR ENTRY ────────────────────────────────────────────────────────
+  if (/\b(delete|remove|undo|hatao|mita|cancel).{0,30}(udhar|credit|udhaar|entry)\b|\b(udhar|udhaar|credit).{0,20}(delete|remove|undo|hatao)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'delete','remove','undo','hatao','mita','cancel','udhar','udhaar','credit','entry','last');
+    if (name) return await vaDeleteLastUdhar(name);
+    return `Say whose udhar to delete — e.g. "delete last udhar for Ramesh" or "remove udhar A-38"`;
+  }
+
   // ── PAYMENT RECEIVED ─────────────────────────────────────────────────────────
   if (/\b(paid|payment|received|mila|aaya|collected)\b/i.test(t) &&
       /\b(\d+|rupee|rs|₹)\b/i.test(t)) {
@@ -3495,7 +3585,7 @@ async function vaProcessCommand(cmd) {
     return `${h<12?'Good morning':h<17?'Good afternoon':'Good evening'}! 👋 I can mark milk, accept orders, record payments, add udhar — just say what you need!`;
   }
   if (/\bhelp\b/i.test(t))
-    return `I can do real actions:\n• "Mark milk for Ramesh" → marks delivered\n• "Mark all milk today" → bulk mark\n• "Accept order #5" or "Deliver Priya's order"\n• "Ramesh paid 200" → records payment\n• "Add udhar 150 for Suresh"\n• "Milk status today"\n• "Pending orders"\n• "Open Ramesh profile"`;
+    return `I can do real actions:\n• "Mark milk for Ramesh" → marks delivered\n• "Mark all milk today" → bulk mark\n• "Remove milk for A-38" → removes today's entry\n• "Accept order #5" or "Deliver Priya's order"\n• "Ramesh paid 200" → records payment\n• "Add udhar 150 for Suresh"\n• "Delete last udhar for Ramesh" → removes latest entry\n• "Milk status today"\n• "Pending orders"\n• "Open Ramesh profile"`;
 
   return null; // unknown
 }
