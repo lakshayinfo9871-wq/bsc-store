@@ -3096,15 +3096,16 @@ function vaGetAdminContext() {
 
 // ════════════════════════════════════════════════════════════════════════════
 // AI ASSISTANT v4 — 100% Claude-powered
-// Understands Hinglish, typos, natural language, voice, anything
+// No regex. No hardcoded patterns. Claude understands everything.
+// Hinglish, typos, voice, natural language — all handled by Claude AI.
 // ════════════════════════════════════════════════════════════════════════════
 
 let _vaOpen = false;
-let _vaConversation = []; // full chat history for multi-turn context
+let _vaConversation = [];
 let _vaRecognition = null;
 let _vaListening = false;
 
-// ── UI helpers ───────────────────────────────────────────────────────────────
+// ── UI ────────────────────────────────────────────────────────────────────────
 function toggleVoicePanel() {
   _vaOpen = !_vaOpen;
   document.getElementById('voicePanel').classList.toggle('open', _vaOpen);
@@ -3113,7 +3114,7 @@ function toggleVoicePanel() {
 function vaAddMsg(role, text) {
   const el = document.getElementById('vaMessages');
   const div = document.createElement('div');
-  div.className = `vp-msg ${role}`;
+  div.className = 'vp-msg ' + role;
   div.textContent = text;
   el.appendChild(div);
   vaScrollBottom();
@@ -3122,330 +3123,402 @@ function vaAddMsg(role, text) {
 function vaScrollBottom() { const el = document.getElementById('vaMessages'); if (el) el.scrollTop = el.scrollHeight; }
 function vaSetStatus(msg) { const el = document.getElementById('vaStatus'); if (el) el.textContent = msg; }
 
-// ── Collect live store context to give Claude full situational awareness ──────
+// ── Build live store context for Claude ──────────────────────────────────────
 async function vaGetLiveContext() {
   const today = new Date().toISOString().slice(0, 10);
+  let milkLine = '', custList = '', orderLine = '', udharLine = '';
 
-  // Milk status
-  let milkStatus = '';
   try {
     if (!milkCustomers.length) await loadMilkData();
     const active = milkCustomers.filter(c => c.active);
-    const marked = active.filter(c => milkLogs.find(l => l.customerId === c.id && l.date === today));
-    const unmarked = active.filter(c => !milkLogs.find(l => l.customerId === c.id && l.date === today));
-    milkStatus = `Milk today: ${marked.length}/${active.length} delivered. Pending: ${unmarked.slice(0,8).map(c => c.name + (c.block && c.villa ? ' (' + c.block + '-' + c.villa + ')' : '')).join(', ')}${unmarked.length > 8 ? ` +${unmarked.length - 8} more` : ''}`;
-  } catch(e) { milkStatus = 'Milk data unavailable'; }
+    const marked  = active.filter(c => milkLogs.find(l => l.customerId === c.id && l.date === today));
+    const pending = active.filter(c => !milkLogs.find(l => l.customerId === c.id && l.date === today));
+    milkLine = marked.length + '/' + active.length + ' delivered. Pending: ' +
+      pending.slice(0,8).map(c => c.name + (c.block&&c.villa ? ' ('+c.block+'-'+c.villa+')' : '')).join(', ') +
+      (pending.length > 8 ? ' +' + (pending.length-8) + ' more' : '');
+  } catch(e) { milkLine = 'unavailable'; }
 
-  // Customers + udhar
-  let custInfo = '';
   try {
     if (!allCustomers.length) await loadCustomersData();
-    const overdue = udharSummaries.filter(s => (s.balance || 0) > 0);
-    custInfo = `${allCustomers.length} customers. ${overdue.length} with outstanding udhar. Top due: ${overdue.slice(0,5).map(s => s.customer.name + ' ₹' + s.balance.toFixed(0)).join(', ')}`;
-  } catch(e) { custInfo = 'Customer data unavailable'; }
-
-  // Customers list for name matching
-  let custList = '';
-  try {
-    custList = allCustomers.slice(0, 60).map(c =>
-      `${c.name} (id:${c.customerId||c.id}${c.block && c.villa ? ', addr:' + c.block + '-' + c.villa : ''}${c.phone ? ', ph:' + c.phone : ''})`
+    custList = allCustomers.map(c =>
+      c.name + ' [id:' + (c.customerId||c.id) + ']' +
+      (c.block && c.villa ? ' [addr:' + c.block + '-' + c.villa + ']' : '') +
+      (c.phone ? ' [ph:' + c.phone + ']' : '')
     ).join('\n');
-  } catch(e) { custList = ''; }
+  } catch(e) { custList = 'unavailable'; }
 
-  // Orders
-  let orderInfo = '';
   try {
-    const pending = (ordersData || []).filter(o => o.status === 'pending');
-    const accepted = (ordersData || []).filter(o => o.status === 'accepted');
-    orderInfo = `${pending.length} pending orders, ${accepted.length} accepted. Recent: ${pending.slice(0,4).map(o => '#' + o.id + ' ' + o.customerName + ' ₹' + o.total).join(', ')}`;
-  } catch(e) { orderInfo = 'Order data unavailable'; }
+    const overdue = (udharSummaries||[]).filter(s => (s.balance||0) > 0);
+    udharLine = overdue.length + ' customers with balance due. Top: ' +
+      overdue.slice(0,5).map(s => s.customer.name + ' Rs.' + Math.round(s.balance)).join(', ');
+  } catch(e) { udharLine = 'unavailable'; }
 
-  return { today, milkStatus, custInfo, custList, orderInfo };
+  try {
+    const pending = (ordersData||[]).filter(o => o.status === 'pending');
+    orderLine = pending.length + ' pending orders: ' +
+      pending.slice(0,5).map(o => '#'+o.id+' '+o.customerName+' Rs.'+o.total).join(', ');
+  } catch(e) { orderLine = 'unavailable'; }
+
+  return { today, milkLine, custList, udharLine, orderLine };
 }
 
-// ── The main Claude API call ──────────────────────────────────────────────────
+// ── Call Claude API ───────────────────────────────────────────────────────────
 async function vaAskClaude(userMessage) {
   const ctx = await vaGetLiveContext();
 
-  const systemPrompt = `You are an AI assistant for BSC Store — a small grocery/dairy store admin panel.
-The admin talks to you in English, Hindi, Hinglish, or a mix. Understand typos, short forms, and casual language.
+  const systemPrompt = `You are the AI assistant for BSC Store admin panel. The admin speaks to you in English, Hindi, Hinglish, or mixed — including typos and short forms. You must understand everything.
 
 TODAY: ${ctx.today}
 CURRENT PAGE: ${currentPage}
-PRODUCTS: ${allProducts.length} items in ${allCategories.length} categories
+TOTAL PRODUCTS: ${allProducts.length}
+TOTAL CUSTOMERS: ${allCustomers.length}
 
-CUSTOMERS:
+FULL CUSTOMER LIST (use this to match names/addresses exactly):
 ${ctx.custList}
 
-STORE STATUS:
-- ${ctx.milkStatus}
-- ${ctx.custInfo}
-- ${ctx.orderInfo}
+MILK STATUS TODAY: ${ctx.milkLine}
+UDHAR SUMMARY: ${ctx.udharLine}
+ORDERS: ${ctx.orderLine}
 
-YOUR JOB:
-You understand what the admin wants and either:
-1. Do the action by returning a special JSON command (see below)
-2. Answer their question conversationally
+YOUR TASK:
+Read what the admin says. Figure out the intent. Return ONE of:
+A) A JSON action object (for store operations)
+B) A plain text reply (for questions/conversation)
 
-ACTIONS YOU CAN TRIGGER (return ONLY valid JSON, no extra text, when action needed):
-{"action":"mark_milk","customerHint":"name or address like A-38 or Ramesh"}
+JSON ACTIONS — return ONLY the raw JSON, no markdown, no extra words:
+
+Mark milk delivered:
+{"action":"mark_milk","customerHint":"name or address"}
+
+Mark all milk:
 {"action":"mark_all_milk"}
+
+Remove today milk entry:
 {"action":"remove_milk","customerHint":"..."}
+
+Pause milk:
 {"action":"pause_milk","customerHint":"..."}
+
+Resume milk:
 {"action":"resume_milk","customerHint":"..."}
-{"action":"add_udhar","customerHint":"...","amount":500,"note":"butter"}
+
+Add udhar (credit):
+{"action":"add_udhar","customerHint":"...","amount":500,"note":"item name like butter or maida"}
+
+Record payment received:
 {"action":"record_payment","customerHint":"...","amount":200,"method":"cash"}
+
+Check customer balance:
 {"action":"check_balance","customerHint":"..."}
+
+Open customer profile:
 {"action":"open_customer","customerHint":"..."}
-{"action":"update_order","orderHint":"#5 or customer name","status":"accepted|delivered|packed|cancelled"}
-{"action":"navigate","page":"milk|orders|customers|products|udhar|dashboard|settings|scanner"}
+
+Update order status:
+{"action":"update_order","orderHint":"#5 or customer name","status":"accepted"}
+(status options: accepted, delivered, packed, cancelled)
+
+Navigate to page:
+{"action":"navigate","page":"milk"}
+(pages: milk, orders, customers, products, udhar, dashboard, settings, scanner)
+
+Show milk status:
 {"action":"milk_status"}
+
+Show pending orders:
 {"action":"pending_orders"}
+
+Today summary:
 {"action":"today_summary"}
 
-EXAMPLES of what the admin might say and what you do:
-- "ramesh ka udhar 200 daal do butter" → {"action":"add_udhar","customerHint":"ramesh","amount":200,"note":"butter"}
-- "A38 ka milk mark karo" → {"action":"mark_milk","customerHint":"A-38"}
-- "lakshay ne 500 diya" → {"action":"record_payment","customerHint":"lakshay","amount":500,"method":"cash"}
-- "sabka milk done" → {"action":"mark_all_milk"}
-- "kitna baaki hai priya ka" → {"action":"check_balance","customerHint":"priya"}
-- "order 5 deliver ho gaya" → {"action":"update_order","orderHint":"#5","status":"delivered"}
-- "add 500 rs of maida under A-38" → {"action":"add_udhar","customerHint":"A-38","amount":500,"note":"maida"}
-- "aaj kitne orders hai" → {"action":"pending_orders"}
-- "milk page pe jao" → {"action":"navigate","page":"milk"}
-- "how many customers do we have" → answer conversationally, no JSON
+CUSTOMER MATCHING RULES:
+- The customerHint should be EXACTLY what the admin said for the customer (name or address)
+- From the FULL CUSTOMER LIST above, pick the best match
+- Address format: A-38, B-12, C-5 (letter-hyphen-number)
+- If admin says "A38" match it to "A-38", "a 38" also means "A-38"
+- Put the MATCHED customer name or address in customerHint, not the raw text
 
-RULES:
-- For actions: return ONLY the JSON object, nothing else
-- For questions/conversation: reply naturally in 1-3 short sentences, same language as admin
-- Never make up customer names or amounts — use exactly what admin said
-- If unclear, ask one short clarifying question`;
+EXAMPLES:
+"A-38 mai udhar add kro 300 rs ka for butter" → {"action":"add_udhar","customerHint":"A-38","amount":300,"note":"butter"}
+"ramesh ko 500 ka udhar daal do maida" → {"action":"add_udhar","customerHint":"Ramesh","amount":500,"note":"maida"}
+"lakshay ne 200 diya" → {"action":"record_payment","customerHint":"Lakshay","amount":200,"method":"cash"}
+"A38 ka milk mark karo" → {"action":"mark_milk","customerHint":"A-38"}
+"sab ka milk done hai" → {"action":"mark_all_milk"}
+"b-12 open karo" → {"action":"open_customer","customerHint":"B-12"}
+"b-20 open" → {"action":"open_customer","customerHint":"B-20"}
+"order 5 deliver ho gaya" → {"action":"update_order","orderHint":"#5","status":"delivered"}
+"kitne pending orders hain" → {"action":"pending_orders"}
+"milk page pe jao" → {"action":"navigate","page":"milk"}
+"priya ka kitna baaki hai" → {"action":"check_balance","customerHint":"Priya"}
+"how many customers" → 'We have ${allCustomers.length} customers total.'
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 200,
-      system: systemPrompt,
-      messages: [
-        ..._vaConversation.slice(-10),
-        { role: 'user', content: userMessage }
-      ]
-    })
-  });
+CRITICAL: For add_udhar, the customerHint is the PERSON (A-38, Ramesh etc), NOT the item. The item goes in "note".`;
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    console.error('Claude API error:', err);
-    return { type: 'text', text: '⚠️ AI error. Check console.' };
-  }
-
-  const data = await response.json();
-  const text = (data.content?.[0]?.text || '').trim();
-
-  // Try to parse as action JSON
+  let result;
   try {
-    const json = JSON.parse(text);
-    if (json.action) return { type: 'action', ...json };
-  } catch(e) {}
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 150,
+        system: systemPrompt,
+        messages: [
+          ..._vaConversation.slice(-8),
+          { role: 'user', content: userMessage }
+        ]
+      })
+    });
 
-  // Also handle JSON buried in text (sometimes Claude adds a tiny preamble)
-  const jsonMatch = text.match(/\{[\s\S]*"action"[\s\S]*\}/);
-  if (jsonMatch) {
+    if (!response.ok) {
+      const err = await response.json().catch(()=>({}));
+      console.error('Claude API error:', response.status, err);
+      return { type: 'text', text: 'AI error ' + response.status + '. Check console.' };
+    }
+
+    const data = await response.json();
+    const text = (data.content?.[0]?.text || '').trim();
+    console.log('Claude raw response:', text);
+
+    // Try parse as JSON action
     try {
-      const json = JSON.parse(jsonMatch[0]);
-      if (json.action) return { type: 'action', ...json };
+      const json = JSON.parse(text);
+      if (json && json.action) return { type: 'action', ...json };
     } catch(e) {}
-  }
 
-  return { type: 'text', text };
+    // JSON buried in text
+    const m = text.match(/\{[^{}]*"action"[^{}]*\}/s);
+    if (m) {
+      try {
+        const json = JSON.parse(m[0]);
+        if (json && json.action) return { type: 'action', ...json };
+      } catch(e) {}
+    }
+
+    return { type: 'text', text };
+  } catch(e) {
+    console.error('VA fetch error:', e);
+    return { type: 'text', text: 'Network error: ' + e.message };
+  }
 }
 
-// ── Execute the action Claude decided on ─────────────────────────────────────
+// ── Find customer by name or address ─────────────────────────────────────────
+function vaFindCustomer(hint, pool) {
+  if (!hint || !hint.trim()) return null;
+  pool = pool || allCustomers;
+  const q = hint.toLowerCase().trim();
+  const qFlat = q.replace(/[\s\-_]/g, '');
+
+  // Exact name
+  let f = pool.find(x => x.name?.toLowerCase() === q);
+  if (f) return f;
+  // Block+villa exact (A-38 → a38)
+  f = pool.find(x => x.block && x.villa &&
+    qFlat === (String(x.block) + String(x.villa)).toLowerCase().replace(/[\s\-_]/g, ''));
+  if (f) return f;
+  // Name starts with
+  f = pool.find(x => x.name?.toLowerCase().startsWith(q));
+  if (f) return f;
+  // Address contains
+  f = pool.find(x => x.address?.toLowerCase().includes(q));
+  if (f) return f;
+  // All words in name
+  const words = q.split(/\s+/).filter(Boolean);
+  f = pool.find(x => words.length && words.every(w => x.name?.toLowerCase().includes(w)));
+  if (f) return f;
+  // Any word ≥3 chars in name
+  f = pool.find(x => words.some(w => w.length >= 3 && x.name?.toLowerCase().includes(w)));
+  if (f) return f;
+  return null;
+}
+
+// ── Execute the action Claude picked ─────────────────────────────────────────
 async function vaExecuteAction(act) {
-  const hint = act.customerHint || '';
-
-  // Customer finder — works with name, address (A-38), phone
-  function findCust(h) {
-    if (!h) return null;
-    const q = h.toLowerCase().trim();
-    const qFlat = q.replace(/[\s\-_]/g, '');
-    const pool = allCustomers;
-    return pool.find(x => x.name?.toLowerCase() === q)
-      || pool.find(x => x.block && x.villa && qFlat === (x.block + x.villa).toLowerCase().replace(/[\s\-_]/g, ''))
-      || pool.find(x => x.name?.toLowerCase().startsWith(q))
-      || pool.find(x => x.address?.toLowerCase().includes(q))
-      || pool.find(x => q.split(/\s+/).every(w => x.name?.toLowerCase().includes(w)))
-      || pool.find(x => q.split(/\s+/).some(w => w.length >= 3 && x.name?.toLowerCase().includes(w)))
-      || null;
-  }
-
-  function findMilkCust(h) {
-    if (!h) return null;
-    const q = h.toLowerCase().trim();
-    const qFlat = q.replace(/[\s\-_]/g, '');
-    const pool = milkCustomers;
-    return pool.find(x => x.name?.toLowerCase() === q)
-      || pool.find(x => x.block && x.villa && qFlat === (x.block + x.villa).toLowerCase().replace(/[\s\-_]/g, ''))
-      || pool.find(x => x.name?.toLowerCase().startsWith(q))
-      || pool.find(x => q.split(/\s+/).every(w => x.name?.toLowerCase().includes(w)))
-      || pool.find(x => q.split(/\s+/).some(w => w.length >= 3 && x.name?.toLowerCase().includes(w)))
-      || null;
-  }
-
   const today = new Date().toISOString().slice(0, 10);
+  const hint  = (act.customerHint || '').trim();
 
   switch (act.action) {
 
     case 'mark_milk': {
       if (!milkCustomers.length) await loadMilkData();
-      const c = findMilkCust(hint);
-      if (!c) return `❌ Milk customer "${hint}" not found.`;
+      const c = vaFindCustomer(hint, milkCustomers);
+      if (!c) return 'Could not find milk customer "' + hint + '". Check the name or address.';
       if (milkLogs.find(l => l.customerId === c.id && l.date === today))
-        return `✅ ${c.name}'s milk already marked today.`;
-      await fetch('/api/admin/milk/logs', { method: 'POST', headers: ah(), body: JSON.stringify({ customerId: c.id, date: today, qty: c.defaultQty || 1, items: c.defaultItems || [] }) });
-      await loadMilkData(); if (currentPage === 'milk') renderMilkPage();
-      return `✅ Milk delivered for ${c.name} — ${c.defaultQty || 1}L!`;
+        return c.name + "'s milk is already marked for today.";
+      await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
+        body: JSON.stringify({ customerId:c.id, date:today, qty:c.defaultQty||1, items:c.defaultItems||[] }) });
+      await loadMilkData();
+      if (currentPage === 'milk') renderMilkPage();
+      return 'Done! Milk marked for ' + c.name + ' (' + (c.defaultQty||1) + 'L).';
     }
 
     case 'mark_all_milk': {
       if (!milkCustomers.length) await loadMilkData();
-      const r = await fetch('/api/admin/milk/bulk-mark', { method: 'POST', headers: ah(), body: JSON.stringify({ date: today }) });
+      const r = await fetch('/api/admin/milk/bulk-mark', { method:'POST', headers:ah(),
+        body: JSON.stringify({ date:today }) });
       const d = await r.json();
-      await loadMilkData(); if (currentPage === 'milk') renderMilkPage();
-      return `✅ Marked ${d.marked || '?'} customers delivered!`;
+      await loadMilkData();
+      if (currentPage === 'milk') renderMilkPage();
+      return 'Done! Marked ' + (d.marked||'all') + ' customers delivered.';
     }
 
     case 'remove_milk': {
       if (!milkCustomers.length) await loadMilkData();
-      const c = findMilkCust(hint);
-      if (!c) return `❌ "${hint}" not found in milk customers.`;
-      await fetch('/api/admin/milk/logs', { method: 'POST', headers: ah(), body: JSON.stringify({ customerId: c.id, date: today, qty: 0, price: milkPrice }) });
-      await loadMilkData(); if (currentPage === 'milk') renderMilkPage();
-      return `✅ Removed today's milk for ${c.name}.`;
+      const c = vaFindCustomer(hint, milkCustomers);
+      if (!c) return 'Could not find "' + hint + '" in milk customers.';
+      await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
+        body: JSON.stringify({ customerId:c.id, date:today, qty:0, price:milkPrice }) });
+      await loadMilkData();
+      if (currentPage === 'milk') renderMilkPage();
+      return "Removed today's milk entry for " + c.name + '.';
     }
 
     case 'pause_milk': {
       if (!milkCustomers.length) await loadMilkData();
-      const c = findMilkCust(hint);
-      if (!c) return `❌ "${hint}" not found.`;
-      await fetch('/api/admin/milk/subscriptions/' + c.id + '/pause', { method: 'POST', headers: ah(), body: JSON.stringify({}) });
-      await loadMilkData(); if (currentPage === 'milk') renderMilkPage();
-      return `✅ Paused milk for ${c.name}.`;
+      const c = vaFindCustomer(hint, milkCustomers);
+      if (!c) return 'Could not find "' + hint + '".';
+      await fetch('/api/admin/milk/subscriptions/' + c.id + '/pause',
+        { method:'POST', headers:ah(), body:'{}' });
+      await loadMilkData();
+      if (currentPage === 'milk') renderMilkPage();
+      return 'Paused milk for ' + c.name + '.';
     }
 
     case 'resume_milk': {
       if (!milkCustomers.length) await loadMilkData();
-      const c = findMilkCust(hint);
-      if (!c) return `❌ "${hint}" not found.`;
-      await fetch('/api/admin/milk/subscriptions/' + c.id + '/resume', { method: 'POST', headers: ah(), body: JSON.stringify({}) });
-      await loadMilkData(); if (currentPage === 'milk') renderMilkPage();
-      return `✅ Resumed milk for ${c.name}.`;
+      const c = vaFindCustomer(hint, milkCustomers);
+      if (!c) return 'Could not find "' + hint + '".';
+      await fetch('/api/admin/milk/subscriptions/' + c.id + '/resume',
+        { method:'POST', headers:ah(), body:'{}' });
+      await loadMilkData();
+      if (currentPage === 'milk') renderMilkPage();
+      return 'Resumed milk for ' + c.name + '.';
     }
 
     case 'add_udhar': {
       if (!allCustomers.length) await loadCustomersData();
-      const c = findCust(hint);
-      if (!c) return `❌ Customer "${hint}" not found.`;
+      const c = vaFindCustomer(hint, allCustomers);
+      if (!c) return 'Could not find customer "' + hint + '". Check spelling or address.';
       const amount = parseFloat(act.amount);
-      if (!amount || isNaN(amount)) return `❌ Amount not clear. Please say the amount.`;
+      if (!amount || isNaN(amount)) return 'Amount not clear. Please say the amount again.';
       const cid = c.customerId || c.id;
-      await fetch('/api/admin/ledger', { method: 'POST', headers: ah(), body: JSON.stringify({ customerId: cid, type: 'credit', amount, note: act.note || '' }) });
+      await fetch('/api/admin/ledger', { method:'POST', headers:ah(),
+        body: JSON.stringify({ customerId:cid, type:'credit', amount, note:act.note||'' }) });
       if (accountSelectedId === cid) await refreshProfile(cid);
-      else { await loadCustomersData(); if (currentPage === 'customers') renderCustomersPage(); else if (currentPage === 'udhar') renderUdhar(); }
-      return `✅ Added ₹${amount} udhar for ${c.name}${act.note ? ' — ' + act.note : ''}!`;
+      else {
+        await loadCustomersData();
+        if (currentPage === 'customers') renderCustomersPage();
+        else if (currentPage === 'udhar') renderUdhar();
+      }
+      return 'Done! Added Rs.' + amount + ' udhar for ' + c.name + (act.note ? ' (' + act.note + ')' : '') + '.';
     }
 
     case 'record_payment': {
       if (!allCustomers.length) await loadCustomersData();
-      const c = findCust(hint);
-      if (!c) return `❌ Customer "${hint}" not found.`;
+      const c = vaFindCustomer(hint, allCustomers);
+      if (!c) return 'Could not find customer "' + hint + '".';
       const amount = parseFloat(act.amount);
-      if (!amount || isNaN(amount)) return `❌ Amount not clear.`;
+      if (!amount || isNaN(amount)) return 'Amount not clear.';
       const cid = c.customerId || c.id;
-      await fetch('/api/admin/ledger', { method: 'POST', headers: ah(), body: JSON.stringify({ customerId: cid, type: 'payment', amount, note: act.method || 'cash' }) });
+      await fetch('/api/admin/ledger', { method:'POST', headers:ah(),
+        body: JSON.stringify({ customerId:cid, type:'payment', amount, note:act.method||'cash' }) });
       if (accountSelectedId === cid) await refreshProfile(cid);
-      else { await loadCustomersData(); if (currentPage === 'customers') renderCustomersPage(); else if (currentPage === 'udhar') renderUdhar(); }
-      return `✅ ₹${amount} payment from ${c.name} recorded!`;
+      else {
+        await loadCustomersData();
+        if (currentPage === 'customers') renderCustomersPage();
+        else if (currentPage === 'udhar') renderUdhar();
+      }
+      return 'Done! Rs.' + amount + ' payment from ' + c.name + ' recorded.';
     }
 
     case 'check_balance': {
       if (!allCustomers.length) await loadCustomersData();
-      const c = findCust(hint);
-      if (!c) return `❌ Customer "${hint}" not found.`;
+      const c = vaFindCustomer(hint, allCustomers);
+      if (!c) return 'Could not find "' + hint + '".';
       const cid = c.customerId || c.id;
-      const r = await fetch('/api/admin/customers/' + cid, { headers: ah() });
-      if (!r.ok) return `❌ Could not load data.`;
+      const r = await fetch('/api/admin/customers/' + cid, { headers:ah() });
+      if (!r.ok) return 'Could not load data for ' + c.name + '.';
       const data = await r.json();
       const bal = data.balance || 0;
-      return `👤 ${c.name}: ${bal > 0 ? '₹' + bal.toFixed(0) + ' due' : bal < 0 ? 'Advance ₹' + Math.abs(bal).toFixed(0) : '✅ Settled'}`;
+      return c.name + ': ' + (bal > 0 ? 'Rs.' + bal.toFixed(0) + ' due' : bal < 0 ? 'Advance Rs.' + Math.abs(bal).toFixed(0) : 'Settled, no balance.');
     }
 
     case 'open_customer': {
       if (!allCustomers.length) await loadCustomersData();
-      const c = findCust(hint);
-      if (!c) return `❌ Customer "${hint}" not found.`;
+      const c = vaFindCustomer(hint, allCustomers);
+      if (!c) return 'Could not find "' + hint + '". Check spelling or address.';
       const cid = c.customerId || c.id;
-      if (currentPage !== 'customers') { await renderCustomers(); currentPage = 'customers'; document.querySelectorAll('.nav-link').forEach((l,i)=>l.classList.toggle('active',['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'][i]==='customers')); document.getElementById('pageTitle').textContent='Customers'; }
-      await new Promise(r => setTimeout(r, 150));
+      if (currentPage !== 'customers') {
+        goTo('customers');
+        await new Promise(r => setTimeout(r, 300));
+      }
       await openCustomerProfile(cid);
-      return `✅ Opened ${c.name}'s profile!`;
+      return 'Opened ' + c.name + "'s profile!";
     }
 
     case 'milk_status': {
       if (!milkCustomers.length) await loadMilkData();
-      const active = milkCustomers.filter(c => c.active);
-      const marked = active.filter(c => milkLogs.find(l => l.customerId === c.id && l.date === today));
-      const unmarked = active.filter(c => !milkLogs.find(l => l.customerId === c.id && l.date === today));
-      let msg = `🥛 ${marked.length}/${active.length} delivered today.`;
-      if (unmarked.length) msg += ` Pending: ${unmarked.slice(0, 6).map(c => c.name + (c.block && c.villa ? ' (' + c.block + '-' + c.villa + ')' : '')).join(', ')}${unmarked.length > 6 ? ` +${unmarked.length - 6} more` : ''}`;
+      const active  = milkCustomers.filter(c => c.active);
+      const marked  = active.filter(c => milkLogs.find(l => l.customerId === c.id && l.date === today));
+      const pending = active.filter(c => !milkLogs.find(l => l.customerId === c.id && l.date === today));
+      let msg = marked.length + '/' + active.length + ' milk deliveries done today.';
+      if (pending.length)
+        msg += ' Still pending: ' + pending.slice(0,6).map(c => c.name + (c.block&&c.villa?' ('+c.block+'-'+c.villa+')':'')).join(', ') + (pending.length>6?' +' + (pending.length-6) + ' more':'') + '.';
       return msg;
     }
 
     case 'pending_orders': {
-      const r = await fetch('/api/admin/orders?date=today', { headers: ah() });
+      const r = await fetch('/api/admin/orders?date=today', { headers:ah() });
       if (r.ok) ordersData = await r.json();
       const pending = ordersData.filter(o => o.status === 'pending');
-      if (!pending.length) return `✅ No pending orders!`;
-      return `📦 ${pending.length} pending: ${pending.slice(0, 5).map(o => '#' + o.id + ' ' + o.customerName + ' ₹' + o.total).join(' · ')}`;
+      if (!pending.length) return 'No pending orders right now!';
+      return pending.length + ' pending orders: ' +
+        pending.slice(0,5).map(o => '#'+o.id+' '+o.customerName+' Rs.'+o.total).join(' | ') +
+        (pending.length > 5 ? ' and ' + (pending.length-5) + ' more.' : '');
     }
 
     case 'today_summary': {
-      const [oR] = await Promise.all([fetch('/api/admin/orders?date=today', { headers: ah() }), loadMilkData()]);
+      const [oR] = await Promise.all([
+        fetch('/api/admin/orders?date=today', { headers:ah() }),
+        loadMilkData()
+      ]);
       if (oR.ok) ordersData = await oR.json();
-      const active = milkCustomers.filter(c => c.active);
-      const milkDone = active.filter(c => milkLogs.find(l => l.customerId === c.id && l.date === today)).length;
-      const pending = ordersData.filter(o => o.status === 'pending').length;
-      const delivered = ordersData.filter(o => o.status === 'delivered').length;
-      return `📊 Today ${today}:\n🥛 Milk: ${milkDone}/${active.length}\n📦 Orders: ${delivered} delivered, ${pending} pending\n👥 ${allCustomers.length} customers`;
+      const active   = milkCustomers.filter(c => c.active);
+      const milkDone = active.filter(c => milkLogs.find(l => l.customerId===c.id && l.date===today)).length;
+      const pending  = ordersData.filter(o => o.status === 'pending').length;
+      const delivered= ordersData.filter(o => o.status === 'delivered').length;
+      return 'Today ' + today + ' — Milk: ' + milkDone + '/' + active.length + ' done. Orders: ' + delivered + ' delivered, ' + pending + ' pending. Customers: ' + allCustomers.length + '.';
     }
 
     case 'update_order': {
-      if (!ordersData.length) { const r = await fetch('/api/admin/orders?date=today', { headers: ah() }); if (r.ok) ordersData = await r.json(); }
+      if (!ordersData.length) {
+        const r = await fetch('/api/admin/orders?date=today', { headers:ah() });
+        if (r.ok) ordersData = await r.json();
+      }
       const oh = (act.orderHint || '').toLowerCase();
       const idM = oh.match(/#?(\d+)/);
       let order = idM ? ordersData.find(o => String(o.id) === idM[1]) : null;
-      if (!order) order = ordersData.find(o => o.customerName?.toLowerCase().includes(oh) || oh.includes(o.customerName?.toLowerCase()));
-      if (!order && ordersData.filter(o => o.status === 'pending').length === 1) order = ordersData.find(o => o.status === 'pending');
-      if (!order) return `❌ Order not found: "${act.orderHint}"`;
+      if (!order) order = ordersData.find(o => o.customerName?.toLowerCase().includes(oh));
+      if (!order && ordersData.filter(o=>o.status==='pending').length===1)
+        order = ordersData.find(o => o.status === 'pending');
+      if (!order) return 'Order not found: "' + act.orderHint + '". Try the order number like #5.';
       await quickUpdateOrder(order.id, act.status);
-      return `✅ Order #${order.id} (${order.customerName}) → ${act.status}!`;
+      return 'Order #' + order.id + ' (' + order.customerName + ') marked as ' + act.status + '!';
     }
 
     case 'navigate': {
-      const pages = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'];
-      const p = act.page?.toLowerCase();
-      if (pages.includes(p)) { goTo(p); return `✅ Navigating to ${p}!`; }
-      return `❌ Unknown page: ${act.page}`;
+      const valid = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'];
+      const p = (act.page||'').toLowerCase();
+      if (valid.includes(p)) { goTo(p); return 'Going to ' + p + ' page!'; }
+      return 'Unknown page: ' + act.page;
     }
 
     default:
-      return `⚠️ Unknown action: ${act.action}`;
+      return 'Unknown action: ' + act.action;
   }
 }
 
-// ── Main entry point — send a command ────────────────────────────────────────
+// ── Main: send command ────────────────────────────────────────────────────────
 async function sendVoiceCommand(cmdOverride) {
   const inp = document.getElementById('vaInput');
   const cmd = (cmdOverride || inp?.value || '').trim();
@@ -3453,89 +3526,81 @@ async function sendVoiceCommand(cmdOverride) {
   if (inp) inp.value = '';
 
   vaAddMsg('user', cmd);
-  vaSetStatus('🤖 Claude is thinking...');
+  vaSetStatus('Claude is thinking...');
 
+  let reply = '';
   try {
     const result = await vaAskClaude(cmd);
-
-    let reply;
     if (result.type === 'action') {
-      vaSetStatus('⚡ Executing...');
+      vaSetStatus('Doing it...');
       reply = await vaExecuteAction(result);
     } else {
       reply = result.text;
     }
-
-    vaAddMsg('ai', reply);
   } catch(e) {
     console.error('VA error', e);
-    vaAddMsg('ai', `⚠️ Error: ${e.message}. Try again.`);
+    reply = 'Error: ' + e.message + '. Please try again.';
   }
 
+  vaAddMsg('ai', reply);
   vaSetStatus('');
 
-  // Speak the reply
-  if ('speechSynthesis' in window && _vaOpen) {
-    const clean = reply?.replace(/[✅❌⚠️🎙️👋📦🥛📒📊💰👤📞🏠📝🛒🗂🗑️⏸🔔ℹ️]/gu, '').replace(/\s+/g, ' ').trim();
-    if (clean) {
-      const utter = new SpeechSynthesisUtterance(clean);
-      utter.rate = 1.05;
-      const voices = window.speechSynthesis.getVoices();
-      const pref = voices.find(v => /Google|Natural|Enhanced|Samantha|Karen|Daniel/i.test(v.name));
-      if (pref) utter.voice = pref;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utter);
-    }
+  // Speak reply
+  if ('speechSynthesis' in window && _vaOpen && reply) {
+    try {
+      const clean = reply.replace(/[^ -]/g, '').replace(/\s+/g,' ').trim();
+      if (clean.length > 2) {
+        const u = new SpeechSynthesisUtterance(clean);
+        u.rate = 1.05;
+        const voices = window.speechSynthesis.getVoices();
+        const pref = voices.find(v => /Google|Natural|Samantha|Karen|Daniel/i.test(v.name));
+        if (pref) u.voice = pref;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+      }
+    } catch(e) {}
   }
 }
 
-// ── Speech recognition (mic button) ─────────────────────────────────────────
+// ── Mic ───────────────────────────────────────────────────────────────────────
 function toggleMic() {
   if (_vaListening) { stopMic(); return; }
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    vaAddMsg('system', '⚠️ Speech recognition not supported. Use Chrome.');
-    return;
+    vaAddMsg('system', 'Speech recognition not supported. Use Chrome.'); return;
   }
   startMic();
 }
-
 function startMic() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   _vaRecognition = new SR();
-  _vaRecognition.lang = 'hi-IN'; // Hindi-first so Hinglish works better
+  _vaRecognition.lang = 'hi-IN';
   _vaRecognition.continuous = false;
   _vaRecognition.interimResults = true;
-
   _vaListening = true;
-  document.getElementById('vaMicBtn').classList.add('active');
-  document.getElementById('voiceBtn').classList.add('listening');
+  document.getElementById('vaMicBtn')?.classList.add('active');
+  document.getElementById('voiceBtn')?.classList.add('listening');
   document.getElementById('vaDot')?.classList.add('listening');
-  vaSetStatus('🎙️ Listening...');
-
+  vaSetStatus('Listening...');
   _vaRecognition.onresult = (e) => {
-    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    const t = Array.from(e.results).map(r => r[0].transcript).join('');
     const inp = document.getElementById('vaInput');
-    if (inp) inp.value = transcript;
-    if (e.results[e.results.length - 1].isFinal) {
-      stopMic();
-      sendVoiceCommand(transcript);
-    }
+    if (inp) inp.value = t;
+    if (e.results[e.results.length-1].isFinal) { stopMic(); sendVoiceCommand(t); }
   };
-  _vaRecognition.onerror = () => stopMic();
-  _vaRecognition.onend = () => stopMic();
+  _vaRecognition.onerror = stopMic;
+  _vaRecognition.onend   = stopMic;
   _vaRecognition.start();
 }
-
 function stopMic() {
   _vaListening = false;
-  if (_vaRecognition) { try { _vaRecognition.stop(); } catch(e) {} _vaRecognition = null; }
+  try { _vaRecognition?.stop(); } catch(e) {}
+  _vaRecognition = null;
   document.getElementById('vaMicBtn')?.classList.remove('active');
   document.getElementById('voiceBtn')?.classList.remove('listening');
   document.getElementById('vaDot')?.classList.remove('listening');
   vaSetStatus('');
 }
 
-// Keyboard shortcuts
 document.addEventListener('keydown', e => {
   if (e.altKey && e.key === 'v') { e.preventDefault(); toggleVoicePanel(); }
   if (e.altKey && e.key === 'm') { e.preventDefault(); if (_vaOpen) toggleMic(); }
