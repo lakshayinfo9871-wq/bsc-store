@@ -1648,20 +1648,44 @@ app.get('/api/customer/ledger/months', customerAuth, async (req, res) => {
 });
 
 // ── SERVE PAGES ───────────────────────────────────────────────────────────────
-// ── GEMINI AI PROXY (free) ────────────────────────────────────────────────────
+// ── AI PROXY — Groq primary, Gemini fallback (both free) ────────────────────
 app.post('/api/admin/ai-chat', adminAuth, async (req, res) => {
-  try {
-    const { system, messages } = req.body;
-    if (!GEMINI_KEYS.length) return res.status(500).json({ error: 'No GEMINI_KEY set in environment.' });
-    const GEMINI_API_KEY = getGeminiKey();
+  const { system, messages } = req.body;
 
+  // ── Try Groq first (14,400 req/day free) ──────────────────────────────────
+  async function tryGroq() {
+    const key = process.env.GROQ_API_KEY || '';
+    if (!key) throw new Error('no key');
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        max_tokens: 150,
+        temperature: 0.2,
+        messages: [{ role: 'system', content: system }, ...messages]
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d?.error?.message || 'Groq error ' + r.status);
+    return d.choices?.[0]?.message?.content || '';
+  }
+
+  // ── Fallback: Gemini (20 req/day free) ────────────────────────────────────
+  async function tryGemini() {
+    const keys = [
+      process.env.GEMINI_KEY_1 || process.env.GEMINI_KEY || process.env.GEMINI_API_KEY || '',
+      process.env.GEMINI_KEY_2 || '',
+      process.env.GEMINI_KEY_3 || '',
+    ].filter(k => k);
+    if (!keys.length) throw new Error('no key');
+    const key = keys[Math.floor(Math.random() * keys.length)];
     const contents = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }]
     }));
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1672,14 +1696,28 @@ app.post('/api/admin/ai-chat', adminAuth, async (req, res) => {
         })
       }
     );
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('Gemini error:', data);
-      return res.status(response.status).json({ error: data?.error?.message || 'Gemini error' });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d?.error?.message || 'Gemini error ' + r.status);
+    return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+
+  try {
+    let text = '';
+    try {
+      text = await tryGroq();
+      console.log('AI: Groq responded');
+    } catch(groqErr) {
+      console.warn('Groq failed:', groqErr.message, '— trying Gemini...');
+      try {
+        text = await tryGemini();
+        console.log('AI: Gemini responded');
+      } catch(geminiErr) {
+        console.error('Both AI failed. Groq:', groqErr.message, 'Gemini:', geminiErr.message);
+        return res.status(503).json({ error: 'All AI services unavailable. Try again in a minute.' });
+      }
     }
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     res.json({ content: [{ type: 'text', text }] });
-  } catch (e) {
+  } catch(e) {
     console.error('AI proxy error:', e);
     res.status(500).json({ error: e.message });
   }
