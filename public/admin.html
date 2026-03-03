@@ -513,6 +513,14 @@ tr:hover td{background:#fafafa;}
     <div class="vp-msg system">👋 I do real actions — no tab switching needed!<br><span style="font-size:.72rem;opacity:.85;line-height:1.6">🥛 "Mark milk for Ramesh" · "Mark all milk today"<br>📦 "Accept order #5" · "Deliver Priya's order"<br>💰 "Ramesh paid 200" · "Add udhar 150 for Suresh"<br>📊 "Pending orders" · "Milk status" · say "help" for more</span></div>
   </div>
   <div class="vp-status" id="vaStatus"></div>
+  <div id="vaQuickBtns" style="padding:.4rem .8rem .2rem;display:flex;gap:.35rem;flex-wrap:wrap;border-top:1px solid var(--border);background:#fafafa">
+    <button onclick="sendVoiceCommand('milk status')" style="background:#f0fdf4;border:1px solid #86efac;color:#15803d;border-radius:7px;padding:.28rem .6rem;font-size:.72rem;font-weight:600;cursor:pointer">🥛 Status</button>
+    <button onclick="sendVoiceCommand('sabka doodh gya')" style="background:#f0fdf4;border:1px solid #86efac;color:#15803d;border-radius:7px;padding:.28rem .6rem;font-size:.72rem;font-weight:600;cursor:pointer">✓ Mark All</button>
+    <button onclick="sendVoiceCommand('sabka doodh hata do')" style="background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;border-radius:7px;padding:.28rem .6rem;font-size:.72rem;font-weight:600;cursor:pointer">✕ Remove All</button>
+    <button onclick="sendVoiceCommand('undo')" style="background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:7px;padding:.28rem .6rem;font-size:.72rem;font-weight:600;cursor:pointer">↩ Undo</button>
+    <button onclick="sendVoiceCommand('pending orders')" style="background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;border-radius:7px;padding:.28rem .6rem;font-size:.72rem;font-weight:600;cursor:pointer">📦 Orders</button>
+    <button onclick="sendVoiceCommand('kiska udhar hai')" style="background:#faf5ff;border:1px solid #ddd6fe;color:#7c3aed;border-radius:7px;padding:.28rem .6rem;font-size:.72rem;font-weight:600;cursor:pointer">📒 Udhar</button>
+  </div>
   <div class="vp-controls">
     <input type="text" class="vp-text-input" id="vaInput" placeholder="Type a command..." onkeydown="if(event.key==='Enter')sendVoiceCommand()">
     <button class="vp-mic" id="vaMicBtn" onclick="toggleMic()" title="Hold to speak">🎤</button>
@@ -1871,11 +1879,39 @@ function renderMilkDeliveries() {
     </tr>`;
   }).join('');
 
+  const todayDone = active.filter(c=>milkLogs.find(l=>l.customerId===c.id&&l.date===today));
+  const todayPct = active.length ? Math.round(todayDone.length/active.length*100) : 0;
+  const todayL = milkLogs.filter(l=>l.date===today).reduce((s,l)=>s+(parseFloat(l.qty)||0),0);
+  const todayAmt = milkLogs.filter(l=>l.date===today).reduce((s,l)=>{
+    if(l.items&&l.items.length) return s+l.items.reduce((is,i)=>is+parseFloat(i.qty||0)*parseFloat(i.price||0),0);
+    return s+(parseFloat(l.qty)||0)*(l.price||milkPrice||60);
+  },0);
+  const pctColor = todayPct===100?'var(--green)':todayPct>60?'var(--yellow)':'var(--red)';
   document.getElementById('milkTabContent').innerHTML=`
+    <div class="card" style="margin-bottom:.8rem">
+      <div style="padding:.9rem 1.2rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+          <div>
+            <span style="font-weight:800;font-size:1rem;color:${pctColor}">${todayDone.length}/${active.length}</span>
+            <span style="font-size:.8rem;color:var(--text2);margin-left:.4rem">delivered today · ${todayL.toFixed(1)}L · ₹${todayAmt.toFixed(0)}</span>
+          </div>
+          <span style="font-weight:900;font-size:1.1rem;color:${pctColor}">${todayPct}%</span>
+        </div>
+        <div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${todayPct}%;background:${pctColor};border-radius:4px;transition:width .4s"></div>
+        </div>
+        ${todayPct<100?`<div style="font-size:.74rem;color:var(--text2);margin-top:.4rem">
+          Pending: <strong>${active.filter(c=>!milkLogs.find(l=>l.customerId===c.id&&l.date===today)).map(c=>(c.block&&c.villa?c.block+'-'+c.villa:c.name)).join(', ')}</strong>
+        </div>`:'<div style="font-size:.74rem;color:var(--green);font-weight:700;margin-top:.4rem">✓ All delivered!</div>'}
+      </div>
+    </div>
     <div class="card">
       <div class="card-header">
         <h2>Today — ${new Date(today+'T12:00:00').toLocaleDateString('default',{weekday:'long',day:'numeric',month:'short'})}</h2>
-        <button class="btn btn-green" onclick="bulkMark('${today}')">✓ Mark All Delivered</button>
+        <div style="display:flex;gap:.4rem">
+          <button class="btn btn-red" onclick="sendVoiceCommand('sabka doodh hata do')" style="font-size:.78rem">✕ Remove All</button>
+          <button class="btn btn-green" onclick="bulkMark('${today}')">✓ Mark All Delivered</button>
+        </div>
       </div>
       ${active.length===0?`<div class="empty-state"><div class="ei">🥛</div><p>No active milk customers yet.</p></div>`:`
       <table>
@@ -3054,49 +3090,6 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 let toastTimer;
 function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800); }
 
-// ═══════════════════════════════════════
-// AI VOICE ASSISTANT
-// ═══════════════════════════════════════
-
-function toggleVoicePanel() {
-  _vaOpen = !_vaOpen;
-  document.getElementById('voicePanel').classList.toggle('open', _vaOpen);
-  if (_vaOpen) {
-    setTimeout(() => document.getElementById('vaInput')?.focus(), 100);
-    vaScrollBottom();
-  }
-}
-
-function vaAddMsg(role, text) {
-  const el = document.getElementById('vaMessages');
-  const div = document.createElement('div');
-  div.className = `vp-msg ${role}`;
-  div.textContent = text;
-  el.appendChild(div);
-  vaScrollBottom();
-  if (role !== 'system') {
-    _vaConversation.push({ role: role === 'user' ? 'user' : 'assistant', content: text });
-  }
-}
-
-function vaScrollBottom() {
-  const el = document.getElementById('vaMessages');
-  if (el) el.scrollTop = el.scrollHeight;
-}
-
-function vaSetStatus(msg) {
-  const el = document.getElementById('vaStatus');
-  if (el) el.textContent = msg;
-}
-
-// Build a compact state snapshot for context (used in replies)
-function vaGetAdminContext() {
-  return { page: currentPage, products: allProducts.length, categories: allCategories.length };
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// AI ASSISTANT v6 — fully trained, understands everything
-// ════════════════════════════════════════════════════════════════════════════
 
 let _vaOpen = false;
 let _vaConversation = [];
@@ -3198,7 +3191,8 @@ Mark milk specific types: {"action":"mark_milk","customerHint":"A-17","items":[{
 Mark ALL milk default: {"action":"mark_all_milk"}
 Mark all EXCEPT multiple not delivered: {"action":"mark_all_except","skipHints":["A-20","A-38"]}
 Mark all + some with custom qty: {"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
-Remove/undo milk entry: {"action":"remove_milk","customerHint":"A-17"}
+Remove milk ONE customer: {"action":"remove_milk","customerHint":"A-17"}
+Remove ALL milk today: {"action":"remove_all_milk"}
 Pause milk: {"action":"pause_milk","customerHint":"Ramesh"}
 Resume milk: {"action":"resume_milk","customerHint":"Ramesh"}
 Add udhar: {"action":"add_udhar","customerHint":"A-38","amount":300,"note":"butter"}
@@ -3213,6 +3207,7 @@ Navigate: {"action":"navigate","page":"milk"}
 Milk status: {"action":"milk_status"}
 Pending orders: {"action":"pending_orders"}
 Today summary: {"action":"today_summary"}
+Undo last action: {"action":"undo_last"}
 
 EXAMPLES (learn these patterns):
 "ajj A-38 ka doodh nhi gya" -> {"action":"mark_all_except","skipHints":["A-38"]}
@@ -3223,6 +3218,10 @@ EXAMPLES (learn these patterns):
 "A-17 ka 0.5L gya" -> {"action":"mark_milk","customerHint":"A-17","qty":0.5}
 "sabka milk done" -> {"action":"mark_all_milk"}
 "A-17 ka milk hatao / remove karo" -> {"action":"remove_milk","customerHint":"A-17"}
+"ajj sabka doodh hata do" -> {"action":"remove_all_milk"}
+"sabka milk remove karo" -> {"action":"remove_all_milk"}
+"aaj ka sab milk delete karo" -> {"action":"remove_all_milk"}
+"undo" / "wapas karo" / "galti ho gayi" -> {"action":"undo_last"}
 "kiska udhar bacha hai" -> {"action":"show_all_udhar"}
 "lakshay ka profile open" -> {"action":"open_customer","customerHint":"Lakshay"}
 "open lakshay" -> {"action":"open_customer","customerHint":"Lakshay"}
@@ -3310,53 +3309,86 @@ async function vaExecuteAction(act) {
       }
     }
     await loadMilkData(); if(currentPage==='milk') renderMilkPage();
-    return msg;
+    const allIds = milkCustomers.filter(c=>c.active).map(c=>c.id);
+    window._vaLastMilkAction = { type:'marked', customerIds: allIds, date: today };
+    return msg + ' Say "undo" to revert.';
   }
 
-  // MARK ALL EXCEPT SOME (not delivered) - supports single skipHint or array skipHints
+  // MARK ALL EXCEPT SOME — marks everyone, removes skipped customers' entries
   if (act.action === 'mark_all_except') {
     if (!milkCustomers.length) await loadMilkData();
-    // Support both old skipHint (string) and new skipHints (array)
     const rawSkips = act.skipHints || (act.skipHint ? [act.skipHint] : []);
     const skipCustomers = rawSkips.map(h => vaFindCustomer(h, milkCustomers)).filter(Boolean);
     const skipIds = new Set(skipCustomers.map(c => c.id));
     const active = milkCustomers.filter(c => c.active);
     let marked = 0;
+    // Step 1: mark ALL active customers (skip none yet)
     for (const c of active) {
-      if (skipIds.has(c.id)) continue;
       const already = milkLogs.find(l => l.customerId === c.id && l.date === today);
       if (already) continue;
       await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
         body: JSON.stringify({ customerId:c.id, date:today, qty:c.defaultQty||1, items:c.defaultItems||[] }) });
       marked++;
     }
-    await loadMilkData(); if(currentPage==='milk') renderMilkPage();
-    const skippedNames = skipCustomers.map(c => c.name).join(', ');
-    return 'Done! Marked ' + marked + ' customers.' + (skipCustomers.length ? ' Skipped: ' + skippedNames + '.' : '');
-  }
-
-  // REMOVE MILK - tries DELETE by log ID first, falls back to qty:0
-  if (act.action === 'remove_milk') {
-    if (!milkCustomers.length) await loadMilkData();
-    const c = vaFindCustomer(hint, milkCustomers);
-    if (!c) return 'Customer "' + hint + '" not found.';
-    // Find the log entry for today
-    const logEntry = milkLogs.find(l => l.customerId === c.id && l.date === today);
-    if (!logEntry) return c.name + ' has no milk entry for today.';
-    // Try DELETE by log ID if available
-    if (logEntry.id) {
-      const dr = await fetch('/api/admin/milk/logs/' + logEntry.id, { method:'DELETE', headers:ah() });
-      if (!dr.ok) {
-        // Fallback: set qty to 0 to effectively remove
+    // Step 2: DELETE entries for skipped customers (even if already marked)
+    await loadMilkData(); // refresh so we have fresh log IDs
+    for (const c of skipCustomers) {
+      const logEntry = milkLogs.find(l => l.customerId === c.id && l.date === today);
+      if (!logEntry) continue;
+      if (logEntry.id) {
+        const dr = await fetch('/api/admin/milk/logs/' + logEntry.id, { method:'DELETE', headers:ah() });
+        if (!dr.ok) await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
+          body: JSON.stringify({ customerId:c.id, date:today, qty:0 }) });
+      } else {
         await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
           body: JSON.stringify({ customerId:c.id, date:today, qty:0 }) });
       }
-    } else {
-      await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
-        body: JSON.stringify({ customerId:c.id, date:today, qty:0 }) });
     }
     await loadMilkData(); if(currentPage==='milk') renderMilkPage();
-    return "Removed today's milk for " + c.name + '.';
+    const nowMarked = active.filter(c=>!skipIds.has(c.id)).map(c=>c.id);
+    window._vaLastMilkAction = { type:'marked', customerIds: nowMarked, date: today };
+    const skippedNames = skipCustomers.map(c => (c.block&&c.villa?c.block+'-'+c.villa:c.name)).join(', ');
+    return 'Done! ✓ Marked ' + (active.length - skipCustomers.length) + ' customers. Removed: ' + (skippedNames||'none') + '. Say "undo" to revert.';
+  }
+
+  // Helper: delete a single milk log entry
+  async function _deleteMilkLog(customerId, date) {
+    const logEntry = milkLogs.find(l => l.customerId === customerId && l.date === date);
+    if (!logEntry) return false;
+    if (logEntry.id) {
+      const dr = await fetch('/api/admin/milk/logs/' + logEntry.id, { method:'DELETE', headers:ah() });
+      if (dr.ok) return true;
+    }
+    // fallback: overwrite with qty:0
+    await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
+      body: JSON.stringify({ customerId, date, qty:0 }) });
+    return true;
+  }
+
+  // REMOVE ALL MILK TODAY
+  if (act.action === 'remove_all_milk') {
+    if (!milkCustomers.length) await loadMilkData();
+    const todayLogs = milkLogs.filter(l => l.date === today);
+    if (!todayLogs.length) return 'No milk entries for today yet.';
+    let removed = 0;
+    for (const log of todayLogs) {
+      const ok = await _deleteMilkLog(log.customerId, today);
+      if (ok) removed++;
+    }
+    await loadMilkData(); if(currentPage==='milk') renderMilkPage();
+    return 'Removed all ' + removed + ' milk entries for today. ✓';
+  }
+
+  // REMOVE MILK SINGLE - tries DELETE by log ID first, falls back to qty:0
+  if (act.action === 'remove_milk') {
+    if (!milkCustomers.length) await loadMilkData();
+    const c = vaFindCustomer(hint, milkCustomers);
+    if (!c) return 'Customer "' + hint + '" not found in milk list.';
+    const logEntry = milkLogs.find(l => l.customerId === c.id && l.date === today);
+    if (!logEntry) return c.name + ' has no milk entry for today.';
+    await _deleteMilkLog(c.id, today);
+    await loadMilkData(); if(currentPage==='milk') renderMilkPage();
+    return "Removed today's milk for " + c.name + '. ✓';
   }
 
   // PAUSE / RESUME MILK
@@ -3487,12 +3519,17 @@ async function vaExecuteAction(act) {
   if (act.action === 'milk_status') {
     if (!milkCustomers.length) await loadMilkData();
     const active = milkCustomers.filter(c=>c.active);
-    const marked = active.filter(c=>milkLogs.find(l=>l.customerId===c.id&&l.date===today));
-    const pending = active.filter(c=>!milkLogs.find(l=>l.customerId===c.id&&l.date===today));
-    // Calculate total litres delivered
-    const totalL = milkLogs.filter(l=>l.date===today).reduce((sum,l)=>sum+(l.qty||1),0);
-    let msg = marked.length+'/'+active.length+' delivered today. Total: '+totalL.toFixed(1)+'L.';
-    if (pending.length) msg += ' Pending: '+pending.map(c=>c.name+(c.block&&c.villa?'('+c.block+'-'+c.villa+')':'')).join(', ')+'.';
+    const todayEntries = milkLogs.filter(l=>l.date===today);
+    const marked = active.filter(c=>todayEntries.find(l=>l.customerId===c.id));
+    const pending = active.filter(c=>!todayEntries.find(l=>l.customerId===c.id));
+    const totalL = todayEntries.reduce((sum,l)=>sum+(parseFloat(l.qty)||0),0);
+    const totalAmt = todayEntries.reduce((sum,l)=>{
+      if(l.items&&l.items.length) return sum+l.items.reduce((s,i)=>s+parseFloat(i.qty||0)*parseFloat(i.price||0),0);
+      return sum+(parseFloat(l.qty)||0)*(l.price||milkPrice||60);
+    },0);
+    let msg = '🥛 '+marked.length+'/'+active.length+' delivered. '+totalL.toFixed(1)+'L = Rs.'+totalAmt.toFixed(0)+'.';
+    if (pending.length) msg += ' Still pending ('+pending.length+'): '+pending.map(c=>(c.block&&c.villa?c.block+'-'+c.villa:c.name)).join(', ')+'.';
+    else msg += ' All done! ✓';
     return msg;
   }
 
@@ -3503,6 +3540,23 @@ async function vaExecuteAction(act) {
     const pending = ordersData.filter(o=>o.status==='pending');
     if (!pending.length) return 'No pending orders!';
     return pending.length+' pending: '+pending.slice(0,5).map(o=>'#'+o.id+' '+o.customerName+' Rs.'+o.total).join(' | ');
+  }
+
+  // UNDO LAST MILK ACTION
+  if (act.action === 'undo_last') {
+    if (!window._vaLastMilkAction) return 'Nothing to undo.';
+    const last = window._vaLastMilkAction;
+    if (!milkCustomers.length) await loadMilkData();
+    if (last.type === 'marked') {
+      // Undo: remove the entries that were just added
+      for (const cid of last.customerIds) {
+        await _deleteMilkLog(cid, last.date);
+      }
+      await loadMilkData(); if(currentPage==='milk') renderMilkPage();
+      window._vaLastMilkAction = null;
+      return 'Undone! Removed milk for ' + last.customerIds.length + ' customers.';
+    }
+    return 'Cannot undo this action type.';
   }
 
   // TODAY SUMMARY
