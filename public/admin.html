@@ -3099,233 +3099,179 @@ function vaGetAdminContext() {
   return { page: currentPage, products: allProducts.length, categories: allCategories.length };
 }
 
-// ── VOICE ASSISTANT — DEEP ACTION ENGINE ──────────────────────────────────────
-// Finds customers/orders by name, executes real actions, no navigation needed
+// ════════════════════════════════════════════════════════════════════════════
+// AI VOICE ASSISTANT v3 — Full Action Engine
+// Supports: milk, udhar, payments, orders, profiles, balance, navigation
+// ════════════════════════════════════════════════════════════════════════════
 
-// ── Helper: fuzzy find customer by name fragment ──────────────────────────────
-function vaFindCustomer(nameHint) {
-  if (!nameHint) return null;
-  const q = nameHint.toLowerCase().trim();
-  // Exact match first
-  let c = allCustomers.find(x => x.name?.toLowerCase() === q);
-  if (c) return c;
-  // Starts-with
-  c = allCustomers.find(x => x.name?.toLowerCase().startsWith(q));
-  if (c) return c;
-  // Contains all words
-  const words = q.split(/\s+/).filter(Boolean);
-  c = allCustomers.find(x => words.every(w => x.name?.toLowerCase().includes(w)));
-  if (c) return c;
-  // Contains any word (last resort)
-  c = allCustomers.find(x => words.some(w => w.length > 2 && x.name?.toLowerCase().includes(w)));
-  return c || null;
+let _vaOpen = false;
+let _vaConversation = [];
+let _vaRecognition = null;
+let _vaListening = false;
+
+function toggleVoicePanel() {
+  _vaOpen = !_vaOpen;
+  document.getElementById('voicePanel').classList.toggle('open', _vaOpen);
+  if (_vaOpen) { setTimeout(() => document.getElementById('vaInput')?.focus(), 100); vaScrollBottom(); }
 }
-
-// ── Helper: fuzzy find milk customer ─────────────────────────────────────────
-function vaFindMilkCustomer(nameHint) {
-  if (!nameHint) return null;
-  const q = nameHint.toLowerCase().trim();
-  const words = q.split(/\s+/).filter(Boolean);
-  // Also match by block+villa combo like "A-38" or "A 38"
-  return milkCustomers.find(x =>
-    x.name?.toLowerCase() === q ||
-    x.name?.toLowerCase().startsWith(q) ||
-    words.every(w => x.name?.toLowerCase().includes(w)) ||
-    words.some(w => w.length > 2 && x.name?.toLowerCase().includes(w)) ||
-    (x.block && x.villa && q.replace(/[\s\-]/g,'') === (x.block+x.villa).toLowerCase().replace(/[\s\-]/g,'')) ||
-    (x.address && x.address.toLowerCase().includes(q))
-  ) || null;
+function vaAddMsg(role, text) {
+  const el = document.getElementById('vaMessages');
+  const div = document.createElement('div');
+  div.className = `vp-msg ${role}`;
+  div.textContent = text;
+  el.appendChild(div);
+  vaScrollBottom();
+  if (role !== 'system') _vaConversation.push({ role: role==='user'?'user':'assistant', content: text });
 }
+function vaScrollBottom() { const el=document.getElementById('vaMessages'); if(el) el.scrollTop=el.scrollHeight; }
+function vaSetStatus(msg) { const el=document.getElementById('vaStatus'); if(el) el.textContent=msg; }
+function vaGetAdminContext() { return {page:currentPage,products:allProducts.length,categories:allCategories.length}; }
 
-// ── Also enhance allCustomers search to match by block+villa ─────────────────
-function vaFindCustomerByAddressOrName(hint) {
-  if (!hint) return null;
+// ── Universal customer finder: name OR block-villa (A-38, A38, A 38) ─────────
+function vaFindCustomer(hint) {
+  if (!hint || !hint.trim()) return null;
   const q = hint.toLowerCase().trim();
-  const qFlat = q.replace(/[\s\-]/g,'');
+  const qFlat = q.replace(/[\s\-_]/g,'');
   const words = q.split(/\s+/).filter(Boolean);
-  return allCustomers.find(x =>
-    x.name?.toLowerCase() === q ||
-    x.name?.toLowerCase().startsWith(q) ||
-    words.every(w => x.name?.toLowerCase().includes(w)) ||
-    words.some(w => w.length > 2 && x.name?.toLowerCase().includes(w)) ||
-    (x.block && x.villa && qFlat === (x.block+x.villa).toLowerCase().replace(/[\s\-]/g,'')) ||
-    (x.address && x.address.toLowerCase().includes(q))
-  ) || null;
-}
-
-// ── Helper: today's date string YYYY-MM-DD ────────────────────────────────────
-function vaToday() { return new Date().toISOString().slice(0,7+3).slice(0,10); }
-
-// ── Helper: extract ₹ amount from text ───────────────────────────────────────
-function vaExtractAmount(text) {
-  const m = text.match(/(?:rs\.?|₹|rupees?)\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:rs\.?|₹|rupees?)|(\d+(?:\.\d+)?)/i);
-  if (m) return parseFloat(m[1]||m[2]||m[3]);
+  const pool = allCustomers;
+  // 1. Exact name
+  let f = pool.find(x => x.name?.toLowerCase() === q);
+  if (f) return f;
+  // 2. Block+villa exact (A-38, A38, a 38)
+  f = pool.find(x => x.block && x.villa &&
+    qFlat === (String(x.block)+String(x.villa)).toLowerCase().replace(/[\s\-_]/g,''));
+  if (f) return f;
+  // 3. Name starts-with
+  f = pool.find(x => x.name?.toLowerCase().startsWith(q));
+  if (f) return f;
+  // 4. Address contains
+  f = pool.find(x => x.address?.toLowerCase().includes(q));
+  if (f) return f;
+  // 5. All words in name
+  f = pool.find(x => words.length && words.every(w => x.name?.toLowerCase().includes(w)));
+  if (f) return f;
+  // 6. Any word (>=3 chars) in name
+  f = pool.find(x => words.some(w => w.length>=3 && x.name?.toLowerCase().includes(w)));
+  if (f) return f;
+  // 7. Separate block/villa
+  if (words.length === 2) {
+    f = pool.find(x => x.block?.toLowerCase()===words[0] && x.villa?.toLowerCase()===words[1]);
+    if (f) return f;
+  }
   return null;
 }
 
-// ── Helper: extract customer name — strips action keywords ───────────────────
-function vaExtractName(text, ...stripWords) {
+// ── Milk customer finder (same logic on milkCustomers pool) ──────────────────
+function vaFindMilkCustomer(hint) {
+  if (!hint || !hint.trim()) return null;
+  const q = hint.toLowerCase().trim();
+  const qFlat = q.replace(/[\s\-_]/g,'');
+  const words = q.split(/\s+/).filter(Boolean);
+  const pool = milkCustomers;
+  let f = pool.find(x => x.name?.toLowerCase() === q);
+  if (f) return f;
+  f = pool.find(x => x.block && x.villa &&
+    qFlat === (String(x.block)+String(x.villa)).toLowerCase().replace(/[\s\-_]/g,''));
+  if (f) return f;
+  f = pool.find(x => x.name?.toLowerCase().startsWith(q));
+  if (f) return f;
+  f = pool.find(x => x.address?.toLowerCase().includes(q));
+  if (f) return f;
+  f = pool.find(x => words.length && words.every(w => x.name?.toLowerCase().includes(w)));
+  if (f) return f;
+  f = pool.find(x => words.some(w => w.length>=3 && x.name?.toLowerCase().includes(w)));
+  if (f) return f;
+  if (words.length === 2) {
+    f = pool.find(x => x.block?.toLowerCase()===words[0] && x.villa?.toLowerCase()===words[1]);
+    if (f) return f;
+  }
+  return null;
+}
+
+function vaToday() { return new Date().toISOString().slice(0,10); }
+
+function vaExtractAmount(text) {
+  const m = text.match(/(?:rs\.?|rupees?)\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:rs\.?|rupees?|₹)|₹\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)/i);
+  return m ? parseFloat(m[1]||m[2]||m[3]||m[4]) : null;
+}
+
+function vaExtractName(text, ...extra) {
   let s = text.toLowerCase();
-  const noise = ['mark','milk','delivered','delivery','today','add','for','of','the','a','an','to',
-    'udhar','credit','payment','paid','record','give','take','accept','order','orders','pending',
-    'customer','sir','ji','bhai','didi','madam','mr','mrs','ms',...stripWords];
-  noise.forEach(w => { s = s.replace(new RegExp('\\b'+w+'\\b','gi'),' '); });
-  // strip quantities like 1L 2l 500ml
+  const noise = [
+    'mark','milk','delivered','delivery','today','aaj','add','for','of','the','a','an','to','with',
+    'udhar','udhaar','credit','payment','paid','record','give','take','accept','order','orders',
+    'pending','customer','sir','ji','bhai','didi','madam','mr','mrs','ms','delete','remove',
+    'cancel','undo','hatao','mita','wapas','pause','resume','start','stop','last','entry',
+    'open','show','profile','detail','view','account','balance','due','check','kya','hai',
+    'kitna','baaki','baki','rupees','rs','cash','upi','bank','online','received','mila',
+    'aaya','collected','dispatch','deliver','pack','packed','ready','bulk','all','everyone',
+    'sabhi','sab','please','pls','ok','okay','ya','yes','no','nahi','ka','ki','ke','ko',
+    'se','mein','aur','bhi','toh','ya','iska','uska','unka','go','navigate','jaao','dekho',
+    'jama','bheja','diya','lagao','daal','jod','likh','shuru','band','karo','do','entry',
+    'doodh','dairy','report','summary','status','list','page','section','tab','main','home',
+    ...extra
+  ];
+  noise.forEach(w => {
+    if (w && w.length>0) {
+      try { s = s.replace(new RegExp('\\b'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'),' '); } catch(e){}
+    }
+  });
   s = s.replace(/\b\d+\s*(?:l|ltr|litre|ml|kg|g|gm)\b/gi,' ');
-  // strip amounts
   s = s.replace(/(?:rs\.?|₹|rupees?)?\s*\d+(?:\.\d+)?/gi,' ');
+  s = s.replace(/[#@₹]/g,' ');
   return s.replace(/\s+/g,' ').trim();
 }
 
-// ── VA CONFIRM: show a quick in-chat confirm prompt ───────────────────────────
 function vaConfirm(msg, onYes) {
   const el = document.getElementById('vaMessages');
   const div = document.createElement('div');
   div.className = 'vp-msg ai';
-  div.innerHTML = `${msg}<br><div style="display:flex;gap:8px;margin-top:8px">
-    <button onclick="this.closest('.vp-msg').remove();(${onYes.toString()})()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer">✅ Yes</button>
-    <button onclick="this.closest('.vp-msg').remove()" style="background:#e5e7eb;color:#374151;border:none;border-radius:8px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer">✕ Cancel</button>
-  </div>`;
+  div.innerHTML = msg+'<br><div style="display:flex;gap:8px;margin-top:8px">'
+    +'<button onclick="this.closest(\'.vp-msg\').remove();('+onYes.toString()+'>()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer">✅ Yes</button>'
+    +'<button onclick="this.closest(\'.vp-msg\').remove()" style="background:#e5e7eb;color:#374151;border:none;border-radius:8px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer">✕ Cancel</button>'
+    +'</div>';
   el.appendChild(div);
   vaScrollBottom();
 }
 
-// ── INTENT HANDLERS — each returns a {reply} string after acting ──────────────
+// ══ INTENT HANDLERS ══════════════════════════════════════════════════════════
 
-// MARK MILK DELIVERED for a customer
-async function vaMarkMilkDelivered(nameHint) {
+async function vaMarkMilkDelivered(hint) {
   if (!milkCustomers.length) await loadMilkData();
-  const c = vaFindMilkCustomer(nameHint);
-  if (!c) return `❌ Couldn't find a milk customer named "${nameHint}". Say "milk customers" to see the list.`;
+  const c = vaFindMilkCustomer(hint);
+  if (!c) return `❌ Milk customer "${hint}" not found. Say "milk list" to see all.`;
   const today = vaToday();
-  const already = milkLogs.find(l => l.customerId===c.id && l.date===today);
-  if (already) return `✅ ${c.name}'s milk was already marked delivered today (${c.defaultQty||1}L).`;
-  try {
-    await fetch('/api/admin/milk/log', {method:'POST', headers:ah(), body:JSON.stringify({customerId:c.id, date:today, qty:c.defaultQty||1, items:c.defaultItems||[]})});
-    await loadMilkData(); renderMilkPage();
-    return `✅ Marked ${c.name}'s milk delivered today — ${c.defaultQty||1}L!`;
-  } catch(e) { return `❌ Failed to mark milk for ${c.name}.`; }
+  if (milkLogs.find(l=>l.customerId===c.id&&l.date===today))
+    return `✅ ${c.name}'s milk already marked today (${c.defaultQty||1}L).`;
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,date:today,qty:c.defaultQty||1,items:c.defaultItems||[]})});
+  await loadMilkData(); if(currentPage==='milk') renderMilkPage();
+  return `✅ Milk delivered for ${c.name} — ${c.defaultQty||1}L!`;
 }
 
-// MARK ALL MILK for today
 async function vaMarkAllMilk() {
   if (!milkCustomers.length) await loadMilkData();
   const today = vaToday();
   const active = milkCustomers.filter(c=>c.active);
   const unmarked = active.filter(c=>!milkLogs.find(l=>l.customerId===c.id&&l.date===today));
-  if (!unmarked.length) return `✅ All ${active.length} milk customers already marked for today!`;
-  try {
-    const r = await fetch('/api/admin/milk/bulk-mark',{method:'POST',headers:ah(),body:JSON.stringify({date:today})});
-    const d = await r.json();
-    await loadMilkData(); renderMilkPage();
-    return `✅ Marked ${d.marked||unmarked.length} customers as milk delivered for today!`;
-  } catch(e) { return `❌ Bulk mark failed. Try the Mark Today button.`; }
+  if (!unmarked.length) return `✅ All ${active.length} milk customers already marked!`;
+  const r = await fetch('/api/admin/milk/bulk-mark',{method:'POST',headers:ah(),body:JSON.stringify({date:today})});
+  const d = await r.json();
+  await loadMilkData(); if(currentPage==='milk') renderMilkPage();
+  return `✅ Marked ${d.marked||unmarked.length} customers delivered!`;
 }
 
-// ACCEPT / UPDATE an order by customer name or order ID
-async function vaUpdateOrder(query, newStatus) {
-  if (!ordersData.length) {
-    const r = await fetch('/api/admin/orders?date=today',{headers:ah()});
-    if(r.ok) ordersData = await r.json();
-  }
-  // Find by order ID
-  const idMatch = query.match(/\b#?(\d+)\b/);
-  let order = idMatch ? ordersData.find(o=>String(o.id)===idMatch[1]) : null;
-  // Find by customer name
-  if (!order) {
-    const q = query.toLowerCase();
-    order = ordersData.find(o => o.customerName?.toLowerCase().includes(q) || o.phone?.includes(q));
-    if (!order) {
-      // Try word-by-word
-      const words = q.split(/\s+/).filter(w=>w.length>2);
-      order = ordersData.find(o => words.some(w=>o.customerName?.toLowerCase().includes(w)));
-    }
-  }
-  if (!order) {
-    const pending = ordersData.filter(o=>o.status==='pending');
-    if (pending.length===1 && (query.match(/pending|next|this|that/i)||!query.trim())) order=pending[0];
-  }
-  if (!order) return `❌ No order found for "${query}". Try saying "accept order #123" or the customer's name.`;
-  await quickUpdateOrder(order.id, newStatus);
-  return `✅ Order #${order.id} (${order.customerName}) marked as ${newStatus}!`;
+async function vaRemoveMilkToday(hint) {
+  if (!milkCustomers.length) await loadMilkData();
+  const c = vaFindMilkCustomer(hint);
+  if (!c) return `❌ Milk customer "${hint}" not found.`;
+  const today = vaToday();
+  if (!milkLogs.find(l=>l.customerId===c.id&&l.date===today))
+    return `ℹ️ ${c.name}'s milk was not marked today — nothing to remove.`;
+  await fetch('/api/admin/milk/logs',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,date:today,qty:0,price:milkPrice})});
+  await loadMilkData(); if(currentPage==='milk') renderMilkPage();
+  return `✅ Removed today's milk entry for ${c.name}.`;
 }
 
-// ADD UDHAR for a customer
-async function vaAddUdhar(nameHint, amount, note) {
-  if (!allCustomers.length) await loadCustomersData();
-  const c = vaFindCustomer(nameHint);
-  if (!c) return `❌ Customer "${nameHint}" not found. Check the name.`;
-  if (!amount || isNaN(amount)) return `❌ Please say the amount too — e.g. "add udhar 200 for Ramesh"`;
-  const cid = c.customerId || c.id;
-  const r1 = await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,type:'credit',amount:parseFloat(amount),note:note||'Voice entry'})});
-  const r2 = await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,items:[],amount:parseFloat(amount),note:note||'Voice entry'})});
-  if (!r1.ok || !r2.ok) return `❌ Server error saving udhar. Check your connection.`;
-  // If profile is open for this customer, live-refresh it; else reload current page
-  if (accountSelectedId === cid) {
-    await refreshProfile(cid);
-  } else {
-    await loadCustomersData();
-    if (currentPage === 'customers') renderCustomersPage();
-    else if (currentPage === 'udhar') await renderUdhar();
-  }
-  return `✅ Added ₹${amount} udhar for ${c.name}! Saved in their profile.`;
-}
-
-// RECORD PAYMENT from a customer
-async function vaRecordPayment(nameHint, amount) {
-  if (!allCustomers.length) await loadCustomersData();
-  const c = vaFindCustomer(nameHint);
-  if (!c) return `❌ Customer "${nameHint}" not found.`;
-  if (!amount || isNaN(amount)) return `❌ Please say the amount — e.g. "Ramesh paid 500"`;
-  const cid = c.customerId || c.id;
-  const r1 = await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,type:'payment',amount:parseFloat(amount),note:'cash'})});
-  const r2 = await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,amount:parseFloat(amount),method:'cash'})});
-  if (!r1.ok || !r2.ok) return `❌ Server error saving payment. Check your connection.`;
-  if (accountSelectedId === cid) {
-    await refreshProfile(cid);
-  } else {
-    await loadCustomersData();
-    if (currentPage === 'customers') renderCustomersPage();
-    else if (currentPage === 'udhar') await renderUdhar();
-  }
-  return `✅ Recorded ₹${amount} payment from ${c.name}! Balance updated.`;
-}
-
-// SHOW customer profile — ensures customers page is rendered before opening profile
-async function vaOpenCustomer(nameHint) {
-  if (!allCustomers.length) await loadCustomersData();
-  const c = vaFindCustomer(nameHint);
-  if (!c) return `❌ Customer "${nameHint}" not found. Try part of the name.`;
-  const cid = c.customerId || c.id;
-  // If already on customers page and the container exists, open directly
-  if (currentPage === 'customers' && document.getElementById('customerProfile')) {
-    await openCustomerProfile(cid);
-    return `✅ Opened profile for ${c.name}!`;
-  }
-  // Must navigate: renderCustomers() loads data + renders page which creates #customerProfile
-  await renderCustomers();
-  currentPage = 'customers';
-  document.querySelectorAll('.nav-link').forEach((l,i) => {
-    l.classList.toggle('active', ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'][i] === 'customers');
-  });
-  document.getElementById('pageTitle').textContent = 'Customers';
-  // Wait for DOM to paint then open profile
-  await new Promise(res => setTimeout(res, 150));
-  await openCustomerProfile(cid);
-  return `✅ Opened profile for ${c.name}!`;
-}
-
-// PENDING ORDERS summary
-async function vaPendingOrders() {
-  const r = await fetch('/api/admin/orders?date=today',{headers:ah()});
-  if(r.ok) ordersData = await r.json();
-  const pending = ordersData.filter(o=>o.status==='pending');
-  if (!pending.length) return `✅ No pending orders right now!`;
-  const names = pending.slice(0,4).map(o=>`#${o.id} ${o.customerName} ₹${o.total}`).join(' · ');
-  return `📦 ${pending.length} pending order${pending.length>1?'s':''}: ${names}${pending.length>4?` + ${pending.length-4} more`:''}`;
-}
-
-// MILK STATUS for today
 async function vaMilkStatus() {
   if (!milkCustomers.length) await loadMilkData();
   const today = vaToday();
@@ -3333,264 +3279,449 @@ async function vaMilkStatus() {
   const marked = active.filter(c=>milkLogs.find(l=>l.customerId===c.id&&l.date===today));
   const unmarked = active.filter(c=>!milkLogs.find(l=>l.customerId===c.id&&l.date===today));
   let msg = `🥛 Milk today: ${marked.length}/${active.length} delivered.`;
-  if (unmarked.length) msg += ` Remaining: ${unmarked.slice(0,4).map(c=>c.name).join(', ')}${unmarked.length>4?` +${unmarked.length-4} more`:''}`;
+  if (unmarked.length) msg += `\nRemaining: ${unmarked.slice(0,5).map(c=>c.name+(c.block&&c.villa?' ('+c.block+'-'+c.villa+')':'')).join(', ')}${unmarked.length>5?` +${unmarked.length-5} more`:''}`;
   return msg;
 }
 
-// LIST MILK CUSTOMERS
 function vaMilkCustomerList() {
+  if (!milkCustomers.length) return `No milk customers found.`;
   const active = milkCustomers.filter(c=>c.active);
-  if (!active.length) return `No active milk customers found.`;
-  return `🥛 ${active.length} milk customers: ${active.map(c=>c.name).join(', ')}`;
+  const paused = milkCustomers.filter(c=>!c.active);
+  let msg = `🥛 ${active.length} active: ${active.map(c=>c.name+(c.block&&c.villa?' ('+c.block+'-'+c.villa+')':'')).slice(0,8).join(', ')}${active.length>8?` +${active.length-8} more`:''}`;
+  if (paused.length) msg += `\n⏸ ${paused.length} paused: ${paused.map(c=>c.name).join(', ')}`;
+  return msg;
 }
 
-// PAUSE / RESUME milk sub
-async function vaPauseMilk(nameHint) {
-  const c = vaFindMilkCustomer(nameHint);
-  if (!c) return `❌ Milk customer "${nameHint}" not found.`;
-  await pauseMilkSub(c.id);
-  return `✅ Paused milk delivery for ${c.name}.`;
-}
-async function vaResumeMilk(nameHint) {
-  const c = vaFindMilkCustomer(nameHint);
-  if (!c) return `❌ Milk customer "${nameHint}" not found.`;
-  await resumeMilkSub(c.id);
-  return `✅ Resumed milk delivery for ${c.name}.`;
-}
-
-// RECORD MILK PAYMENT
-async function vaMilkPayment(nameHint, amount) {
+async function vaPauseMilk(hint) {
   if (!milkCustomers.length) await loadMilkData();
-  const c = vaFindMilkCustomer(nameHint);
-  if (!c) return `❌ Milk customer "${nameHint}" not found.`;
-  if (!amount || isNaN(amount)) return `❌ Say the amount — e.g. "milk payment 300 for Ramesh"`;
+  const c = vaFindMilkCustomer(hint);
+  if (!c) return `❌ Milk customer "${hint}" not found.`;
+  if (!c.active) return `ℹ️ ${c.name}'s milk is already paused.`;
+  await fetch('/api/admin/milk/subscriptions/'+c.id+'/pause',{method:'POST',headers:ah(),body:JSON.stringify({})});
+  await loadMilkData(); if(currentPage==='milk') renderMilkPage();
+  return `✅ Paused milk for ${c.name}.`;
+}
+
+async function vaResumeMilk(hint) {
+  if (!milkCustomers.length) await loadMilkData();
+  const c = vaFindMilkCustomer(hint);
+  if (!c) return `❌ Milk customer "${hint}" not found.`;
+  if (c.active) return `ℹ️ ${c.name}'s milk is already active.`;
+  await fetch('/api/admin/milk/subscriptions/'+c.id+'/resume',{method:'POST',headers:ah(),body:JSON.stringify({})});
+  await loadMilkData(); if(currentPage==='milk') renderMilkPage();
+  return `✅ Resumed milk for ${c.name}.`;
+}
+
+async function vaMilkPayment(hint, amount) {
+  if (!milkCustomers.length) await loadMilkData();
+  const c = vaFindMilkCustomer(hint);
+  if (!c) return `❌ Milk customer "${hint}" not found.`;
+  if (!amount||isNaN(amount)) return `❌ Say the amount — e.g. "milk payment 300 for Ramesh"`;
   const month = new Date().toISOString().slice(0,7);
-  await recordMilkPayment(c.id, month, parseFloat(amount));
+  await fetch('/api/admin/milk/payment',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,month,amount:parseFloat(amount),note:'Voice'})});
+  await loadMilkData(); if(currentPage==='milk') renderMilkPage();
   return `✅ Recorded ₹${amount} milk payment from ${c.name}!`;
 }
 
-// REMOVE TODAY'S MILK ENTRY for a customer
-async function vaRemoveMilkToday(nameHint) {
-  if (!milkCustomers.length) await loadMilkData();
-  const c = vaFindMilkCustomer(nameHint);
-  if (!c) return `❌ Couldn't find milk customer "${nameHint}". Check the name or account code (e.g. A-38).`;
-  const today = vaToday();
-  const existing = milkLogs.find(l => l.customerId===c.id && l.date===today);
-  if (!existing) return `ℹ️ ${c.name}'s milk was not marked today — nothing to remove.`;
-  try {
-    // Set qty=0 to remove the entry (same as the ✕ button in Edit Log)
-    await fetch('/api/admin/milk/logs', {method:'POST', headers:ah(), body:JSON.stringify({customerId:c.id, date:today, qty:0, price:milkPrice})});
-    await loadMilkData(); renderMilkPage();
-    return `✅ Removed today's milk entry for ${c.name}.`;
-  } catch(e) { return `❌ Failed to remove milk entry for ${c.name}.`; }
-}
-
-// DELETE LAST UDHAR ENTRY for a customer
-async function vaDeleteLastUdhar(nameHint) {
+// ADD UDHAR — single API (ledger only, no duplicate)
+async function vaAddUdhar(hint, amount, note) {
   if (!allCustomers.length) await loadCustomersData();
-  const c = vaFindCustomerByAddressOrName(nameHint) || vaFindCustomer(nameHint);
-  if (!c) return `❌ Customer "${nameHint}" not found.`;
-  const cid = c.customerId || c.id;
-  // Fetch full profile to get ledger entries
-  const r = await fetch('/api/admin/customers/'+cid, {headers:ah()});
-  if (!r.ok) return `❌ Could not fetch customer data.`;
-  const data = await r.json();
-  // Find the most recent credit entry (udhar)
-  const ledgerCredits = (data.ledgerEntries||[]).filter(e=>e.type==='credit').sort((a,b)=>b.id-a.id);
-  const oldCredits = (data.udharEntries||[]).sort((a,b)=>b.id-a.id);
-  if (!ledgerCredits.length && !oldCredits.length) return `ℹ️ No udhar entries found for ${c.name}.`;
-  if (ledgerCredits.length) {
-    const entry = ledgerCredits[0];
-    return new Promise(resolve => {
-      vaConfirm(`Delete last udhar entry for ${c.name}? — ₹${entry.amount} (${entry.note||'no note'}) on ${fmtDate(entry.date)}`, async () => {
-        await fetch('/api/admin/ledger/'+entry.id,{method:'DELETE',headers:ah()});
-        await loadCustomersData();
-        if (currentPage==='customers') renderCustomersPage();
-        else if (currentPage==='udhar') await renderUdhar();
-        resolve(`✅ Deleted udhar entry ₹${entry.amount} for ${c.name}.`);
-      });
-      resolve(`🔔 Confirm deletion above ↑`);
-    });
-  } else {
-    const entry = oldCredits[0];
-    return new Promise(resolve => {
-      vaConfirm(`Delete last udhar entry for ${c.name}? — ₹${entry.amount} on ${fmtDate(entry.date)}`, async () => {
-        await fetch('/api/admin/udhar/'+entry.id,{method:'DELETE',headers:ah()});
-        await loadCustomersData();
-        if (currentPage==='customers') renderCustomersPage();
-        else if (currentPage==='udhar') await renderUdhar();
-        resolve(`✅ Deleted udhar entry ₹${entry.amount} for ${c.name}.`);
-      });
-      resolve(`🔔 Confirm deletion above ↑`);
-    });
-  }
+  const c = vaFindCustomer(hint);
+  if (!c) return `❌ Customer "${hint}" not found. Try name or address like A-38.`;
+  if (!amount||isNaN(amount)) return `❌ Say the amount — e.g. "add udhar 200 for Ramesh"`;
+  const cid = c.customerId||c.id;
+  const r = await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,type:'credit',amount:parseFloat(amount),note:note||'Voice entry'})});
+  if (!r.ok) return `❌ Server error saving udhar.`;
+  if (accountSelectedId===cid) await refreshProfile(cid);
+  else { await loadCustomersData(); if(currentPage==='customers') renderCustomersPage(); else if(currentPage==='udhar') await renderUdhar(); }
+  return `✅ Added ₹${amount} udhar for ${c.name}!`;
 }
 
-// ── MAIN NLP MATCHER ──────────────────────────────────────────────────────────
+// RECORD PAYMENT — single API (ledger only, no duplicate)
+async function vaRecordPayment(hint, amount, method) {
+  if (!allCustomers.length) await loadCustomersData();
+  const c = vaFindCustomer(hint);
+  if (!c) return `❌ Customer "${hint}" not found.`;
+  if (!amount||isNaN(amount)) return `❌ Say the amount — e.g. "Ramesh paid 500"`;
+  const cid = c.customerId||c.id;
+  const r = await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,type:'payment',amount:parseFloat(amount),note:method||'cash'})});
+  if (!r.ok) return `❌ Server error saving payment.`;
+  if (accountSelectedId===cid) await refreshProfile(cid);
+  else { await loadCustomersData(); if(currentPage==='customers') renderCustomersPage(); else if(currentPage==='udhar') await renderUdhar(); }
+  return `✅ Recorded ₹${amount} payment from ${c.name}! Balance updated.`;
+}
+
+async function vaDeleteLastUdhar(hint) {
+  if (!allCustomers.length) await loadCustomersData();
+  const c = vaFindCustomer(hint);
+  if (!c) return `❌ Customer "${hint}" not found.`;
+  const cid = c.customerId||c.id;
+  const r = await fetch('/api/admin/customers/'+cid,{headers:ah()});
+  if (!r.ok) return `❌ Could not fetch data.`;
+  const data = await r.json();
+  const credits = (data.ledgerEntries||[]).filter(e=>e.type==='credit').sort((a,b)=>b.id-a.id);
+  if (!credits.length) return `ℹ️ No udhar entries for ${c.name}.`;
+  const entry = credits[0];
+  const msg = `Delete udhar ₹${entry.amount} for ${c.name}? (${entry.note||'no note'}, ${fmtDate(entry.date)})`;
+  const el = document.getElementById('vaMessages');
+  const div = document.createElement('div');
+  div.className = 'vp-msg ai';
+  div.innerHTML = msg + '<br><div style="display:flex;gap:8px;margin-top:8px">'
+    + '<button id="vaDelYes" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer">🗑️ Delete</button>'
+    + '<button id="vaDelNo" style="background:#e5e7eb;color:#374151;border:none;border-radius:8px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer">✕ Cancel</button>'
+    + '</div>';
+  el.appendChild(div);
+  vaScrollBottom();
+  div.querySelector('#vaDelYes').onclick = async () => {
+    div.remove();
+    await fetch('/api/admin/ledger/'+entry.id,{method:'DELETE',headers:ah()});
+    await loadCustomersData();
+    if(currentPage==='customers') renderCustomersPage();
+    else if(currentPage==='udhar') await renderUdhar();
+    vaAddMsg('ai',`✅ Deleted ₹${entry.amount} udhar for ${c.name}.`);
+  };
+  div.querySelector('#vaDelNo').onclick = () => div.remove();
+  return `🔔 Confirm deletion above ↑`;
+}
+
+async function vaDeleteLastPayment(hint) {
+  if (!allCustomers.length) await loadCustomersData();
+  const c = vaFindCustomer(hint);
+  if (!c) return `❌ Customer "${hint}" not found.`;
+  const cid = c.customerId||c.id;
+  const r = await fetch('/api/admin/customers/'+cid,{headers:ah()});
+  if (!r.ok) return `❌ Could not fetch data.`;
+  const data = await r.json();
+  const payments = (data.ledgerEntries||[]).filter(e=>e.type==='payment').sort((a,b)=>b.id-a.id);
+  if (!payments.length) return `ℹ️ No payment entries for ${c.name}.`;
+  const entry = payments[0];
+  const msg = `Delete payment ₹${entry.amount} for ${c.name}? (${fmtDate(entry.date)})`;
+  const el = document.getElementById('vaMessages');
+  const div = document.createElement('div');
+  div.className = 'vp-msg ai';
+  div.innerHTML = msg + '<br><div style="display:flex;gap:8px;margin-top:8px">'
+    + '<button id="vaPayDelYes" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer">🗑️ Delete</button>'
+    + '<button id="vaPayDelNo" style="background:#e5e7eb;color:#374151;border:none;border-radius:8px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer">✕ Cancel</button>'
+    + '</div>';
+  el.appendChild(div);
+  vaScrollBottom();
+  div.querySelector('#vaPayDelYes').onclick = async () => {
+    div.remove();
+    await fetch('/api/admin/ledger/'+entry.id,{method:'DELETE',headers:ah()});
+    await loadCustomersData();
+    if(currentPage==='customers') renderCustomersPage();
+    else if(currentPage==='udhar') await renderUdhar();
+    vaAddMsg('ai',`✅ Deleted ₹${entry.amount} payment for ${c.name}.`);
+  };
+  div.querySelector('#vaPayDelNo').onclick = () => div.remove();
+  return `🔔 Confirm deletion above ↑`;
+}
+
+async function vaCheckBalance(hint) {
+  if (!allCustomers.length) await loadCustomersData();
+  const c = vaFindCustomer(hint);
+  if (!c) return `❌ Customer "${hint}" not found.`;
+  const cid = c.customerId||c.id;
+  const r = await fetch('/api/admin/customers/'+cid,{headers:ah()});
+  if (!r.ok) return `❌ Could not load data.`;
+  const data = await r.json();
+  const bal = data.balance||0;
+  const balTxt = bal>0?`₹${bal.toFixed(0)} due`:bal<0?`Advance ₹${Math.abs(bal).toFixed(0)}`:`Settled ✓`;
+  const ledger = (data.ledgerEntries||[]).sort((a,b)=>b.id-a.id);
+  const last = ledger[0];
+  let msg = `👤 ${c.name}  |  💰 ${balTxt}`;
+  if (c.phone) msg += `\n📞 ${c.phone}`;
+  if (c.block||c.villa) msg += `\n🏠 ${[c.block,c.villa].filter(Boolean).join('-')}`;
+  if (last) msg += `\n📝 Last: ${last.type==='credit'?'Udhar':'Payment'} ₹${last.amount} on ${fmtDate(last.date)}`;
+  return msg;
+}
+
+async function vaShowUdharList(hint) {
+  if (!allCustomers.length) await loadCustomersData();
+  const c = vaFindCustomer(hint);
+  if (!c) return `❌ Customer "${hint}" not found.`;
+  const cid = c.customerId||c.id;
+  const r = await fetch('/api/admin/customers/'+cid,{headers:ah()});
+  if (!r.ok) return `❌ Could not load data.`;
+  const data = await r.json();
+  const bal = data.balance||0;
+  const credits = (data.ledgerEntries||[]).filter(e=>e.type==='credit').sort((a,b)=>b.id-a.id);
+  if (!credits.length) return `✅ ${c.name} has no udhar entries. Balance: ${bal===0?'Settled':bal>0?'₹'+bal+' due':'Advance ₹'+Math.abs(bal)}`;
+  const lines = credits.slice(0,5).map(e=>`• ₹${e.amount} on ${fmtDate(e.date)}${e.note?' ('+e.note+')':''}`).join('\n');
+  return `📒 ${c.name} Udhar (Bal: ${bal>0?'₹'+bal.toFixed(0)+' due':bal<0?'Advance ₹'+Math.abs(bal).toFixed(0):'Settled'}):\n${lines}${credits.length>5?`\n...and ${credits.length-5} more`:''}`;
+}
+
+async function vaOpenCustomer(hint) {
+  if (!allCustomers.length) await loadCustomersData();
+  const c = vaFindCustomer(hint);
+  if (!c) return `❌ "${hint}" not found. Try name or address like A-38.`;
+  const cid = c.customerId||c.id;
+  if (currentPage==='customers' && document.getElementById('customerProfile')) {
+    await openCustomerProfile(cid);
+    return `✅ Opened ${c.name}'s profile!`;
+  }
+  await renderCustomers();
+  currentPage = 'customers';
+  document.querySelectorAll('.nav-link').forEach((l,i) => {
+    l.classList.toggle('active',['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'][i]==='customers');
+  });
+  document.getElementById('pageTitle').textContent = 'Customers';
+  await new Promise(res=>setTimeout(res,180));
+  await openCustomerProfile(cid);
+  return `✅ Opened ${c.name}'s profile!`;
+}
+
+async function vaPendingOrders() {
+  const r = await fetch('/api/admin/orders?date=today',{headers:ah()});
+  if(r.ok) ordersData = await r.json();
+  const pending = ordersData.filter(o=>o.status==='pending');
+  const accepted = ordersData.filter(o=>o.status==='accepted');
+  if (!pending.length && !accepted.length) return `✅ No pending orders right now!`;
+  let msg='';
+  if(pending.length) msg+=`📦 ${pending.length} pending: ${pending.slice(0,4).map(o=>`#${o.id} ${o.customerName} ₹${o.total}`).join(' · ')}${pending.length>4?` +${pending.length-4} more`:''}`;
+  if(accepted.length) msg+=`${msg?'\n':''}✅ ${accepted.length} accepted: ${accepted.slice(0,3).map(o=>`#${o.id} ${o.customerName}`).join(', ')}`;
+  return msg;
+}
+
+async function vaTodaySummary() {
+  const [oR] = await Promise.all([
+    fetch('/api/admin/orders?date=today',{headers:ah()}),
+    loadMilkData()
+  ]);
+  if(oR.ok) ordersData = await oR.json();
+  const today = vaToday();
+  const pending = ordersData.filter(o=>o.status==='pending').length;
+  const delivered = ordersData.filter(o=>o.status==='delivered').length;
+  const active = milkCustomers.filter(c=>c.active);
+  const milkDone = active.filter(c=>milkLogs.find(l=>l.customerId===c.id&&l.date===today)).length;
+  return `📊 Today:\n🛒 Orders: ${delivered} delivered, ${pending} pending\n🥛 Milk: ${milkDone}/${active.length} done\n👥 ${allCustomers.length} customers`;
+}
+
+async function vaUpdateOrder(query, newStatus) {
+  if (!ordersData.length) {
+    const r = await fetch('/api/admin/orders?date=today',{headers:ah()});
+    if(r.ok) ordersData = await r.json();
+  }
+  const idMatch = query.match(/#?(\d+)/);
+  let order = idMatch ? ordersData.find(o=>String(o.id)===idMatch[1]) : null;
+  if (!order) {
+    const q = query.toLowerCase();
+    order = ordersData.find(o => o.customerName?.toLowerCase().includes(q)||o.phone?.includes(q));
+    if (!order) {
+      const words = q.split(/\s+/).filter(w=>w.length>2);
+      order = ordersData.find(o => words.some(w=>o.customerName?.toLowerCase().includes(w)));
+    }
+  }
+  if (!order) {
+    const pending = ordersData.filter(o=>o.status==='pending');
+    if (pending.length===1) order=pending[0];
+  }
+  if (!order) return `❌ Order not found for "${query}". Try "accept order #123".`;
+  await quickUpdateOrder(order.id, newStatus);
+  return `✅ Order #${order.id} (${order.customerName}) → ${newStatus}!`;
+}
+
+// ══ MAIN COMMAND PROCESSOR ════════════════════════════════════════════════════
 async function vaProcessCommand(cmd) {
   const t = cmd.toLowerCase().trim();
 
-  // ── REMOVE / DELETE TODAY'S MILK ─────────────────────────────────────────────
-  if (/\b(remove|delete|cancel|undo|hatao|mita|wapas).{0,30}(milk|doodh)\b|\b(milk|doodh).{0,20}(remove|delete|cancel|undo|nahi|mat)\b/i.test(t)) {
-    const name = vaExtractName(cmd, 'remove','delete','cancel','undo','hatao','mita','wapas','milk','doodh','today','aaj');
-    if (name) return await vaRemoveMilkToday(name);
-    return `Say who — e.g. "remove milk for A-38" or "delete milk for Ramesh"`;
+  // GREETINGS
+  if (/^(hi|hey|hello|helo|hii|sup|yo|namaskar|namaste)\b/i.test(t)) {
+    const h=new Date().getHours();
+    return `${h<12?'Good morning':h<17?'Good afternoon':'Good evening'}! 👋 Say "help" to see all commands.`;
   }
 
-  // ── MARK MILK ───────────────────────────────────────────────────────────────
-  if (/\bmark.{0,30}(all|everyone|sabhi|sab)\b.*milk|\bmilk.{0,15}(all|everyone|sabhi|bulk|today)\b/i.test(t) ||
-      /\bbulk.?mark\b/i.test(t)) {
+  // HELP
+  if (/\bhelp\b/i.test(t)) return `🎙️ Commands:\n\n🥛 Milk:\n"Mark milk for [name/A-38]" · "Remove milk for A-38" · "Mark all milk" · "Pause/Resume milk for Ramesh" · "Milk status" · "Milk list" · "Milk payment 300 for Ramesh"\n\n💰 Udhar:\n"Add udhar 150 for [name/A-38]" · "Delete udhar for Ramesh" · "Delete payment for Ramesh" · "Check balance of A-17" · "Show udhar of Ramesh"\n\n💵 Payment:\n"Ramesh paid 200" · "Payment 500 from A-20 upi"\n\n📦 Orders:\n"Accept/Deliver/Pack/Cancel order #5" · "Pending orders" · "Today summary"\n\n👤 Profile:\n"Open Ramesh" · "Open A-38" · "Show profile A-20"\n\n🗂 Navigate:\n"Go to milk/orders/products/udhar/settings"`;
+
+  // TODAY SUMMARY
+  if (/\b(today.?summary|summary|aaj.?ka|daily.?report|overview)\b/i.test(t)) {
+    return await vaTodaySummary();
+  }
+
+  // REFRESH
+  if (/\b(refresh|reload|sync)\b/i.test(t)) {
+    await loadAll(true);
+    const fns={dashboard:renderDashboard,orders:renderOrders,customers:renderCustomers,products:renderProducts,milk:renderMilk,udhar:renderUdhar};
+    if(fns[currentPage]) await fns[currentPage]();
+    return `✅ Refreshed!`;
+  }
+
+  // REMOVE MILK
+  if (/\b(remove|delete|cancel|undo|hatao|mita|wapas).{0,30}(milk|doodh)\b|\b(milk|doodh).{0,25}(remove|delete|undo|nahi|mat|cancel)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'remove','delete','cancel','undo','hatao','mita','wapas','nahi','mat','milk','doodh','today','aaj');
+    if (name) return await vaRemoveMilkToday(name);
+    return `Say who — e.g. "remove milk for A-38"`;
+  }
+
+  // MARK ALL MILK
+  if (/\b(mark|deliver).{0,20}(all|everyone|sabhi|sab|bulk).{0,20}(milk|doodh)|\b(milk|doodh).{0,15}(all|everyone|sabhi|bulk)\b|\bbulk.?mark\b/i.test(t)) {
     return await vaMarkAllMilk();
   }
-  if (/\bmark.{1,40}milk\b|\bmilk.{1,40}(delivered|mark|done|de do|de diya)\b|\bdelivered.{1,30}milk\b/i.test(t) ||
-      /\bmilk\b.*\b(today|kal|abhi)\b/i.test(t)) {
-    const name = vaExtractName(cmd, 'mark','milk','delivered','today','de do','de diya');
+
+  // MARK MILK FOR SPECIFIC CUSTOMER
+  if (/\bmark.{1,40}(milk|doodh)\b|\b(milk|doodh).{1,40}(delivered|mark|done|de do|de diya|diya|karo|deliver)\b|\bdeliver.{0,20}(milk|doodh)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'mark','milk','doodh','delivered','delivery','done','de','do','diya','karo','today','aaj','deliver');
     if (name) return await vaMarkMilkDelivered(name);
     return await vaMilkStatus();
   }
 
-  // ── MILK STATUS / LIST ───────────────────────────────────────────────────────
-  if (/\b(milk.?status|milk.?today|today.?milk|kitna.?milk|milk.?kaun)\b/i.test(t) ||
-      /^milk\s*$/i.test(t)) {
+  // MILK STATUS
+  if (/\b(milk.?status|milk.?today|today.?milk|kitna.?milk|milk.?kaun|milk.?report)\b/i.test(t) || /^(milk|doodh)\s*$/i.test(t)) {
     return await vaMilkStatus();
   }
-  if (/\b(milk.?customer|milk.?list|who.?milk|kaun.?milk)\b/i.test(t)) {
+
+  // MILK LIST
+  if (/\b(milk.?list|milk.?customer|milk.?log|who.?milk|kaun.?milk|list.?milk)\b/i.test(t)) {
     if (!milkCustomers.length) await loadMilkData();
     return vaMilkCustomerList();
   }
 
-  // ── PAUSE / RESUME MILK ──────────────────────────────────────────────────────
-  if (/\bpause.{1,30}milk\b|\bmilk.{1,20}pause\b/i.test(t)) {
-    const name = vaExtractName(cmd, 'pause','milk');
-    return name ? await vaPauseMilk(name) : `Say who to pause — e.g. "pause milk for Ramesh"`;
-  }
-  if (/\bresume.{1,30}milk\b|\bmilk.{1,20}resume\b|\bstart.{1,30}milk\b/i.test(t)) {
-    const name = vaExtractName(cmd, 'resume','start','milk');
-    return name ? await vaResumeMilk(name) : `Say who to resume — e.g. "resume milk for Ramesh"`;
+  // PAUSE MILK
+  if (/\bpause.{1,30}(milk|doodh)\b|\b(milk|doodh).{1,25}pause\b|\bband.{1,20}(milk|doodh)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'pause','milk','doodh','band','karo');
+    return name ? await vaPauseMilk(name) : `Say who — e.g. "pause milk for Ramesh"`;
   }
 
-  // ── MILK PAYMENT ─────────────────────────────────────────────────────────────
-  if (/\bmilk.{1,20}pay|\bpay.{1,20}milk\b/i.test(t)) {
+  // RESUME MILK
+  if (/\bresume.{1,30}(milk|doodh)\b|\b(milk|doodh).{1,25}(resume|start|shuru)\b|\bshuru.{1,20}(milk|doodh)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'resume','start','shuru','milk','doodh');
+    return name ? await vaResumeMilk(name) : `Say who — e.g. "resume milk for Ramesh"`;
+  }
+
+  // MILK PAYMENT
+  if (/\b(milk|doodh).{1,25}(pay|paid|payment|diya|bheja)\b|\b(pay|paid).{1,20}(milk|doodh)\b/i.test(t)) {
     const amount = vaExtractAmount(t);
-    const name = vaExtractName(cmd, 'milk','payment','paid','pay','received');
+    const name = vaExtractName(cmd, 'milk','doodh','payment','paid','pay','received','diya','bheja');
     return await vaMilkPayment(name, amount);
   }
 
-  // ── ACCEPT / DELIVER ORDERS ──────────────────────────────────────────────────
-  if (/\b(accept|confirm|approve)\b.{0,30}(order|#\d+)/i.test(t) ||
-      /\border.{0,15}(accept|confirm)\b/i.test(t)) {
-    const query = vaExtractName(cmd, 'accept','confirm','approve','order');
-    return await vaUpdateOrder(query, 'accepted');
-  }
-  if (/\b(deliver|mark.{0,10}deliver|dispatch)\b.{0,30}(order|#\d+)/i.test(t) ||
-      /\border.{0,15}(deliver|done|complete)\b/i.test(t)) {
-    const query = vaExtractName(cmd, 'deliver','dispatch','mark','order','delivered','done','complete');
-    return await vaUpdateOrder(query, 'delivered');
-  }
-  if (/\b(pack|packed|ready)\b.{0,30}(order|#\d+)/i.test(t)) {
-    const query = vaExtractName(cmd, 'pack','packed','ready','order');
-    return await vaUpdateOrder(query, 'packed');
-  }
-  if (/\b(cancel)\b.{0,30}(order|#\d+)/i.test(t)) {
-    const query = vaExtractName(cmd, 'cancel','order');
-    return await vaUpdateOrder(query, 'cancelled');
+  // DELETE UDHAR
+  if (/\b(delete|remove|undo|hatao|mita|cancel|wapas).{0,30}(udhar|udhaar|credit|entry)\b|\b(udhar|udhaar|credit).{0,25}(delete|remove|undo|hatao|mita|cancel)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'delete','remove','undo','hatao','mita','cancel','wapas','udhar','udhaar','credit','entry','last','ka','ki','ke','ko');
+    if (name) return await vaDeleteLastUdhar(name);
+    return `Say whose udhar to delete — e.g. "delete udhar for Ramesh" or "remove udhar A-38"`;
   }
 
-  // ── PENDING ORDERS SUMMARY ───────────────────────────────────────────────────
-  if (/\b(pending.?order|order.?pending|kaun.?order|new.?order|today.?order|order.?today|kitne.?order)\b/i.test(t)) {
-    return await vaPendingOrders();
+  // DELETE PAYMENT
+  if (/\b(delete|remove|undo|hatao).{0,30}(payment|paid)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'delete','remove','undo','hatao','payment','paid','last','entry');
+    if (name) return await vaDeleteLastPayment(name);
+    return `Say whose payment — e.g. "delete payment for Ramesh"`;
   }
 
-  // ── UDHAR ────────────────────────────────────────────────────────────────────
-  if (/\b(add|daal|jod|likh).{0,20}(udhar|credit|udhaar)\b|\b(udhar|udhaar|credit).{0,20}(add|de|diya|lagao)\b/i.test(t)) {
+  // ADD UDHAR
+  if (/\b(add|daal|jod|likh|lagao).{0,25}(udhar|udhaar|credit)\b|\b(udhar|udhaar|credit).{0,25}(add|de|diya|lagao|daal|jod)\b/i.test(t)) {
     const amount = vaExtractAmount(t);
-    const name = vaExtractName(cmd, 'add','udhar','udhaar','credit','daal','jod','likh','de','diya','lagao','rupees','rs','₹');
+    const name = vaExtractName(cmd, 'add','daal','jod','likh','lagao','udhar','udhaar','credit','de','diya','entry','voice');
     return await vaAddUdhar(name, amount, '');
   }
 
-  // ── DELETE UDHAR ENTRY ────────────────────────────────────────────────────────
-  if (/\b(delete|remove|undo|hatao|mita|cancel).{0,30}(udhar|credit|udhaar|entry)\b|\b(udhar|udhaar|credit).{0,20}(delete|remove|undo|hatao)\b/i.test(t)) {
-    const name = vaExtractName(cmd, 'delete','remove','undo','hatao','mita','cancel','udhar','udhaar','credit','entry','last');
-    if (name) return await vaDeleteLastUdhar(name);
-    return `Say whose udhar to delete — e.g. "delete last udhar for Ramesh" or "remove udhar A-38"`;
-  }
-
-  // ── PAYMENT RECEIVED ─────────────────────────────────────────────────────────
-  if (/\b(paid|payment|received|mila|aaya|collected)\b/i.test(t) &&
-      /\b(\d+|rupee|rs|₹)\b/i.test(t)) {
+  // PAYMENT RECEIVED
+  if (/\b(paid|payment|received|mila|aaya|collected|bheja|diya|jama)\b/i.test(t) && /\b\d+\b/.test(t)) {
     const amount = vaExtractAmount(t);
-    const name = vaExtractName(cmd, 'paid','payment','received','mila','aaya','collected','cash','upi','rupees','rs','₹');
-    return await vaRecordPayment(name, amount);
+    const methodM = t.match(/\b(upi|cash|online|bank|transfer|gpay|paytm|phonepe|neft|imps)\b/i);
+    const method = methodM ? methodM[1] : 'cash';
+    const name = vaExtractName(cmd, 'paid','payment','received','mila','aaya','collected','bheja','diya','jama','cash','upi','online','bank','transfer','gpay','paytm','phonepe','add','record');
+    return await vaRecordPayment(name, amount, method);
   }
 
-  // ── OPEN CUSTOMER PROFILE ────────────────────────────────────────────────────
-  if (/\b(open|show|profile|detail|view).{1,20}customer\b|\bcustomer.{1,20}(open|show|profile)\b/i.test(t) ||
-      /^(open|show|profile)\s+\w/i.test(t)) {
-    const name = vaExtractName(cmd, 'open','show','profile','detail','view','customer');
-    if (name.length > 1) return await vaOpenCustomer(name);
+  // CHECK BALANCE
+  if (/\b(balance|baaki|baki|due|kitna|check).{0,30}(udhar|due|balance|baaki|baki)\b|\b(udhar|due|balance|baaki).{0,20}(check|batao|kitna|kya)\b|\bcheck\b.{0,20}\b(balance|due)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'balance','baaki','baki','due','check','batao','kitna','how','much','kya','hai','udhar','of');
+    if (name) return await vaCheckBalance(name);
+    return `Say whose balance — e.g. "check balance of Ramesh"`;
   }
 
-  // ── STATS & COUNTS ───────────────────────────────────────────────────────────
+  // SHOW UDHAR LIST
+  if (/\b(show|see|dekho|list|batao).{0,20}udhar\b|\budhar.{0,20}(show|list|batao|detail)\b/i.test(t)) {
+    const name = vaExtractName(cmd, 'show','see','dekho','list','batao','udhar','of','for','ka','ki','ke');
+    if (name) return await vaShowUdharList(name);
+  }
+
+  // ORDERS: ACCEPT
+  if (/\b(accept|confirm|approve)\b.{0,30}(order|#\d+)/i.test(t) || /\border.{0,15}(accept|confirm)\b/i.test(t)) {
+    const q = t.match(/#?(\d+)/)?.[0] || vaExtractName(cmd, 'accept','confirm','approve','order');
+    return await vaUpdateOrder(q||'', 'accepted');
+  }
+  // ORDERS: DELIVER
+  if (/\b(deliver|dispatch|complete)\b.{0,30}(order|#\d+)/i.test(t) || /\border.{0,15}(deliver|done|complete)\b/i.test(t)) {
+    const q = t.match(/#?(\d+)/)?.[0] || vaExtractName(cmd, 'deliver','dispatch','mark','order','delivered','done','complete');
+    return await vaUpdateOrder(q||'', 'delivered');
+  }
+  // ORDERS: PACK
+  if (/\b(pack|packed|ready)\b.{0,30}(order|#\d+)/i.test(t)) {
+    const q = t.match(/#?(\d+)/)?.[0] || vaExtractName(cmd, 'pack','packed','ready','order');
+    return await vaUpdateOrder(q||'', 'packed');
+  }
+  // ORDERS: CANCEL
+  if (/\bcancel.{0,30}(order|#\d+)|order.{0,15}cancel\b/i.test(t)) {
+    const q = t.match(/#?(\d+)/)?.[0] || vaExtractName(cmd, 'cancel','order');
+    return await vaUpdateOrder(q||'', 'cancelled');
+  }
+
+  // PENDING ORDERS
+  if (/\b(pending.?order|order.?pending|kaun.?order|new.?order|today.?order|order.?today|kitne.?order|order.?status)\b/i.test(t)) {
+    return await vaPendingOrders();
+  }
+
+  // STATS
   if (/\b(how many|kitne|total|count).{0,15}product\b/i.test(t))
-    return `📦 You have ${allProducts.length} products across ${allCategories.length} categories.`;
+    return `📦 ${allProducts.length} products in ${allCategories.length} categories.`;
   if (/\b(how many|kitne|total|count).{0,15}customer\b/i.test(t))
-    return `👥 You have ${allCustomers.length} customers.`;
+    return `👥 ${allCustomers.length} customers, ${allCustomers.filter(c=>c.milkSubscription).length} with milk sub.`;
   if (/\b(how many|kitne|total).{0,15}categor\b/i.test(t))
-    return `🗂 You have ${allCategories.length} categories: ${allCategories.slice(0,5).map(c=>c.name).join(', ')}${allCategories.length>5?'...':''}`;
+    return `🗂 ${allCategories.length} categories: ${allCategories.slice(0,6).map(c=>c.name).join(', ')}${allCategories.length>6?'...':''}`;
   if (/\b(which|current|kaunsa|konsa).{0,10}page\b|\bwhere am i\b/i.test(t))
-    return `You're on the ${currentPage} page.`;
+    return `You're on: ${currentPage}`;
 
-  // ── NAVIGATION (last resort) ─────────────────────────────────────────────────
-  const pages = {
-    dashboard:['dashboard','dash','home','main','overview'],
-    orders:['orders','order','billing'],
-    customers:['customers','customer','client'],
-    products:['products','product','items','item','catalogue','catalog','inventory'],
-    milk:['milk','dairy','milkman','doodh'],
-    udhar:['udhar','udhaar','credit','khata','due','dues','ledger','bahi'],
-    categories:['categories','category'],
-    subcategories:['subcategories','subcategory'],
-    banners:['banners','banner','slides'],
-    settings:['settings','setting','config'],
-    scanner:['scanner','scan','barcode'],
-  };
-  const addActions = {
-    openAddProduct:[/\b(add|new|create)\b.{0,10}\bproduct\b/i],
-    openAddCategory:[/\b(add|new|create)\b.{0,10}\bcategor\b/i],
-    openAddBanner:[/\b(add|new|create)\b.{0,10}\bbanner\b/i],
-  };
-  for (const [action, pats] of Object.entries(addActions)) {
-    if (pats.some(p=>p.test(t))) {
-      if(action==='openAddProduct'){goTo('products');setTimeout(()=>openProductModal(),200);}
-      if(action==='openAddCategory'){goTo('categories');setTimeout(()=>openCatModal(),200);}
-      if(action==='openAddBanner'){goTo('banners');setTimeout(()=>openBannerModal(),200);}
-      return `✅ Opening form!`;
+  // OPEN CUSTOMER BY NAME OR ADDRESS (must be before navigation)
+  if (/\b(open|show|profile|view|dekho)\b/i.test(t) || /^[a-z]-?\d+/i.test(t)) {
+    const name = vaExtractName(cmd, 'open','show','profile','detail','view','dekho','customer','account','of','the');
+    if (name && name.length >= 2) {
+      if (!allCustomers.length) await loadCustomersData();
+      const c = vaFindCustomer(name);
+      if (c) return await vaOpenCustomer(name);
+    }
+    // If it looks like an address code (like "A-38") try directly
+    const addrMatch = cmd.trim().match(/^([a-z]\s*[-\s]?\s*\d+)$/i);
+    if (addrMatch) {
+      if (!allCustomers.length) await loadCustomersData();
+      const c = vaFindCustomer(addrMatch[1].trim());
+      if (c) return await vaOpenCustomer(addrMatch[1].trim());
     }
   }
-  for (const [page, aliases] of Object.entries(pages)) {
-    if (aliases.some(a => t.includes(a))) { goTo(page); return `Opening ${page}!`; }
+
+  // ADD FORM SHORTCUTS
+  if (/\b(add|new|create)\b.{0,12}\bproduct\b/i.test(t)) { goTo('products'); setTimeout(()=>openProductModal(),200); return `✅ Opening add product!`; }
+  if (/\b(add|new|create)\b.{0,12}\bcategor\b/i.test(t)) { goTo('categories'); setTimeout(()=>openCatModal(),200); return `✅ Opening add category!`; }
+  if (/\b(add|new|create)\b.{0,12}\bbanner\b/i.test(t)) { goTo('banners'); setTimeout(()=>openBannerModal(),200); return `✅ Opening add banner!`; }
+  if (/\b(add|new|create)\b.{0,12}\bcustomer\b/i.test(t)) { goTo('customers'); setTimeout(()=>typeof openAddCustomerModal==='function'&&openAddCustomerModal(),200); return `✅ Opening add customer!`; }
+
+  // EXPLICIT NAVIGATION ("go to milk", "open milk page")
+  const navMap = [
+    [/\b(milk|doodh)\b/i, 'milk'],
+    [/\b(udhar|udhaar|khata|bahi|ledger)\b/i, 'udhar'],
+    [/\b(order|orders|billing)\b/i, 'orders'],
+    [/\b(customer|customers|grahak)\b/i, 'customers'],
+    [/\b(product|products|inventory|catalogue)\b/i, 'products'],
+    [/\b(dashboard|dash|home|overview)\b/i, 'dashboard'],
+    [/\b(setting|settings|config)\b/i, 'settings'],
+    [/\b(scanner|scan|barcode|qr)\b/i, 'scanner'],
+    [/\b(banner|banners|slide)\b/i, 'banners'],
+    [/\b(categor)\b/i, 'categories'],
+  ];
+  // Only trigger navigation if there's an explicit nav word or the command is short and matches a page
+  if (/\b(go to|open|show|navigate|jaao|page|section)\b/i.test(t) || t.split(' ').length <= 2) {
+    for (const [pat, page] of navMap) {
+      if (pat.test(t)) { goTo(page); return `Opening ${page}!`; }
+    }
   }
 
-  // ── REFRESH ───────────────────────────────────────────────────────────────────
-  if (/\b(refresh|reload|sync|update)\b/i.test(t)) {
-    await loadAll(true);
-    const fn={dashboard:renderDashboard,orders:renderOrders,customers:renderCustomers,products:renderProducts,milk:renderMilk}[currentPage];
-    if(fn)fn();
-    return `✅ Data refreshed!`;
-  }
-
-  // ── GREETINGS ────────────────────────────────────────────────────────────────
-  if (/^(hi|hey|hello|helo|hii|sup|yo|namaskar|namaste)\b/i.test(t)) {
-    const h=new Date().getHours();
-    return `${h<12?'Good morning':h<17?'Good afternoon':'Good evening'}! 👋 I can mark milk, accept orders, record payments, add udhar — just say what you need!`;
-  }
-  if (/\bhelp\b/i.test(t))
-    return `I can do real actions:\n• "Mark milk for Ramesh" → marks delivered\n• "Mark all milk today" → bulk mark\n• "Remove milk for A-38" → removes today's entry\n• "Accept order #5" or "Deliver Priya's order"\n• "Ramesh paid 200" → records payment\n• "Add udhar 150 for Suresh"\n• "Delete last udhar for Ramesh" → removes latest entry\n• "Milk status today"\n• "Pending orders"\n• "Open Ramesh profile"`;
-
-  return null; // unknown
+  return null;
 }
 
-// ── SEND / PROCESS COMMAND ───────────────────────────────────────────────────
+// ── SEND / PROCESS COMMAND ────────────────────────────────────────────────────
 async function sendVoiceCommand(cmdOverride) {
   const inp = document.getElementById('vaInput');
   const cmd = (cmdOverride || inp?.value || '').trim();
@@ -3604,24 +3735,23 @@ async function sendVoiceCommand(cmdOverride) {
   try {
     reply = await vaProcessCommand(cmd);
     if (!reply) {
-      const tips = ['Mark milk for [name]','Accept order #5','[Name] paid 200','Add udhar 150 for [name]','Milk status','Pending orders'];
-      reply = `I didn't get that. Try: "${tips[Math.floor(Math.random()*tips.length)]}" — or say "help" for all commands.`;
+      const tips = ['Mark milk for [name]','A-38 paid 200','Add udhar 150 for [name]','Open A-38','Pending orders','Milk status','Today summary'];
+      reply = `I didn't understand that. Try: "${tips[Math.floor(Math.random()*tips.length)]}" — or say "help" for all commands.`;
     }
   } catch(e) {
-    console.error('VA error', e);
-    reply = `⚠️ Something went wrong: ${e.message||e}. Try again!`;
+    console.error('VA error',e);
+    reply = `⚠️ Error: ${e.message||e}. Try again!`;
   }
 
   vaAddMsg('ai', reply);
   vaSetStatus('');
 
-  // Speak reply
   if ('speechSynthesis' in window && _vaOpen) {
-    const clean = reply.replace(/[✅❌⚠️🎙️👋📦🥛📒]/g,'').replace(/\s+/g,' ').trim();
+    const clean = reply.replace(/[✅❌⚠️🎙️👋📦🥛📒📊💰👤📞🏠📝🛒🗂🗑️⏸🔔ℹ️]/g,'').replace(/\s+/g,' ').trim();
     const utter = new SpeechSynthesisUtterance(clean);
     utter.rate = 1.05;
     const voices = window.speechSynthesis.getVoices();
-    const pref = voices.find(v => /Google|Natural|Enhanced|Samantha|Karen|Daniel/i.test(v.name));
+    const pref = voices.find(v=>/Google|Natural|Enhanced|Samantha|Karen|Daniel/i.test(v.name));
     if (pref) utter.voice = pref;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter);
