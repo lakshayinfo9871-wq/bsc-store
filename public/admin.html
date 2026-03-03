@@ -3548,7 +3548,7 @@ async function sendVoiceCommand(cmdOverride) {
   // Speak reply
   if ('speechSynthesis' in window && _vaOpen && reply) {
     try {
-      const clean = reply.replace(/[^ -]/g, '').replace(/\s+/g,' ').trim();
+      const clean = reply.replace(/[^ -]/g, '').replace(/\s+/g,' ').trim();
       if (clean.length > 2) {
         const u = new SpeechSynthesisUtterance(clean);
         u.rate = 1.05;
