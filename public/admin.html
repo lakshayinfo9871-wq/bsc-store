@@ -3237,10 +3237,19 @@ async function vaAddUdhar(nameHint, amount, note) {
   const c = vaFindCustomer(nameHint);
   if (!c) return `❌ Customer "${nameHint}" not found. Check the name.`;
   if (!amount || isNaN(amount)) return `❌ Please say the amount too — e.g. "add udhar 200 for Ramesh"`;
-  await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,type:'credit',amount:parseFloat(amount),note:note||'Voice entry'})});
-  await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,items:[],amount:parseFloat(amount),note:note||'Voice entry'})});
-  if(currentPage==='customers') { await loadCustomersData(); renderCustomersPage(); }
-  return `✅ Added ₹${amount} udhar for ${c.name}!`;
+  const cid = c.customerId || c.id;
+  const r1 = await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,type:'credit',amount:parseFloat(amount),note:note||'Voice entry'})});
+  const r2 = await fetch('/api/admin/udhar',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,items:[],amount:parseFloat(amount),note:note||'Voice entry'})});
+  if (!r1.ok || !r2.ok) return `❌ Server error saving udhar. Check your connection.`;
+  // If profile is open for this customer, live-refresh it; else reload current page
+  if (accountSelectedId === cid) {
+    await refreshProfile(cid);
+  } else {
+    await loadCustomersData();
+    if (currentPage === 'customers') renderCustomersPage();
+    else if (currentPage === 'udhar') await renderUdhar();
+  }
+  return `✅ Added ₹${amount} udhar for ${c.name}! Saved in their profile.`;
 }
 
 // RECORD PAYMENT from a customer
@@ -3249,20 +3258,42 @@ async function vaRecordPayment(nameHint, amount) {
   const c = vaFindCustomer(nameHint);
   if (!c) return `❌ Customer "${nameHint}" not found.`;
   if (!amount || isNaN(amount)) return `❌ Please say the amount — e.g. "Ramesh paid 500"`;
-  await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,type:'payment',amount:parseFloat(amount),note:'cash'})});
-  await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId:c.id,amount:parseFloat(amount),method:'cash'})});
-  if(currentPage==='customers') { await loadCustomersData(); renderCustomersPage(); }
-  return `✅ Recorded ₹${amount} payment from ${c.name}!`;
+  const cid = c.customerId || c.id;
+  const r1 = await fetch('/api/admin/ledger',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,type:'payment',amount:parseFloat(amount),note:'cash'})});
+  const r2 = await fetch('/api/admin/udhar-payments',{method:'POST',headers:ah(),body:JSON.stringify({customerId:cid,amount:parseFloat(amount),method:'cash'})});
+  if (!r1.ok || !r2.ok) return `❌ Server error saving payment. Check your connection.`;
+  if (accountSelectedId === cid) {
+    await refreshProfile(cid);
+  } else {
+    await loadCustomersData();
+    if (currentPage === 'customers') renderCustomersPage();
+    else if (currentPage === 'udhar') await renderUdhar();
+  }
+  return `✅ Recorded ₹${amount} payment from ${c.name}! Balance updated.`;
 }
 
-// SHOW customer profile
+// SHOW customer profile — ensures customers page is rendered before opening profile
 async function vaOpenCustomer(nameHint) {
   if (!allCustomers.length) await loadCustomersData();
   const c = vaFindCustomer(nameHint);
-  if (!c) return `❌ Customer "${nameHint}" not found.`;
-  goTo('customers');
-  setTimeout(()=>openCustomerProfile(c.id), 250);
-  return `✅ Opening profile for ${c.name}!`;
+  if (!c) return `❌ Customer "${nameHint}" not found. Try part of the name.`;
+  const cid = c.customerId || c.id;
+  // If already on customers page and the container exists, open directly
+  if (currentPage === 'customers' && document.getElementById('customerProfile')) {
+    await openCustomerProfile(cid);
+    return `✅ Opened profile for ${c.name}!`;
+  }
+  // Must navigate: renderCustomers() loads data + renders page which creates #customerProfile
+  await renderCustomers();
+  currentPage = 'customers';
+  document.querySelectorAll('.nav-link').forEach((l,i) => {
+    l.classList.toggle('active', ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'][i] === 'customers');
+  });
+  document.getElementById('pageTitle').textContent = 'Customers';
+  // Wait for DOM to paint then open profile
+  await new Promise(res => setTimeout(res, 150));
+  await openCustomerProfile(cid);
+  return `✅ Opened profile for ${c.name}!`;
 }
 
 // PENDING ORDERS summary
