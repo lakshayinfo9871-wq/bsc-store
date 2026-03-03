@@ -1186,31 +1186,6 @@ async function delLedgerEntry(id, customerId) {
   );
 }
 
-async function editLedgerEntry(id, customerId) {
-  const e = (_profileData.ledgerEntries||[]).find(x=>x.id===id);
-  if (!e) return toast('Entry not found');
-  const isCredit = e.type === 'credit';
-  miniModal({
-    title: isCredit ? '✏️ Edit Udhar Entry' : '✏️ Edit Payment Entry',
-    fields: [
-      { id: 'amount', label: 'Amount (₹)', type: 'number', value: e.amount, min: 0 },
-      { id: 'note', label: isCredit ? 'Description / Item' : 'Note / Method',
-        value: e.note||'', placeholder: isCredit ? 'e.g. Maida, Milk, Rice...' : 'e.g. Cash, UPI...' },
-      { id: 'date', label: 'Date', type: 'date', value: e.date||new Date().toISOString().slice(0,10) },
-    ],
-    confirmLabel: 'Update', confirmClass: 'btn-blue',
-    onConfirm: async ({ amount, note, date }) => {
-      const r = await fetch('/api/admin/ledger/'+id, {
-        method: 'PUT', headers: ah(),
-        body: JSON.stringify({ amount: parseFloat(amount)||e.amount, note: note||'', date: date||e.date })
-      });
-      if (!r.ok) return toast('Failed to update entry');
-      toast('\u2705 Entry updated!');
-      await refreshProfile(customerId);
-    }
-  });
-}
-
 async function delUdharEntry(id, customerId) {
   undoToast('Udhar entry deleted',
     async () => {
@@ -3632,23 +3607,18 @@ async function vaProcessCommand(cmd) {
   }
 
   // ADD UDHAR — handles natural phrases:
+  // "add udhar 500 of butter under A-38"
   // "add udhar 500 of maida for Lakshay Kumar"
-  // "add 500 rs of maida under Lakshay"
   // "add udhar 200 for Ramesh"
   if (/\b(add|daal|jod|likh|lagao).{0,25}(udhar|udhaar|credit)\b|\b(udhar|udhaar|credit).{0,25}(add|de|diya|lagao|daal|jod)\b/i.test(t)) {
     const amount = vaExtractAmount(t);
-    // Extract item: "of [item] for/under/to name"
-    const itemMatch = cmd.match(/\bof\s+([a-zA-Z][a-zA-Z\s]{1,30})\s+(?:for|under|to|ke liye)\b/i)
-                  || cmd.match(/\b(ka|ki)\s+([a-zA-Z][a-zA-Z\s]{1,30})\s+(?:for|under|to)\b/i);
+    // Extract customer: LAST part after for/under/to — allow A-38 style (alphanum + hyphen)
+    const forMatch = cmd.match(/\b(?:for|under|to|ke liye)\s+([a-zA-Z0-9][a-zA-Z0-9\s\-]+?)\s*$/i);
+    const custHint = forMatch ? forMatch[1].trim() : vaExtractName(cmd, 'add','daal','jod','likh','lagao','udhar','udhaar','credit','de','diya','entry','voice','rs','rupees');
+    // Extract item: "of [item] for/under" — must come BEFORE the for/under keyword
+    const itemMatch = cmd.match(/\bof\s+([a-zA-Z][a-zA-Z\s]{1,25}?)\s+(?:for|under|to|ke liye)\b/i)
+                  || cmd.match(/\b(ka|ki)\s+([a-zA-Z][a-zA-Z\s]{1,25}?)\s+(?:for|under|to)\b/i);
     const itemNote = itemMatch ? (itemMatch[1]||itemMatch[2]).trim() : '';
-    // Extract customer name — last part after for/under/to keyword
-    const forMatch = cmd.match(/\b(?:for|under|to|ke liye)\s+([a-zA-Z][a-zA-Z\s]+)\s*$/i);
-    let custHint = '';
-    if (forMatch) {
-      custHint = forMatch[1].trim();
-    } else {
-      custHint = vaExtractName(cmd, 'add','daal','jod','likh','lagao','udhar','udhaar','credit','de','diya','entry','voice','of',itemNote,'rs','rupees');
-    }
     return await vaAddUdhar(custHint, amount, itemNote);
   }
 
@@ -3757,6 +3727,92 @@ async function vaProcessCommand(cmd) {
 }
 
 // ── SEND / PROCESS COMMAND ────────────────────────────────────────────────────
+
+async function editLedgerEntry(id, customerId) {
+  const e = (_profileData.ledgerEntries||[]).find(x=>x.id===id);
+  if (!e) return toast('Entry not found');
+  const isCredit = e.type === 'credit';
+  miniModal({
+    title: isCredit ? '\u270f\ufe0f Edit Udhar Entry' : '\u270f\ufe0f Edit Payment Entry',
+    fields: [
+      { id: 'amount', label: 'Amount (\u20b9)', type: 'number', value: e.amount, min: 0 },
+      { id: 'note', label: isCredit ? 'Description / Item' : 'Note / Method',
+        value: e.note||'', placeholder: isCredit ? 'e.g. Maida, Milk, Rice...' : 'e.g. Cash, UPI...' },
+      { id: 'date', label: 'Date', type: 'date', value: e.date||new Date().toISOString().slice(0,10) },
+    ],
+    confirmLabel: 'Update', confirmClass: 'btn-blue',
+    onConfirm: async ({ amount, note, date }) => {
+      const r = await fetch('/api/admin/ledger/'+id, {
+        method: 'PUT', headers: ah(),
+        body: JSON.stringify({ amount: parseFloat(amount)||e.amount, note: note||'', date: date||e.date })
+      });
+      if (!r.ok) return toast('Failed to update entry');
+      toast('Entry updated!');
+      await refreshProfile(customerId);
+    }
+  });
+}
+
+// ── CLAUDE AI FALLBACK ────────────────────────────────────────────────────────
+async function vaAskClaude(userMessage) {
+  vaSetStatus('🤖 Asking Claude AI...');
+  try {
+    // Build a rich system prompt with live store context
+    const today = new Date().toISOString().slice(0,10);
+    const activeM = milkCustomers.filter(c=>c.active);
+    const markedToday = activeM.filter(c=>milkLogs.find(l=>l.customerId===c.id&&l.date===today));
+    const udharSummary = udharSummaries || [];
+    const overdueCount = udharSummary.filter(s=>(s.balance||0)>0).length;
+
+    const systemPrompt = `You are an AI assistant for BSC Store admin panel. You help the store owner manage their grocery/dairy store.
+
+LIVE STORE DATA (${today}):
+- Customers: ${allCustomers.length} total
+- Products: ${allProducts.length} items in ${allCategories.length} categories  
+- Milk: ${markedToday.length}/${activeM.length} customers delivered today
+- Udhar: ${overdueCount} customers with outstanding balance
+- Current page: ${currentPage}
+
+CUSTOMER LIST (first 20): ${allCustomers.slice(0,20).map(c=>c.name+(c.block&&c.villa?' ('+c.block+'-'+c.villa+')':'')).join(', ')}
+
+You can help with:
+- Questions about the store data above
+- Explaining how to use features
+- Suggesting commands (e.g. "say: mark milk for Ramesh")
+- General business advice for a small grocery store
+
+For ACTIONS (adding udhar, marking milk, etc.) always suggest the exact voice command to use.
+Keep replies short and helpful. Use ₹ for amounts. Respond in the same language as the user (Hindi/English mix is fine).`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        system: systemPrompt,
+        messages: [
+          ..._vaConversation.slice(-6), // last 3 exchanges for context
+          { role: 'user', content: userMessage }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error('Claude API error:', err);
+      const tips = ['Mark milk for [name]','A-38 paid 200','Add udhar 150 for [name]','Open A-38','Pending orders','Milk status','Today summary'];
+      return `I didn't understand that. Try: "${tips[Math.floor(Math.random()*tips.length)]}" — or say "help" for all commands.`;
+    }
+
+    const data = await response.json();
+    return data.content?.[0]?.text || 'No response from AI.';
+  } catch(e) {
+    console.error('Claude fetch error:', e);
+    return `I didn't understand that. Say "help" to see available commands.`;
+  }
+}
+
 async function sendVoiceCommand(cmdOverride) {
   const inp = document.getElementById('vaInput');
   const cmd = (cmdOverride || inp?.value || '').trim();
@@ -3770,8 +3826,8 @@ async function sendVoiceCommand(cmdOverride) {
   try {
     reply = await vaProcessCommand(cmd);
     if (!reply) {
-      const tips = ['Mark milk for [name]','A-38 paid 200','Add udhar 150 for [name]','Open A-38','Pending orders','Milk status','Today summary'];
-      reply = `I didn't understand that. Try: "${tips[Math.floor(Math.random()*tips.length)]}" — or say "help" for all commands.`;
+      // Fallback to Claude AI for anything not handled by local rules
+      reply = await vaAskClaude(cmd);
     }
   } catch(e) {
     console.error('VA error',e);
