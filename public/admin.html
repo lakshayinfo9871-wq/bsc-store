@@ -3461,7 +3461,7 @@ async function vaProcessCommand(cmd) {
   // ── GREETINGS ────────────────────────────────────────────────────────────────
   if (/^(hi|hey|hello|helo|hii|sup|yo|namaskar|namaste)\b/i.test(t)) {
     const h=new Date().getHours();
-    return `${h<12?'Good morning':'h<17?Good afternoon':'Good evening'}! 👋 I can mark milk, accept orders, record payments, add udhar — just say what you need!`;
+    return `${h<12?'Good morning':h<17?'Good afternoon':'Good evening'}! 👋 I can mark milk, accept orders, record payments, add udhar — just say what you need!`;
   }
   if (/\bhelp\b/i.test(t))
     return `I can do real actions:\n• "Mark milk for Ramesh" → marks delivered\n• "Mark all milk today" → bulk mark\n• "Accept order #5" or "Deliver Priya's order"\n• "Ramesh paid 200" → records payment\n• "Add udhar 150 for Suresh"\n• "Milk status today"\n• "Pending orders"\n• "Open Ramesh profile"`;
