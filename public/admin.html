@@ -3128,123 +3128,56 @@ async function vaGetLiveContext() {
     const active  = milkCustomers.filter(c => c.active);
     const marked  = active.filter(c => milkLogs.find(l => l.customerId === c.id && l.date === today));
     const pending = active.filter(c => !milkLogs.find(l => l.customerId === c.id && l.date === today));
-    milkLine = marked.length + '/' + active.length + ' delivered. Pending: ' +
-      pending.slice(0,8).map(c => c.name + (c.block&&c.villa ? ' ('+c.block+'-'+c.villa+')' : '')).join(', ') +
-      (pending.length > 8 ? ' +' + (pending.length-8) + ' more' : '');
-  } catch(e) { milkLine = 'unavailable'; }
+    milkLine = marked.length + '/' + active.length + ' done. Pending: ' +
+      pending.slice(0,5).map(c => c.name + (c.block&&c.villa ? '('+c.block+'-'+c.villa+')' : '')).join(',');
+  } catch(e) { milkLine = ''; }
   try {
     if (!allCustomers.length) await loadCustomersData();
+    // Only send name + address — keep it short
     custList = allCustomers.map(c =>
-      c.name + ' [id:' + (c.customerId||c.id) + ']' +
-      (c.block && c.villa ? ' [addr:' + c.block + '-' + c.villa + ']' : '') +
-      (c.phone ? ' [ph:' + c.phone + ']' : '')
-    ).join('\n');
-  } catch(e) { custList = 'unavailable'; }
+      c.name + (c.block && c.villa ? '(' + c.block + '-' + c.villa + ')' : '')
+    ).join(', ');
+  } catch(e) { custList = ''; }
   try {
     const overdue = (udharSummaries||[]).filter(s => (s.balance||0) > 0);
-    udharLine = overdue.length + ' with balance. Top: ' +
-      overdue.slice(0,5).map(s => s.customer.name + ' Rs.' + Math.round(s.balance)).join(', ');
-  } catch(e) { udharLine = 'unavailable'; }
+    udharLine = overdue.slice(0,5).map(s => s.customer.name + ':Rs.' + Math.round(s.balance)).join(', ');
+  } catch(e) { udharLine = ''; }
   try {
     const pending = (ordersData||[]).filter(o => o.status === 'pending');
-    orderLine = pending.length + ' pending: ' +
-      pending.slice(0,5).map(o => '#'+o.id+' '+o.customerName+' Rs.'+o.total).join(', ');
-  } catch(e) { orderLine = 'unavailable'; }
+    orderLine = pending.slice(0,3).map(o => '#'+o.id+' '+o.customerName).join(', ');
+  } catch(e) { orderLine = ''; }
   return { today, milkLine, custList, udharLine, orderLine };
 }
 
 async function vaAskClaude(userMessage) {
   const ctx = await vaGetLiveContext();
 
-  const systemPrompt = `You are the AI assistant for BSC Store admin panel.
-Admin speaks in English, Hindi, Hinglish, typos, short forms — understand everything.
-
-TODAY: ${ctx.today}
-CURRENT PAGE: ${currentPage}
-PRODUCTS: ${allProducts.length} | CUSTOMERS: ${allCustomers.length}
-
-FULL CUSTOMER LIST:
-${ctx.custList}
-
-MILK TODAY: ${ctx.milkLine}
+  const systemPrompt = `BSC Store admin AI. Understand English/Hindi/Hinglish/typos/short forms.
+TODAY:${ctx.today} PAGE:${currentPage}
+CUSTOMERS: ${ctx.custList}
+MILK: ${ctx.milkLine}
 UDHAR: ${ctx.udharLine}
 ORDERS: ${ctx.orderLine}
 
-Return ONLY a raw JSON action object (no markdown, no explanation) for actions.
-For questions/conversation return plain text.
+Return ONLY raw JSON for actions, plain text for questions. No markdown.
 
-ALL AVAILABLE ACTIONS:
+ACTIONS (JSON format):
+mark_milk: {"action":"mark_milk","customerHint":"A-17","qty":0.5}
+mark_all_milk: {"action":"mark_all_milk"}
+mark_all with exceptions: {"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
+remove_milk: {"action":"remove_milk","customerHint":"A-17"}
+pause_milk/resume_milk: {"action":"pause_milk","customerHint":"Ramesh"}
+add_udhar: {"action":"add_udhar","customerHint":"A-38","amount":300,"note":"butter"}
+record_payment: {"action":"record_payment","customerHint":"Ramesh","amount":500}
+delete_udhar: {"action":"delete_udhar","customerHint":"Lakshay","amount":200}
+delete_all_udhar: {"action":"delete_all_udhar","customerHint":"Lakshay"}
+check_balance: {"action":"check_balance","customerHint":"Priya"}
+open_customer: {"action":"open_customer","customerHint":"B-12"}
+update_order: {"action":"update_order","orderHint":"#5","status":"delivered"}
+navigate: {"action":"navigate","page":"milk"}
+milk_status/pending_orders/today_summary: {"action":"milk_status"}
 
-Mark milk for one customer (default qty):
-{"action":"mark_milk","customerHint":"A-17"}
-
-Mark milk with CUSTOM quantity:
-{"action":"mark_milk","customerHint":"A-17","qty":0.5}
-
-Mark all milk (everyone gets default qty):
-{"action":"mark_all_milk"}
-
-Mark all milk EXCEPT some with custom qty:
-{"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
-
-Remove milk entry for today:
-{"action":"remove_milk","customerHint":"A-17"}
-
-Pause milk subscription:
-{"action":"pause_milk","customerHint":"Ramesh"}
-
-Resume milk subscription:
-{"action":"resume_milk","customerHint":"Ramesh"}
-
-Add udhar (credit):
-{"action":"add_udhar","customerHint":"A-38","amount":300,"note":"butter"}
-
-Record payment received:
-{"action":"record_payment","customerHint":"Ramesh","amount":500,"method":"cash"}
-
-Delete a specific udhar entry (latest or by amount):
-{"action":"delete_udhar","customerHint":"Lakshay","amount":200}
-
-Delete ALL udhar entries for a customer:
-{"action":"delete_all_udhar","customerHint":"Lakshay"}
-
-Check balance:
-{"action":"check_balance","customerHint":"Priya"}
-
-Open customer profile:
-{"action":"open_customer","customerHint":"B-12"}
-
-Update order status:
-{"action":"update_order","orderHint":"#5","status":"delivered"}
-(status: accepted, delivered, packed, cancelled)
-
-Navigate to page:
-{"action":"navigate","page":"milk"}
-(pages: milk, orders, customers, products, udhar, dashboard, settings, scanner)
-
-Show milk status:
-{"action":"milk_status"}
-
-Show pending orders:
-{"action":"pending_orders"}
-
-Today summary:
-{"action":"today_summary"}
-
-CRITICAL EXAMPLES:
-"ajj A-17 m bas 0.5L gaya" -> {"action":"mark_milk","customerHint":"A-17","qty":0.5}
-"ajj sabka doodh gya lekin A-17 ka 0.5L" -> {"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
-"sabka milk done" -> {"action":"mark_all_milk"}
-"A-38 mai udhar 300 butter" -> {"action":"add_udhar","customerHint":"A-38","amount":300,"note":"butter"}
-"lakshay ke sare udhar delete karo" -> {"action":"delete_all_udhar","customerHint":"Lakshay"}
-"delete 200 wala udhar lakshay ka" -> {"action":"delete_udhar","customerHint":"Lakshay","amount":200}
-"lakshay ka profile open karo" -> {"action":"open_customer","customerHint":"Lakshay"}
-"open b-12" -> {"action":"open_customer","customerHint":"B-12"}
-"ramesh ne 500 diya" -> {"action":"record_payment","customerHint":"Ramesh","amount":500,"method":"cash"}
-"order 5 deliver hua" -> {"action":"update_order","orderHint":"#5","status":"delivered"}
-"A-17 ka milk hatao aaj ka" -> {"action":"remove_milk","customerHint":"A-17"}
-
-CUSTOMER MATCHING: customerHint = person name OR address (A-38, B-12 etc). Item/product goes in "note".`;
+RULES: customerHint=name or address(A-38,B-12). item goes in note field.`
 
   try {
     const proxyRes = await fetch('/api/admin/ai-chat', {
