@@ -874,6 +874,7 @@ function renderLedgerTab(data, customerId) {
             <td>${entry.note||'—'}</td>
             <td style="font-weight:700;color:${isCredit?'var(--red)':'var(--green)'}">${isCredit?'+':'−'}₹${(entry.amount||0).toFixed(0)}</td>
             <td><div class="actions">
+              <button class="btn btn-blue" style="font-size:.7rem;padding:.22rem .55rem" onclick="editLedgerEntry(${entry.id},${customerId})">Edit</button>
               <button class="btn btn-red" style="font-size:.7rem;padding:.22rem .55rem" onclick="delLedgerEntry(${entry.id},${customerId})">Del</button>
             </div></td>
           </tr>`;
@@ -1183,6 +1184,31 @@ async function delLedgerEntry(id, customerId) {
     },
     () => {} // undo — do nothing (entry not deleted yet)
   );
+}
+
+async function editLedgerEntry(id, customerId) {
+  const e = (_profileData.ledgerEntries||[]).find(x=>x.id===id);
+  if (!e) return toast('Entry not found');
+  const isCredit = e.type === 'credit';
+  miniModal({
+    title: isCredit ? '✏️ Edit Udhar Entry' : '✏️ Edit Payment Entry',
+    fields: [
+      { id: 'amount', label: 'Amount (₹)', type: 'number', value: e.amount, min: 0 },
+      { id: 'note', label: isCredit ? 'Description / Item' : 'Note / Method',
+        value: e.note||'', placeholder: isCredit ? 'e.g. Maida, Milk, Rice...' : 'e.g. Cash, UPI...' },
+      { id: 'date', label: 'Date', type: 'date', value: e.date||new Date().toISOString().slice(0,10) },
+    ],
+    confirmLabel: 'Update', confirmClass: 'btn-blue',
+    onConfirm: async ({ amount, note, date }) => {
+      const r = await fetch('/api/admin/ledger/'+id, {
+        method: 'PUT', headers: ah(),
+        body: JSON.stringify({ amount: parseFloat(amount)||e.amount, note: note||'', date: date||e.date })
+      });
+      if (!r.ok) return toast('Failed to update entry');
+      toast('\u2705 Entry updated!');
+      await refreshProfile(customerId);
+    }
+  });
 }
 
 async function delUdharEntry(id, customerId) {
@@ -3605,11 +3631,25 @@ async function vaProcessCommand(cmd) {
     return `Say whose payment — e.g. "delete payment for Ramesh"`;
   }
 
-  // ADD UDHAR
+  // ADD UDHAR — handles natural phrases:
+  // "add udhar 500 of maida for Lakshay Kumar"
+  // "add 500 rs of maida under Lakshay"
+  // "add udhar 200 for Ramesh"
   if (/\b(add|daal|jod|likh|lagao).{0,25}(udhar|udhaar|credit)\b|\b(udhar|udhaar|credit).{0,25}(add|de|diya|lagao|daal|jod)\b/i.test(t)) {
     const amount = vaExtractAmount(t);
-    const name = vaExtractName(cmd, 'add','daal','jod','likh','lagao','udhar','udhaar','credit','de','diya','entry','voice');
-    return await vaAddUdhar(name, amount, '');
+    // Extract item: "of [item] for/under/to name"
+    const itemMatch = cmd.match(/\bof\s+([a-zA-Z][a-zA-Z\s]{1,30})\s+(?:for|under|to|ke liye)\b/i)
+                  || cmd.match(/\b(ka|ki)\s+([a-zA-Z][a-zA-Z\s]{1,30})\s+(?:for|under|to)\b/i);
+    const itemNote = itemMatch ? (itemMatch[1]||itemMatch[2]).trim() : '';
+    // Extract customer name — last part after for/under/to keyword
+    const forMatch = cmd.match(/\b(?:for|under|to|ke liye)\s+([a-zA-Z][a-zA-Z\s]+)\s*$/i);
+    let custHint = '';
+    if (forMatch) {
+      custHint = forMatch[1].trim();
+    } else {
+      custHint = vaExtractName(cmd, 'add','daal','jod','likh','lagao','udhar','udhaar','credit','de','diya','entry','voice','of',itemNote,'rs','rupees');
+    }
+    return await vaAddUdhar(custHint, amount, itemNote);
   }
 
   // PAYMENT RECEIVED
