@@ -3337,6 +3337,7 @@ Mark milk specific types: {"action":"mark_milk","customerHint":"A-17","items":[{
 Mark ALL milk default: {"action":"mark_all_milk"}
 Mark all EXCEPT multiple not delivered: {"action":"mark_all_except","skipHints":["A-20","A-38"]}
 Mark all + some with custom qty: {"action":"mark_all_milk","exceptions":[{"customerHint":"A-17","qty":0.5}]}
+Add ONE more not delivered (incremental): {"action":"add_not_delivered","customerHint":"A-20"}
 Remove milk ONE customer: {"action":"remove_milk","customerHint":"A-17"}
 Remove ALL milk today: {"action":"remove_all_milk"}
 Pause milk: {"action":"pause_milk","customerHint":"Ramesh"}
@@ -3363,6 +3364,9 @@ EXAMPLES (learn these patterns):
 "A-17 ka aaj aadha liter cow aur 1L full cream gya" -> {"action":"mark_milk","customerHint":"A-17","items":[{"type":"Cow Milk","qty":0.5,"price":60},{"type":"Full Cream","qty":1,"price":70}]}
 "A-17 ka 0.5L gya" -> {"action":"mark_milk","customerHint":"A-17","qty":0.5}
 "sabka milk done" -> {"action":"mark_all_milk"}
+"ek aur nahi gaya, A-20 ka" -> {"action":"add_not_delivered","customerHint":"A-20"}
+"A-20 ka bhi aaj nahi gaya" -> {"action":"add_not_delivered","customerHint":"A-20"}
+"one more not delivered B-5" -> {"action":"add_not_delivered","customerHint":"B-5"}
 "A-17 ka milk hatao / remove karo" -> {"action":"remove_milk","customerHint":"A-17"}
 "ajj sabka doodh hata do" -> {"action":"remove_all_milk"}
 "sabka milk remove karo" -> {"action":"remove_all_milk"}
@@ -3377,6 +3381,8 @@ EXAMPLES (learn these patterns):
 
 RULES:
 - skipHints is ALWAYS an array even for one customer
+- CRITICAL: When user says "ek aur nahi gaya" / "one more not delivered" / adding to existing undelivered list → use add_not_delivered (NOT mark_all_except). This preserves previously-undelivered customers.
+- Use mark_all_except ONLY when user says "sabka done" or "all delivered" with exceptions in the SAME sentence (first-time marking)
 - customerHint = person name or block-villa address
 - For milk with specific types, use items[] with correct prices from MILK PRICES above
 - aadha=0.5L, ek=1L, dedh=1.5L, do=2L
@@ -3460,7 +3466,7 @@ async function vaExecuteAction(act) {
     return msg + ' Say "undo" to revert.';
   }
 
-  // MARK ALL EXCEPT SOME — marks everyone, removes skipped customers' entries
+  // MARK ALL EXCEPT SOME — marks only unmarked customers, preserving already-undelivered ones
   if (act.action === 'mark_all_except') {
     if (!milkCustomers.length) await loadMilkData();
     const rawSkips = act.skipHints || (act.skipHint ? [act.skipHint] : []);
@@ -3468,16 +3474,17 @@ async function vaExecuteAction(act) {
     const skipIds = new Set(skipCustomers.map(c => c.id));
     const active = milkCustomers.filter(c => c.active);
     let marked = 0;
-    // Step 1: mark ALL active customers (skip none yet)
+    // Only mark customers NOT in skip list AND not already logged — preserves previous undelivered
     for (const c of active) {
+      if (skipIds.has(c.id)) continue;
       const already = milkLogs.find(l => l.customerId === c.id && l.date === today);
       if (already) continue;
       await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
         body: JSON.stringify({ customerId:c.id, date:today, qty:c.defaultQty||1, items:c.defaultItems||[] }) });
       marked++;
     }
-    // Step 2: DELETE entries for skipped customers (even if already marked)
-    await loadMilkData(); // refresh so we have fresh log IDs
+    // Remove log for explicitly skipped customers (if they were previously marked)
+    await loadMilkData();
     for (const c of skipCustomers) {
       const logEntry = milkLogs.find(l => l.customerId === c.id && l.date === today);
       if (!logEntry) continue;
@@ -3491,10 +3498,33 @@ async function vaExecuteAction(act) {
       }
     }
     await loadMilkData(); if(currentPage==='milk') renderMilkPage();
-    const nowMarked = active.filter(c=>!skipIds.has(c.id)).map(c=>c.id);
-    window._vaLastMilkAction = { type:'marked', customerIds: nowMarked, date: today };
-    const skippedNames = skipCustomers.map(c => (c.block&&c.villa?c.block+'-'+c.villa:c.name)).join(', ');
-    return 'Done! ✓ Marked ' + (active.length - skipCustomers.length) + ' customers. Removed: ' + (skippedNames||'none') + '. Say "undo" to revert.';
+    const nowPending = milkCustomers.filter(c=>c.active&&!milkLogs.find(l=>l.customerId===c.id&&l.date===today));
+    window._vaLastMilkAction = { type:'marked', customerIds: active.filter(c=>!skipIds.has(c.id)).map(c=>c.id), date: today };
+    const pendingNames = nowPending.map(c=>(c.block&&c.villa?c.block+'-'+c.villa:c.name)).join(', ');
+    return 'Done! ✓ Marked ' + marked + ' new. Not delivered today (' + nowPending.length + '): ' + (pendingNames||'none') + '. Say "undo" to revert.';
+  }
+
+  // ADD ONE MORE NOT DELIVERED — removes ONE customer's log without touching anyone else
+  // Use when admin says "ek aur nahi gaya" or "one more person didn't get milk"
+  if (act.action === 'add_not_delivered') {
+    if (!milkCustomers.length) await loadMilkData();
+    const c = vaFindCustomer(act.customerHint, milkCustomers);
+    if (!c) return 'Customer "' + act.customerHint + '" not found.';
+    const logEntry = milkLogs.find(l => l.customerId === c.id && l.date === today);
+    if (logEntry) {
+      if (logEntry.id) {
+        const dr = await fetch('/api/admin/milk/logs/' + logEntry.id, { method:'DELETE', headers:ah() });
+        if (!dr.ok) await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
+          body: JSON.stringify({ customerId:c.id, date:today, qty:0 }) });
+      } else {
+        await fetch('/api/admin/milk/logs', { method:'POST', headers:ah(),
+          body: JSON.stringify({ customerId:c.id, date:today, qty:0 }) });
+      }
+    }
+    await loadMilkData(); if(currentPage==='milk') renderMilkPage();
+    const nowPending2 = milkCustomers.filter(c2=>c2.active&&!milkLogs.find(l=>l.customerId===c2.id&&l.date===today));
+    const pendingNames2 = nowPending2.map(c2=>(c2.block&&c2.villa?c2.block+'-'+c2.villa:c2.name)).join(', ');
+    return 'Removed milk for ' + (c.block&&c.villa?c.block+'-'+c.villa:c.name) + '. Total not delivered today: ' + nowPending2.length + ' (' + pendingNames2 + ').';
   }
 
   // Helper: delete a single milk log entry
@@ -3788,27 +3818,49 @@ function startMic() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   _vaRecognition = new SR();
   _vaRecognition.lang = 'hi-IN';
-  _vaRecognition.continuous = false;
+  _vaRecognition.continuous = true;
   _vaRecognition.interimResults = true;
   _vaListening = true;
+  _vaSilenceTimer = null;
+  _vaFinalTranscript = '';
   document.getElementById('vaMicBtn')?.classList.add('active');
   document.getElementById('voiceBtn')?.classList.add('listening');
   document.getElementById('vaDot')?.classList.add('listening');
   vaSetStatus('Listening...');
   _vaRecognition.onresult = (e) => {
-    const t = Array.from(e.results).map(r => r[0].transcript).join('');
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) _vaFinalTranscript += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    const combined = (_vaFinalTranscript + interim).trim();
     const inp = document.getElementById('vaInput');
-    if (inp) inp.value = t;
-    if (e.results[e.results.length-1].isFinal) { stopMic(); sendVoiceCommand(t); }
+    if (inp) inp.value = combined;
+    // Reset 1.5s silence timer each time new speech arrives
+    if (_vaSilenceTimer) clearTimeout(_vaSilenceTimer);
+    if (combined) {
+      vaSetStatus('Listening... ⏳');
+      _vaSilenceTimer = setTimeout(() => {
+        const final = (_vaFinalTranscript.trim() || combined);
+        if (final) { stopMic(); sendVoiceCommand(final); }
+      }, 1500);
+    }
   };
-  _vaRecognition.onerror = stopMic;
-  _vaRecognition.onend   = stopMic;
+  _vaRecognition.onerror = (e) => { if (e.error !== 'no-speech') stopMic(); };
+  _vaRecognition.onend = () => {
+    // Restart if we're still in listening mode (continuous mode can stop unexpectedly)
+    if (_vaListening && !_vaSilenceTimer) {
+      try { _vaRecognition.start(); } catch(err) { stopMic(); }
+    }
+  };
   _vaRecognition.start();
 }
 function stopMic() {
   _vaListening = false;
+  if (_vaSilenceTimer) { clearTimeout(_vaSilenceTimer); _vaSilenceTimer = null; }
   try { _vaRecognition?.stop(); } catch(e) {}
   _vaRecognition = null;
+  _vaFinalTranscript = '';
   document.getElementById('vaMicBtn')?.classList.remove('active');
   document.getElementById('voiceBtn')?.classList.remove('listening');
   document.getElementById('vaDot')?.classList.remove('listening');
