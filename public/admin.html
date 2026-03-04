@@ -2587,7 +2587,7 @@ function updateTier(vi,ti,field,val){if(_editVariants[vi]?.priceTiers?.[ti])_edi
 function removeTier(vi,ti){if(_editVariants[vi]?.priceTiers){_editVariants[vi].priceTiers.splice(ti,1);renderVariantEditor();}}
 function addTierToVariant(vi){if(!_editVariants[vi].priceTiers)_editVariants[vi].priceTiers=[];_editVariants[vi].priceTiers.push({minQty:1,price:0});renderVariantEditor();}
 function removeVariant(i){_editVariants.splice(i,1);renderVariantEditor();}
-function addVariant(){_editVariants.push({id:'v'+(_editVariants.length+1),label:'',imageUrl:'',mrp:null,inStock:true,priceTiers:[{minQty:1,price:0}]});renderVariantEditor();}
+function addVariant(){_editVariants.push({id:'v'+Date.now(),label:'',imageUrl:'',mrp:null,inStock:true,priceTiers:[{minQty:1,price:0}]});renderVariantEditor();}
 
 async function saveProduct() {
   const id = document.getElementById('pEditId').value;
@@ -2614,7 +2614,7 @@ async function saveProduct() {
     stockQuantity: stockVal !== '' ? parseInt(stockVal) : null,
     lowStockThreshold: parseInt(document.getElementById('pLowStock').value) || 5,
     disabled: document.getElementById('pDisabled').checked,
-    variants:_editVariants.map((v,i)=>({...v,id:v.id||('v'+(i+1)),priceTiers:[...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)}))
+    variants:_editVariants.map((v,i)=>({...v,id:v.id||('v'+Date.now()+i),priceTiers:[...v.priceTiers].sort((a,b)=>a.minQty-b.minQty)}))
   };
   const r = await fetch(id?`/api/admin/products/${id}`:'/api/admin/products',{method:id?'PUT':'POST',headers:ah(),body:JSON.stringify(body)});
   if (!r.ok) { const err=await r.json(); return toast(err.error||'Save failed'); }
