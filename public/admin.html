@@ -1869,6 +1869,26 @@ function renderMilkDeliveries() {
           ? c.defaultItems.map(i=>`${i.qty}L ${i.type}`).join('<br>')
           : c.defaultQty+'L/day'
       }</td>
+      <td>${(() => {
+        if (!todayE) return `<span style="font-size:.75rem;color:var(--text3)">—</span>`;
+        let dailyL, dailyAmt;
+        if (todayE.items && todayE.items.length) {
+          dailyL = todayE.items.reduce((s,i)=>s+parseFloat(i.qty||0),0);
+          dailyAmt = todayE.items.reduce((s,i)=>s+parseFloat(i.qty||0)*parseFloat(i.price||0),0);
+          const detail = todayE.items.map(i=>`${i.qty}L ${i.type} @₹${i.price}`).join(' + ');
+          return `<div title="${detail}" style="cursor:default">
+            <span style="font-weight:700;color:var(--green)">${dailyL.toFixed(1)}L</span>
+            <span style="font-size:.75rem;color:var(--text2);margin-left:3px">₹${dailyAmt.toFixed(0)}</span>
+          </div>`;
+        } else {
+          dailyL = parseFloat(todayE.qty)||0;
+          dailyAmt = dailyL * (todayE.price||milkPrice||60);
+          return `<div>
+            <span style="font-weight:700;color:var(--green)">${dailyL.toFixed(1)}L</span>
+            <span style="font-size:.75rem;color:var(--text2);margin-left:3px">₹${dailyAmt.toFixed(0)}</span>
+          </div>`;
+        }
+      })()}</td>
       <td><span class="badge badge-blue">${totalL.toFixed(1)}L</span></td>
       <td style="font-weight:700;color:var(--green)">₹${totalAmt.toFixed(0)}</td>
       <td>${todayBadge}</td>
@@ -1915,7 +1935,7 @@ function renderMilkDeliveries() {
       </div>
       ${active.length===0?`<div class="empty-state"><div class="ei">🥛</div><p>No active milk customers yet.</p></div>`:`
       <table>
-        <thead><tr><th>Customer</th><th>Default</th><th>This Month</th><th>Amount</th><th>Today</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Customer</th><th>Default</th><th>Daily Delivery</th><th>This Month</th><th>Amount</th><th>Today</th><th>Actions</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`}
     </div>`;
