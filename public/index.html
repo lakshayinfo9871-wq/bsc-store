@@ -2790,46 +2790,7 @@ function _renderCtxGrid(list) {
     return;
   }
   // Use wide pCard (same as split panel right side)
-  grid.innerHTML = list.map(p => {
-    const selVid = window._selVariant?.[p.id] || defaultVariant(p)?.id;
-    const v = getVariant(p, selVid);
-    if (!v) return '';
-    const qty = cart[cartKey(p.id, selVid)] || 0;
-    const price = getPrice(v.priceTiers, qty || 1);
-    const mrp = v.mrp && v.mrp > price ? v.mrp : null;
-    const off = offPct(price, mrp);
-    const isOOS = v.inStock === false;
-    const imgUrl = p.imageUrl || v.imageUrl || '';
-    const variantBlock = p.variants?.length > 1
-      ? `<button class="pc-variant-btn" onclick="event.stopPropagation();openVariantDropdown(${p.id},this)">${v.label} <span style="color:var(--text3)">▾</span></button>`
-      : `<div class="pc-label">${v.label}</div>`;
-    const bulkBadge = v.priceTiers?.length > 1
-      ? `<div class="pc-bulk-hint">📦 Bulk deal</div>` : '';
-    const addCtrl = qty > 0
-      ? `<div class="qty-ctrl"><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button><span>${qty}</span><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button></div>`
-      : isOOS
-      ? `<button class="add-btn" style="opacity:.45;cursor:default" disabled>ADD</button>`
-      : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
-    return `<div class="pcard${isOOS?' oos':''}" style="width:100%;flex-shrink:1;" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
-      <div class="pc-img-wrap">
-        ${imgUrl?`<img src="${imgUrl}" loading="lazy">`:'<span style="font-size:2.2rem">📦</span>'}
-        ${off>0&&!isOOS?`<span class="pc-discount-badge">${off}% OFF`:''}
-        ${p.isNew&&off===0&&!isOOS?`<span class="pc-new-badge">NEW</span>`:''}
-        ${isOOS?`<span class="pc-oos-badge">OUT OF STOCK</span>`:''}
-        <div class="pc-add-overlay">${addCtrl}</div>
-      </div>
-      <div class="pc-body">
-        ${variantBlock}
-        <div class="pc-name">${p.name}</div>
-        <div class="pc-price-row">
-          <span class="pc-price">₹${price}</span>
-          ${mrp?`<span class="pc-mrp">₹${mrp}</span>`:''}
-          ${off>0?`<span class="pc-off">${off}% off</span>`:''}
-        </div>
-        ${bulkBadge}
-      </div>
-    </div>`;
-  }).join('');
+  grid.innerHTML = list.map(p => pCardBlinkit(p)).join('');
 }
 
 
