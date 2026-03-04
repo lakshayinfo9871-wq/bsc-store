@@ -2912,7 +2912,7 @@ function pCard(p) {
       <div class="pc-variant-dropdown" id="${dropId}">
         ${[...p.variants].sort((a,b)=>{const n=s=>{const m=(s||'').toLowerCase().match(/([\d.]+)\s*(kg|g|gm|l|ltr|litre|ml)?/);if(!m)return 0;const v=parseFloat(m[1]),u=m[2]||'';return(u==='kg'||u==='l'||u==='ltr'||u==='litre')?v*1000:v;};return n(a.label)-n(b.label);}).map(vv => {
           const vp = getPrice(vv.priceTiers, 1);
-          return `<div class="pc-vd-option ${vv.id===selVid?'selected':''}" onclick="event.stopPropagation();pickVariant(${p.id},'${vv.id}','${dropId}','${btnId}')">
+          return `<div class="pc-vd-option ${vv.id===selVid?'selected':''}" data-vid="${vv.id}" onclick="event.stopPropagation();pickVariant(${p.id},'${vv.id}','${dropId}','${btnId}')">
             <span>${vv.label}</span>
             <span class="vd-price">₹${vp}</span>
           </div>`;
@@ -3021,7 +3021,7 @@ function pickVariant(pid, vid, dropId, btnId) {
 
   // Update option highlights
   dropEl.querySelectorAll('.pc-vd-option').forEach(opt => {
-    const optVid = opt.getAttribute('onclick')?.match(/'([^']+)'/g)?.[1]?.replace(/'/g,'');
+    const optVid = opt.getAttribute('data-vid');
     opt.classList.toggle('selected', optVid === vid);
   });
 
@@ -3112,7 +3112,7 @@ function pCardBlinkit(p) {
       <div class="pc-variant-dropdown" id="${dropId}">
         ${[...p.variants].sort((a,b)=>{const n=s=>{const m=(s||'').toLowerCase().match(/([\d.]+)\s*(kg|g|gm|l|ltr|litre|ml)?/);if(!m)return 0;const v=parseFloat(m[1]),u=m[2]||'';return(u==='kg'||u==='l'||u==='ltr'||u==='litre')?v*1000:v;};return n(a.label)-n(b.label);}).map(vv => {
           const vp = getPrice(vv.priceTiers, 1);
-          return `<div class="pc-vd-option ${vv.id===selVid?'selected':''}" onclick="event.stopPropagation();pickVariant(${p.id},'${vv.id}','${dropId}','${btnId}')">
+          return `<div class="pc-vd-option ${vv.id===selVid?'selected':''}" data-vid="${vv.id}" onclick="event.stopPropagation();pickVariant(${p.id},'${vv.id}','${dropId}','${btnId}')">
             <span>${vv.label}</span>
             <span class="vd-price">₹${vp}</span>
           </div>`;
@@ -3457,22 +3457,9 @@ function openProductDetail(pid) {
       </div>
     </div>` : '';
 
-  // Sort variants by numeric weight/volume from label (e.g. 100g < 500g < 1kg, 250ml < 1L)
-  const _sortedVariants = [...p.variants].sort((a, b) => {
-    const toGrams = s => {
-      const m = (s||'').toLowerCase().match(/([\d.]+)\s*(kg|g|gm|gms|gram|l|ltr|litre|liter|ml|kl)?/);
-      if (!m) return parseFloat(s||'0') || 0;
-      const n = parseFloat(m[1]);
-      const u = m[2] || '';
-      if (u === 'kg' || u === 'kl') return n * 1000;
-      if (u === 'l' || u === 'ltr' || u === 'litre' || u === 'liter') return n * 1000;
-      return n; // g, gm, gms, gram, ml, or raw number
-    };
-    return toGrams(a.label) - toGrams(b.label);
-  });
-  // Ensure selVid is actually a valid variant — prevents double-highlight when stale
+  // Ensure selVid is valid — prevents stale ID causing double highlight
   const _validSelVid = p.variants.find(vv => vv.id === selVid) ? selVid : p.variants[0]?.id;
-
+  const _sortedVariants = [...p.variants].sort((a,b)=>{const n=s=>{const m=(s||'').toLowerCase().match(/([\d.]+)\s*(kg|g|gm|l|ltr|litre|ml)?/);if(!m)return 0;const v=parseFloat(m[1]),u=m[2]||'';return(u==='kg'||u==='l'||u==='ltr'||u==='litre')?v*1000:v;};return n(a.label)-n(b.label);});
   const variantHTML = p.variants.length > 1 ? `
     <div style="margin-top:12px">
       <div style="font-size:.7rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Select Variant</div>
