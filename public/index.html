@@ -94,28 +94,19 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 @keyframes phFade{0%,100%{opacity:0;transform:translateY(4px)}10%,85%{opacity:1;transform:translateY(0)}}
 .ph-anim{animation:phFade 3s ease forwards;}
 
-.cat-tabs{display:flex;overflow-x:auto;gap:0;}
-.ctab{flex:1;min-width:60px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px 8px;cursor:pointer;border-bottom:2.5px solid transparent;transition:all .15s;}
+.cat-tabs{display:grid;grid-auto-columns:1fr;grid-auto-flow:column;gap:0;}
+.ctab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px 8px;cursor:pointer;border-bottom:2.5px solid transparent;transition:all .15s;min-width:0;}
 .ctab.active{border-bottom-color:var(--green);}
 .ctab .ti{width:28px;height:28px;border-radius:8px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.9rem;}
 .ctab .ti img{width:100%;height:100%;object-fit:cover;}
-.ctab .tn{font-size:10px;font-weight:600;color:var(--text2);white-space:normal;text-align:center;line-height:1.25;min-height:calc(10px * 1.25 * 2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;}
+.ctab .tn{font-size:10px;font-weight:600;color:var(--text2);white-space:normal;text-align:center;line-height:1.3;height:26px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;width:100%;}
 .ctab.active .tn{color:var(--text);}
 
 /* ══════════════════════ SCROLL AREA ══════════════════════ */
 .scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:100px;}
 
 
-/* ── SHOP CLOSED BANNER ── */
-.shop-closed-bar{position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#1a0505,#2d0808);border-bottom:2px solid rgba(255,71,87,.4);padding:10px 16px;display:flex;align-items:center;gap:10px;animation:slideDown .35s ease;}
-@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
-.shop-closed-bar .scb-icon{font-size:1.4rem;flex-shrink:0;}
-.shop-closed-bar .scb-text{flex:1;}
-.shop-closed-bar .scb-title{font-size:.88rem;font-weight:900;color:#ff4757;line-height:1.3;}
-.shop-closed-bar .scb-sub{font-size:.75rem;color:rgba(255,255,255,.55);margin-top:1px;}
-.shop-closed-overlay{position:fixed;inset:0;z-index:500;pointer-events:none;}
-.ck-place-btn.disabled{background:linear-gradient(135deg,#2a2a2a,#1a1a1a)!important;color:rgba(255,255,255,.3)!important;box-shadow:none!important;cursor:not-allowed!important;}
-
+/* ══════════════════════ BANNER ══════════════════════ */
 .banner-wrap{padding:14px 14px 0;}
 .banner-slider{border-radius:16px;overflow:hidden;}
 .banner-track{display:flex;transition:transform .4s cubic-bezier(.4,0,.2,1);}
@@ -665,13 +656,6 @@ select.ck-inp option{background:var(--bg2);}
 </style>
 </head>
 <body>
-<div id="shopClosedBar" style="display:none" class="shop-closed-bar">
-  <div class="scb-icon">🔴</div>
-  <div class="scb-text">
-    <div class="scb-title" id="shopClosedTitle">We're closed right now</div>
-    <div class="scb-sub" id="shopClosedSub">Browse our products — ordering will be available soon</div>
-  </div>
-</div>
 
 <!-- TOPBAR: Collapsing header (logo+search) + sticky tabs -->
 <div class="topbar" id="topbar">
@@ -854,39 +838,6 @@ function offPct(price, mrp) {
   return Math.round((mrp - price) / mrp * 100);
 }
 
-// ── SHOP OPEN / CLOSED ────────────────────────────────────────────────────────
-function isShopOpen() {
-  const ss = settings.shopStatus;
-  if (!ss) return true;
-  if (!ss.manualOpen) return false;
-  const now = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const nowStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  const open = ss.openTime || '08:00';
-  const close = ss.closeTime || '22:00';
-  if (open < close) return nowStr >= open && nowStr < close;
-  return nowStr >= open || nowStr < close;
-}
-function applyShopStatus() {
-  const ss = settings.shopStatus || {};
-  const open = isShopOpen();
-  const bar = document.getElementById('shopClosedBar');
-  const placeBtn = document.getElementById('ckPlaceBtn');
-  if (!open) {
-    if (bar) {
-      const msg = ss.closedMessage || "We're closed right now. Orders open at";
-      document.getElementById('shopClosedTitle').textContent = msg + (ss.openTime ? ' ' + ss.openTime : '');
-      document.getElementById('shopClosedSub').textContent = 'Browse our products — ordering will be available soon';
-      bar.style.display = 'flex';
-      document.body.style.paddingTop = '52px';
-    }
-    if (placeBtn) { placeBtn.classList.add('disabled'); placeBtn.querySelector('span').textContent = '🔴 Shop Closed'; }
-  } else {
-    if (bar) { bar.style.display = 'none'; document.body.style.paddingTop = ''; }
-    if (placeBtn) { placeBtn.classList.remove('disabled'); placeBtn.querySelector('span').textContent = 'Place Order'; }
-  }
-}
-
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
   loadCart(); // #9: restore cart from localStorage
@@ -901,7 +852,7 @@ async function init() {
         seen[v.id] = true;
       });
     });
-    buildTabs(); renderHome(); updateCart(); applyShopStatus(); // re-render with restored cart
+    buildTabs(); renderHome(); updateCart(); // re-render with restored cart
   } catch(e) {
     document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
   }
@@ -4141,13 +4092,6 @@ function ckoValidate() {
 }
 
 function ckoPlace() {
-  if (!isShopOpen()) {
-    const ss = settings.shopStatus || {};
-    const msg = ss.closedMessage || "We're closed right now. Orders open at";
-    const time = ss.openTime || '';
-    showToast(`🔴 ${msg}${time ? ' ' + time : ''}`);
-    return;
-  }
   if (!getMilkToken()) { showToast('Please login first'); return; }
   const method=window._payMethod||'cod';
   if (method==='upi' && settings.upiId?.trim()) {
@@ -4825,8 +4769,6 @@ document.addEventListener('click', (e) => {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 init();
-// Re-check shop open/closed every 60s so schedule auto-applies
-setInterval(applyShopStatus, 60000);
 </script>
 </body>
 </html>
