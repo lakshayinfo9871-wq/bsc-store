@@ -300,6 +300,12 @@ app.get('/api/store', async (req, res) => {
           variantId: fg.variantId || null, qty: fg.qty || 1,
           autoAdd: fg.autoAdd !== false, label: fg.label || '',
           discountPrice: typeof fg.discountPrice === 'number' ? fg.discountPrice : 0,
+        },
+        shopStatus: {
+          manualOpen: settings.shopStatus?.manualOpen !== false,
+          openTime: settings.shopStatus?.openTime || '08:00',
+          closeTime: settings.shopStatus?.closeTime || '22:00',
+          closedMessage: settings.shopStatus?.closedMessage || "We're closed right now. Orders open at",
         }
       }
     });
@@ -616,10 +622,21 @@ app.get('/api/admin/settings', adminAuth, async (req, res) => {
 });
 app.put('/api/admin/settings', adminAuth, async (req, res) => {
   try {
-    const { newPassword, ...rest } = req.body;
+    const { newPassword, shopStatus, ...rest } = req.body;
     const update = { ...rest };
     if (newPassword) update.adminPassword = sha256(newPassword);
-    await db.collection('settings').updateOne({ _id: 'main' }, { $set: update });
+    // Handle shopStatus as a merged sub-object or dot-notation key
+    if (shopStatus) {
+      // Get existing first, then merge
+      const existing = await db.collection('settings').findOne({ _id: 'main' });
+      update.shopStatus = { ...(existing?.shopStatus || {}), ...shopStatus };
+    }
+    // Handle dot-notation keys like 'shopStatus.manualOpen'
+    const dotKeys = Object.keys(update).filter(k => k.includes('.'));
+    const setObj = {};
+    dotKeys.forEach(k => { setObj[k] = update[k]; delete update[k]; });
+    Object.keys(update).forEach(k => { setObj[k] = update[k]; });
+    await db.collection('settings').updateOne({ _id: 'main' }, { $set: setObj });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1096,6 +1113,27 @@ app.post('/api/orders', async (req, res) => {
   try {
     const { customerName, phone, block, villa, note, items, freeGift, paymentMethod } = req.body;
     if (!customerName || !phone || !items?.length) return res.status(400).json({ error: 'Missing fields' });
+
+    // ── SHOP OPEN/CLOSED CHECK ────────────────────────────────────────────────
+    const storeSettings = await db.collection('settings').findOne({ _id: 'main' });
+    const ss = storeSettings?.shopStatus || {};
+    const manualOpen = ss.manualOpen !== false;
+    if (!manualOpen) return res.status(503).json({ error: "Shop is currently closed. Please check back later." });
+    // Check time window
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const nowStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const openTime = ss.openTime || '08:00';
+    const closeTime = ss.closeTime || '22:00';
+    if (openTime < closeTime) {
+      if (nowStr < openTime || nowStr >= closeTime)
+        return res.status(503).json({ error: `Shop is closed. Orders are accepted between ${openTime} and ${closeTime}.` });
+    } else {
+      // overnight window e.g. 20:00 – 02:00
+      if (nowStr < openTime && nowStr >= closeTime)
+        return res.status(503).json({ error: `Shop is closed. Orders are accepted between ${openTime} and ${closeTime}.` });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // ── SERVER-SIDE PRICE RECALCULATION (#3) ─────────────────────────────────
     // Never trust client-submitted prices — recalculate from DB

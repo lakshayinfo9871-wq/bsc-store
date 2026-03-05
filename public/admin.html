@@ -3134,8 +3134,44 @@ async function renderSettings() {
   document.getElementById('content').innerHTML=`
     <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.2rem;max-width:1000px;align-items:start">
       <div style="display:flex;flex-direction:column;gap:1.2rem">
-        <div class="card">
-          <div class="card-header"><h2>⚙️ Store Settings</h2></div>
+        <div class="card" style="border:2px solid ${s.shopStatus?.manualOpen!==false?'var(--green)':'var(--red)'};transition:border-color .3s" id="shopStatusCard">
+          <div class="card-header"><h2>🏪 Shop Status</h2></div>
+          <div class="card-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px">
+              <div>
+                <div style="font-size:1rem;font-weight:800;margin-bottom:3px" id="shopStatusLabel">${s.shopStatus?.manualOpen!==false?'🟢 Shop is OPEN':'🔴 Shop is CLOSED'}</div>
+                <div style="font-size:.78rem;color:var(--text2)">Customers ${s.shopStatus?.manualOpen!==false?'can':'cannot'} place orders right now</div>
+              </div>
+              <button id="shopToggleBtn" onclick="toggleShopStatus()"
+                style="padding:.7rem 1.6rem;border-radius:12px;font-size:.92rem;font-weight:900;border:none;cursor:pointer;transition:all .2s;white-space:nowrap;
+                background:${s.shopStatus?.manualOpen!==false?'rgba(255,71,87,.15)':'rgba(45,211,111,.15)'};
+                color:${s.shopStatus?.manualOpen!==false?'var(--red)':'var(--green)'};
+                border:2px solid ${s.shopStatus?.manualOpen!==false?'var(--red)':'var(--green)'}">
+                ${s.shopStatus?.manualOpen!==false?'🔴 Close Shop':'🟢 Open Shop'}
+              </button>
+            </div>
+            <hr style="border:none;border-top:1px solid var(--border);margin:0 0 16px">
+            <div style="font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">⏰ Auto Schedule</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div class="form-group" style="margin:0">
+                <label style="font-size:.78rem">Opens At</label>
+                <input type="time" id="sOpenTime" value="${s.shopStatus?.openTime||'08:00'}" style="font-size:.95rem;font-weight:700">
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:.78rem">Closes At</label>
+                <input type="time" id="sCloseTime" value="${s.shopStatus?.closeTime||'22:00'}" style="font-size:.95rem;font-weight:700">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:14px">
+              <label style="font-size:.78rem">Closed Message (shown to customers)</label>
+              <input type="text" id="sClosedMsg" value="${s.shopStatus?.closedMessage||"We're closed right now. Orders open at"}" placeholder="We're closed right now. Orders open at">
+            </div>
+            <div style="font-size:.75rem;color:var(--text3);background:var(--bg);border-radius:8px;padding:9px 12px;line-height:1.6;margin-bottom:14px">
+              💡 The schedule only applies when the shop is <strong>Open</strong>. If you manually close it, it stays closed until you re-open — regardless of schedule.
+            </div>
+            <button class="btn btn-green" style="width:100%;justify-content:center" onclick="saveShopStatus()">💾 Save Schedule</button>
+          </div>
+        </div>
           <div class="card-body">
             <div class="form-group"><label>Store Name</label><input type="text" id="sName" value="${s.storeName||''}"></div>
             <div class="form-group"><label>WhatsApp Number</label><input type="text" id="sWA" value="${s.whatsapp||''}" placeholder="e.g. 919876543210"><div class="form-hint">Country code, no + sign</div></div>
@@ -3233,6 +3269,32 @@ async function saveSettings() {
   if (pass) body.newPassword = pass;
   await fetch('/api/admin/settings',{method:'PUT',headers:ah(),body:JSON.stringify(body)});
   toast('✅ Settings saved!');
+}
+
+// ── SHOP OPEN / CLOSE ────────────────────────────────────────────────────────
+async function toggleShopStatus() {
+  const btn = document.getElementById('shopToggleBtn');
+  const label = document.getElementById('shopStatusLabel');
+  const card = document.getElementById('shopStatusCard');
+  const isCurrentlyOpen = btn.textContent.includes('Close');
+  const newOpen = !isCurrentlyOpen;
+  btn.disabled = true; btn.textContent = '⏳ Saving...';
+  await fetch('/api/admin/settings', { method:'PUT', headers:ah(), body:JSON.stringify({ 'shopStatus.manualOpen': newOpen }) });
+  // Re-render to reflect new state
+  await renderSettings();
+  toast(newOpen ? '🟢 Shop is now OPEN — orders accepted!' : '🔴 Shop is now CLOSED — orders blocked!');
+}
+
+async function saveShopStatus() {
+  const body = {
+    shopStatus: {
+      openTime: document.getElementById('sOpenTime')?.value || '08:00',
+      closeTime: document.getElementById('sCloseTime')?.value || '22:00',
+      closedMessage: (document.getElementById('sClosedMsg')?.value || '').trim() || "We're closed right now. Orders open at",
+    }
+  };
+  await fetch('/api/admin/settings', { method:'PUT', headers:ah(), body:JSON.stringify(body) });
+  toast('✅ Schedule saved!');
 }
 
 // ── STORE LOCATION ───────────────────────────────────────────────────────────

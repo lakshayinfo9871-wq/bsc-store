@@ -106,7 +106,16 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:100px;}
 
 
-/* ══════════════════════ BANNER ══════════════════════ */
+/* ── SHOP CLOSED BANNER ── */
+.shop-closed-bar{position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#1a0505,#2d0808);border-bottom:2px solid rgba(255,71,87,.4);padding:10px 16px;display:flex;align-items:center;gap:10px;animation:slideDown .35s ease;}
+@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+.shop-closed-bar .scb-icon{font-size:1.4rem;flex-shrink:0;}
+.shop-closed-bar .scb-text{flex:1;}
+.shop-closed-bar .scb-title{font-size:.88rem;font-weight:900;color:#ff4757;line-height:1.3;}
+.shop-closed-bar .scb-sub{font-size:.75rem;color:rgba(255,255,255,.55);margin-top:1px;}
+.shop-closed-overlay{position:fixed;inset:0;z-index:500;pointer-events:none;}
+.ck-place-btn.disabled{background:linear-gradient(135deg,#2a2a2a,#1a1a1a)!important;color:rgba(255,255,255,.3)!important;box-shadow:none!important;cursor:not-allowed!important;}
+
 .banner-wrap{padding:14px 14px 0;}
 .banner-slider{border-radius:16px;overflow:hidden;}
 .banner-track{display:flex;transition:transform .4s cubic-bezier(.4,0,.2,1);}
@@ -656,6 +665,13 @@ select.ck-inp option{background:var(--bg2);}
 </style>
 </head>
 <body>
+<div id="shopClosedBar" style="display:none" class="shop-closed-bar">
+  <div class="scb-icon">🔴</div>
+  <div class="scb-text">
+    <div class="scb-title" id="shopClosedTitle">We're closed right now</div>
+    <div class="scb-sub" id="shopClosedSub">Browse our products — ordering will be available soon</div>
+  </div>
+</div>
 
 <!-- TOPBAR: Collapsing header (logo+search) + sticky tabs -->
 <div class="topbar" id="topbar">
@@ -838,6 +854,39 @@ function offPct(price, mrp) {
   return Math.round((mrp - price) / mrp * 100);
 }
 
+// ── SHOP OPEN / CLOSED ────────────────────────────────────────────────────────
+function isShopOpen() {
+  const ss = settings.shopStatus;
+  if (!ss) return true;
+  if (!ss.manualOpen) return false;
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const nowStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const open = ss.openTime || '08:00';
+  const close = ss.closeTime || '22:00';
+  if (open < close) return nowStr >= open && nowStr < close;
+  return nowStr >= open || nowStr < close;
+}
+function applyShopStatus() {
+  const ss = settings.shopStatus || {};
+  const open = isShopOpen();
+  const bar = document.getElementById('shopClosedBar');
+  const placeBtn = document.getElementById('ckPlaceBtn');
+  if (!open) {
+    if (bar) {
+      const msg = ss.closedMessage || "We're closed right now. Orders open at";
+      document.getElementById('shopClosedTitle').textContent = msg + (ss.openTime ? ' ' + ss.openTime : '');
+      document.getElementById('shopClosedSub').textContent = 'Browse our products — ordering will be available soon';
+      bar.style.display = 'flex';
+      document.body.style.paddingTop = '52px';
+    }
+    if (placeBtn) { placeBtn.classList.add('disabled'); placeBtn.querySelector('span').textContent = '🔴 Shop Closed'; }
+  } else {
+    if (bar) { bar.style.display = 'none'; document.body.style.paddingTop = ''; }
+    if (placeBtn) { placeBtn.classList.remove('disabled'); placeBtn.querySelector('span').textContent = 'Place Order'; }
+  }
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
   loadCart(); // #9: restore cart from localStorage
@@ -852,7 +901,7 @@ async function init() {
         seen[v.id] = true;
       });
     });
-    buildTabs(); renderHome(); updateCart(); // re-render with restored cart
+    buildTabs(); renderHome(); updateCart(); applyShopStatus(); // re-render with restored cart
   } catch(e) {
     document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
   }
@@ -4092,6 +4141,13 @@ function ckoValidate() {
 }
 
 function ckoPlace() {
+  if (!isShopOpen()) {
+    const ss = settings.shopStatus || {};
+    const msg = ss.closedMessage || "We're closed right now. Orders open at";
+    const time = ss.openTime || '';
+    showToast(`🔴 ${msg}${time ? ' ' + time : ''}`);
+    return;
+  }
   if (!getMilkToken()) { showToast('Please login first'); return; }
   const method=window._payMethod||'cod';
   if (method==='upi' && settings.upiId?.trim()) {
@@ -4769,6 +4825,8 @@ document.addEventListener('click', (e) => {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 init();
+// Re-check shop open/closed every 60s so schedule auto-applies
+setInterval(applyShopStatus, 60000);
 </script>
 </body>
 </html>
