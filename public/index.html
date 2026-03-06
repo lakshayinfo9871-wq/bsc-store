@@ -165,7 +165,7 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .cat-card{border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .15s;}
 .cat-card:active{transform:scale(.94);}
 .cc-img{aspect-ratio:1;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;padding:0;position:relative;}
-.cc-img img{width:85%;height:85%;object-fit:cover;border-radius:8px;margin:0 auto;}
+.cc-img img{width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;}
 .cc-emoji{font-size:2rem;line-height:1;}
 .cc-name{font-size:9.5px;font-weight:700;padding:5px 4px;text-align:center;line-height:1.25;color:#fff;}
 
@@ -187,8 +187,8 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .pcard{flex-shrink:0;width:148px;background:var(--bg2);border-radius:14px;border:1px solid var(--border);overflow:hidden;position:relative;display:flex;flex-direction:column;}
 
 /* Image area */
-.pc-img-wrap{height:155px;background:var(--bg3);border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:center;padding:0;overflow:hidden;position:relative;}
-.pc-img-wrap img{width:100%;height:100%;object-fit:cover;}
+.pc-img-wrap{height:130px;background:var(--bg3);border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:center;padding:10px;overflow:hidden;position:relative;}
+.pc-img-wrap img{width:100%;height:100%;object-fit:contain;}
 
 /* Discount badge — top left of image */
 .pc-discount-badge{position:absolute;top:7px;left:7px;background:var(--green);color:#000;font-size:.58rem;font-weight:900;padding:2px 6px;border-radius:5px;letter-spacing:.02em;z-index:2;}
@@ -278,8 +278,8 @@ button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightn
 .cats-grid-page{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px;}
 .cats-grid-card{border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s;padding:0;}
 .cats-grid-card:active{transform:scale(.93);}
-.cats-grid-img{aspect-ratio:1;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;border-radius:14px 14px 0 0;}
-.cats-grid-img img{width:100%;height:100%;object-fit:contain;}
+.cats-grid-img{aspect-ratio:1;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0;border-radius:14px 14px 0 0;}
+.cats-grid-img img{width:100%;height:100%;object-fit:cover;}
 .cats-grid-name{font-size:10px;font-weight:800;padding:5px 4px 8px;text-align:center;line-height:1.25;color:#fff;border-radius:0 0 14px 14px;}
 
 /* ══════════════════════ BULK PRICING TABLE ══════════════════════ */
@@ -1003,7 +1003,7 @@ function openCatsPage() {
   document.getElementById('fpAllCatsBody').style.display = '';
   document.getElementById('fpGrid').innerHTML = cats.map((c,i) =>
     `<div class="cats-grid-card ${getCcBg(i)}" onclick="openFP(${c.id})">
-      <div class="cats-grid-img">${c.imageUrl?`<img src="${c.imageUrl}" style="width:85%;height:85%;object-fit:contain">`:`<span style="font-size:2rem">📂</span>`}</div>
+      <div class="cats-grid-img">${c.imageUrl?`<img src="${c.imageUrl}" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:2rem">📂</span>`}</div>
       <div class="cats-grid-name ${getCcBg(i)}">${c.name}</div>
     </div>`
   ).join('');
@@ -1195,7 +1195,7 @@ function _getActiveSections(ctx) {
       kw:['maggi','noodles','chai','tea','coffee','bread','butter','biscuit','instant','soup','snacks','chips','ginger','curd'] });
   }
   const _hotHour = new Date().getHours();
-  if (ctx.season==='summer' && _hotHour >= 10 && _hotHour < 17) {
+  if (ctx.season==='summer' && _hotHour >= 10 && _hotHour < 19) {
     secs.push({ id:'summer', priority:88,
       title:'🥤 Beat the Heat', tag:'peak summer',
       greeting:'Hot day!', sub:'Cool drinks and quick bites, delivered cold.',
@@ -2529,7 +2529,7 @@ function _canvasSunrise(ctx, W, H, c1, c2, glow, id) {
       ctx.quadraticCurveTo(b.x+18,b.y+flap,b.x+24,b.y);
       ctx.strokeStyle='rgba(148,163,184,.75)'; ctx.lineWidth=1.3; ctx.stroke();
     });
-    t+=0.25;
+    t+=0.8;
     window._bannerRAFs[id]=requestAnimationFrame(draw);
   }
   draw();
@@ -2722,7 +2722,7 @@ async function buildPersonalisedHome() {
       if (_liveWeather.isRaining || _liveWeather.isThunder) {
         effectiveSeason = 'monsoon';
         liveTag = _liveWeather.isThunder ? `⛈️ ${Math.round(_liveWeather.temp)}°C` : `🌧️ ${Math.round(_liveWeather.temp)}°C`;
-      } else if ((_liveWeather.isHot || _liveWeather.isVeryHot) && (new Date().getHours() >= 10 && new Date().getHours() < 17)) {
+      } else if ((_liveWeather.isHot || _liveWeather.isVeryHot) && (new Date().getHours() >= 10 && new Date().getHours() < 19)) {
         effectiveSeason = 'summer';
         liveTag = `🌡️ ${Math.round(_liveWeather.temp)}°C`;
       } else if (_liveWeather.isCold || _liveWeather.isChilly) {
@@ -3317,7 +3317,7 @@ function renderSplitPanel(catId) {
     const activeSubCatId = window._openSubCatId;
     catLeft.innerHTML =
       `<div class="cat-left-item ${activeSubCatId === null ? 'active' : ''}" onclick="switchSubCat(null)" id="clitem_all">
-        <div class="cat-left-img"><span style="font-size:1.3rem">⊞</span></div>
+        <div class="cat-left-img">${cat && cat.imageUrl ? `<img src="${cat.imageUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover">` : `<span style="font-size:1.3rem">⊞</span>`}</div>
         <div class="cat-left-label">All</div>
       </div>` +
       catSubcats.map(sc =>
