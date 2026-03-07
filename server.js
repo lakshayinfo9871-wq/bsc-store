@@ -161,75 +161,597 @@ function migrateProduct(p) {
 }
 
 // ── SYNONYMS MAP ──────────────────────────────────────────────────────────────
-// Bidirectional: searching either word will find the other
+// Bidirectional: searching either word finds the other. English + Hindi + Hinglish.
 const SYNONYMS = {
-  // Hindi → English
-  doodh: ['milk', 'dairy'],
-  dudh: ['milk', 'dairy'],
-  dahi: ['curd', 'yogurt', 'yoghurt', 'set curd'],
-  paneer: ['cottage cheese', 'cheese', 'chenna'],
-  makhan: ['butter'],
-  ghee: ['clarified butter'],
-  chawal: ['rice'],
-  aata: ['wheat flour', 'flour', 'atta'],
-  maida: ['flour', 'refined flour', 'all purpose flour'],
-  dal: ['lentils', 'pulses', 'daal'],
-  sabzi: ['vegetables', 'veggies'],
-  tamatar: ['tomato', 'tomatoes'],
-  pyaaz: ['onion', 'onions'],
-  aloo: ['potato', 'potatoes'],
-  mirchi: ['chilli', 'chili', 'pepper'],
-  namak: ['salt'],
-  cheeni: ['sugar'],
-  tel: ['oil', 'cooking oil'],
-  sarson: ['mustard'],
-  jeera: ['cumin'],
-  haldi: ['turmeric'],
-  adrak: ['ginger'],
-  lehsun: ['garlic'],
-  dhania: ['coriander', 'cilantro'],
-  anda: ['egg', 'eggs'],
-  murga: ['chicken'],
-  macchi: ['fish'],
-  murg: ['chicken'],
-  roti: ['bread', 'chapati', 'chapatti'],
-  bread: ['roti', 'pav'],
-  chai: ['tea'],
-  coffee: ['kafi'],
-  nimbu: ['lemon', 'lime'],
-  kela: ['banana'],
-  seb: ['apple'],
-  aam: ['mango'],
-  angoor: ['grapes'],
-  narangi: ['orange'],
-  // English → Hindi (reverse for discoverability)
-  milk: ['doodh', 'dudh', 'dairy milk'],
-  curd: ['dahi', 'yogurt', 'yoghurt'],
-  butter: ['makhan'],
-  rice: ['chawal'],
-  flour: ['aata', 'atta', 'maida'],
-  potato: ['aloo'],
-  onion: ['pyaaz'],
-  tomato: ['tamatar'],
-  egg: ['anda'],
-  eggs: ['anda'],
-  chicken: ['murga', 'murg'],
-  bread: ['roti', 'pav'],
-  tea: ['chai'],
-  lemon: ['nimbu'],
-  // Brand / type aliases
-  toned: ['milk', 'doodh'],
-  full: ['milk', 'doodh'],
-  skimmed: ['milk', 'doodh'],
-  lassi: ['curd', 'dahi', 'buttermilk', 'chaach'],
-  chaach: ['buttermilk', 'lassi', 'curd'],
-  buttermilk: ['chaach', 'lassi', 'curd', 'dahi'],
-  shrikhand: ['curd', 'dahi', 'yogurt'],
-  cream: ['malai'],
-  malai: ['cream'],
-  pouch: ['packet', 'pack'],
-  packet: ['pack', 'pouch'],
+
+  // ── DAIRY ─────────────────────────────────────────────────────────────────
+  doodh:        ['milk', 'dairy', 'dudh', 'doodh'],
+  dudh:         ['milk', 'dairy', 'doodh'],
+  milk:         ['doodh', 'dudh', 'dairy', 'dairy milk', 'fresh milk'],
+  dahi:         ['curd', 'yogurt', 'yoghurt', 'set curd', 'dahi', 'doi'],
+  doi:          ['curd', 'dahi', 'yogurt'],
+  curd:         ['dahi', 'doi', 'yogurt', 'yoghurt', 'set curd', 'fresh curd'],
+  yogurt:       ['dahi', 'curd', 'yoghurt'],
+  yoghurt:      ['dahi', 'curd', 'yogurt'],
+  paneer:       ['cottage cheese', 'chenna', 'panir', 'fresh paneer', 'paneer block'],
+  panir:        ['paneer', 'cottage cheese', 'chenna'],
+  makhan:       ['butter', 'makkhan', 'white butter'],
+  makkhan:      ['butter', 'makhan'],
+  butter:       ['makhan', 'makkhan', 'white butter', 'dairy butter'],
+  ghee:         ['clarified butter', 'pure ghee', 'cow ghee', 'desi ghee', 'ghi'],
+  ghi:          ['ghee', 'clarified butter', 'desi ghee'],
+  'desi ghee':  ['ghee', 'pure ghee', 'cow ghee'],
+  'cow ghee':   ['ghee', 'desi ghee', 'gau ghee'],
+  malai:        ['cream', 'fresh cream', 'malaai'],
+  malaai:       ['cream', 'malai', 'fresh cream'],
+  cream:        ['malai', 'fresh cream', 'dairy cream'],
+  'fresh cream':['malai', 'cream'],
+  lassi:        ['curd drink', 'dahi drink', 'buttermilk', 'chaach', 'yogurt drink'],
+  chaach:       ['buttermilk', 'lassi', 'curd drink', 'chach', 'mattha'],
+  chach:        ['buttermilk', 'chaach', 'lassi', 'mattha'],
+  mattha:       ['buttermilk', 'chaach', 'lassi'],
+  buttermilk:   ['chaach', 'lassi', 'mattha', 'chach', 'dahi pani'],
+  shrikhand:    ['sweet curd', 'sweetened yogurt', 'dahi mithai'],
+  khoa:         ['mawa', 'milk solid', 'khoya', 'condensed milk solid'],
+  khoya:        ['mawa', 'khoa', 'milk solid'],
+  mawa:         ['khoa', 'khoya', 'milk solid'],
+  chenna:       ['paneer', 'cottage cheese', 'fresh cheese'],
+  rabri:        ['condensed milk', 'sweet milk', 'rabdi'],
+  rabdi:        ['rabri', 'condensed milk', 'sweet milk'],
+  'toned milk': ['doodh', 'milk', 'toned doodh', 'low fat milk'],
+  'full cream': ['full fat milk', 'full cream doodh', 'whole milk'],
+  toned:        ['milk', 'doodh', 'toned milk', 'low fat'],
+  'double toned':['milk', 'doodh', 'skimmed milk'],
+  skimmed:      ['milk', 'doodh', 'low fat milk'],
+  'cow milk':   ['gai ka doodh', 'cow doodh', 'milk'],
+  'buffalo milk':['bhains ka doodh', 'milk', 'doodh'],
+  'gai ka doodh':['cow milk', 'milk', 'doodh'],
+  flavoured:    ['flavored', 'flavoured milk', 'chocolate milk'],
+  'milk powder':['doodh powder', 'dried milk', 'powder milk'],
+  'doodh powder':['milk powder', 'dried milk'],
+  condensed:    ['condensed milk', 'milkmaid', 'sweet milk', 'mithi doodh'],
+
+  // ── GRAINS, FLOUR & STAPLES ───────────────────────────────────────────────
+  chawal:       ['rice', 'rice grain', 'chaval'],
+  chaval:       ['rice', 'chawal'],
+  rice:         ['chawal', 'chaval', 'basmati', 'grain'],
+  basmati:      ['rice', 'chawal', 'basmati rice', 'long grain rice'],
+  'sella rice': ['rice', 'chawal', 'parboiled rice'],
+  'brown rice': ['chawal', 'rice', 'whole grain rice'],
+  aata:         ['wheat flour', 'flour', 'atta', 'chakki atta', 'gehun atta'],
+  atta:         ['wheat flour', 'flour', 'aata', 'gehun atta'],
+  'chakki atta':['atta', 'aata', 'wheat flour', 'fresh ground flour'],
+  gehun:        ['wheat', 'wheat flour', 'atta', 'aata'],
+  maida:        ['refined flour', 'all purpose flour', 'flour', 'white flour'],
+  besan:        ['gram flour', 'chickpea flour', 'chane ka aata', 'besan flour'],
+  'gram flour': ['besan', 'chickpea flour', 'chane ka aata'],
+  sooji:        ['semolina', 'rava', 'suji', 'sooji rava'],
+  suji:         ['semolina', 'rava', 'sooji'],
+  rava:         ['semolina', 'sooji', 'suji', 'rava upma'],
+  semolina:     ['sooji', 'suji', 'rava'],
+  poha:         ['flattened rice', 'beaten rice', 'poha rice', 'chivda'],
+  'beaten rice':['poha', 'flattened rice'],
+  daliya:       ['broken wheat', 'dalia', 'porridge', 'wheat porridge'],
+  dalia:        ['broken wheat', 'daliya', 'porridge'],
+  oats:         ['oatmeal', 'oat', 'daliya', 'breakfast cereal'],
+  millet:       ['bajra', 'jowar', 'ragi', 'millet grain'],
+  bajra:        ['millet', 'pearl millet', 'bajra flour'],
+  jowar:        ['sorghum', 'jowar flour', 'millet'],
+  ragi:         ['finger millet', 'nachni', 'ragi flour'],
+  nachni:       ['ragi', 'finger millet'],
+  makka:        ['corn', 'maize', 'makki', 'corn flour'],
+  makki:        ['corn', 'maize', 'makka', 'corn flour'],
+  cornflour:    ['corn starch', 'makki atta', 'corn flour'],
+  'corn flour': ['cornflour', 'corn starch', 'makki atta'],
+
+  // ── PULSES & LENTILS ─────────────────────────────────────────────────────
+  dal:          ['lentils', 'pulses', 'daal', 'legumes'],
+  daal:         ['lentils', 'pulses', 'dal', 'legumes'],
+  lentils:      ['dal', 'daal', 'pulses'],
+  'masoor dal': ['red lentils', 'lal dal', 'masoor'],
+  masoor:       ['red lentils', 'masoor dal', 'lal dal'],
+  'moong dal':  ['yellow lentils', 'mung dal', 'moong', 'green gram'],
+  moong:        ['green gram', 'mung', 'moong dal'],
+  mung:         ['green gram', 'moong', 'moong dal'],
+  'urad dal':   ['black lentils', 'urad', 'black gram', 'dhuli dal'],
+  urad:         ['black gram', 'urad dal', 'black lentils'],
+  'chana dal':  ['split chickpeas', 'chana', 'Bengal gram'],
+  chana:        ['chickpeas', 'chane', 'chole', 'Bengal gram', 'chana dal'],
+  chole:        ['chickpeas', 'chana', 'white chickpeas', 'kabuli chana'],
+  'kabuli chana':['white chickpeas', 'chole', 'chana'],
+  rajma:        ['kidney beans', 'red kidney beans', 'rajmah'],
+  rajmah:       ['kidney beans', 'rajma'],
+  'kidney beans':['rajma', 'rajmah'],
+  lobiya:       ['black eyed peas', 'cowpeas', 'chawli'],
+  chawli:       ['black eyed peas', 'lobiya'],
+  'arhar dal':  ['toor dal', 'pigeon peas', 'tur dal'],
+  'toor dal':   ['arhar dal', 'pigeon peas', 'tur dal'],
+  tur:          ['toor', 'arhar', 'pigeon peas', 'tur dal'],
+
+  // ── VEGETABLES ───────────────────────────────────────────────────────────
+  sabzi:        ['vegetables', 'veggies', 'sabji', 'fresh vegetables'],
+  sabji:        ['vegetables', 'sabzi', 'veggies'],
+  aloo:         ['potato', 'potatoes', 'aaloo', 'batata'],
+  aaloo:        ['potato', 'potatoes', 'aloo', 'batata'],
+  batata:       ['potato', 'aloo', 'potatoes'],
+  potato:       ['aloo', 'aaloo', 'batata', 'potatoes'],
+  potatoes:     ['aloo', 'aaloo', 'batata'],
+  pyaaz:        ['onion', 'onions', 'kanda', 'piyaz'],
+  piyaz:        ['onion', 'onions', 'pyaaz', 'kanda'],
+  kanda:        ['onion', 'pyaaz', 'piyaz'],
+  onion:        ['pyaaz', 'piyaz', 'kanda', 'onions'],
+  tamatar:      ['tomato', 'tomatoes', 'tamater'],
+  tamater:      ['tomato', 'tomatoes', 'tamatar'],
+  tomato:       ['tamatar', 'tamater', 'tomatoes'],
+  tomatoes:     ['tamatar', 'tamater', 'tomato'],
+  lauki:        ['bottle gourd', 'doodhi', 'ghiya'],
+  doodhi:       ['bottle gourd', 'lauki', 'ghiya'],
+  ghiya:        ['bottle gourd', 'lauki', 'doodhi'],
+  'bottle gourd':['lauki', 'doodhi', 'ghiya'],
+  karela:       ['bitter gourd', 'bitter melon', 'karela sabzi'],
+  'bitter gourd':['karela', 'bitter melon'],
+  tinda:        ['apple gourd', 'indian round gourd', 'tinde'],
+  tinde:        ['apple gourd', 'tinda'],
+  tori:         ['ridge gourd', 'luffa', 'torai'],
+  torai:        ['ridge gourd', 'tori', 'luffa'],
+  'ridge gourd':['tori', 'torai', 'luffa'],
+  kaddu:        ['pumpkin', 'sitaphal', 'squash'],
+  sitaphal:     ['pumpkin', 'kaddu'],
+  pumpkin:      ['kaddu', 'sitaphal'],
+  baingan:      ['eggplant', 'brinjal', 'aubergine', 'baigan'],
+  baigan:       ['eggplant', 'brinjal', 'baingan'],
+  brinjal:      ['baingan', 'baigan', 'eggplant', 'aubergine'],
+  eggplant:     ['baingan', 'brinjal'],
+  bhindi:       ['okra', 'ladyfinger', 'lady finger', 'ladies finger'],
+  okra:         ['bhindi', 'ladyfinger', 'ladies finger'],
+  palak:        ['spinach', 'palak saag'],
+  spinach:      ['palak', 'palak saag'],
+  methi:        ['fenugreek', 'fenugreek leaves', 'methi leaves'],
+  fenugreek:    ['methi', 'methi leaves'],
+  sarson:       ['mustard greens', 'sarson ka saag', 'mustard leaves'],
+  'sarson saag':['mustard greens', 'sarson'],
+  saag:         ['leafy greens', 'greens', 'saag sabzi', 'palak', 'methi'],
+  patta:        ['leaves', 'leafy', 'greens'],
+  gobhi:        ['cauliflower', 'patta gobhi', 'band gobhi', 'cabbage', 'broccoli'],
+  phool:        ['cauliflower', 'phool gobhi'],
+  'phool gobhi':['cauliflower', 'gobhi'],
+  cauliflower:  ['phool gobhi', 'gobhi'],
+  'patta gobhi':['cabbage', 'band gobhi', 'gobhi'],
+  'band gobhi': ['cabbage', 'patta gobhi'],
+  cabbage:      ['patta gobhi', 'band gobhi'],
+  broccoli:     ['gobhi', 'hari gobhi', 'broccoli'],
+  matar:        ['peas', 'green peas', 'mutter'],
+  mutter:       ['peas', 'green peas', 'matar'],
+  peas:         ['matar', 'mutter', 'green peas'],
+  'green peas': ['matar', 'mutter', 'peas'],
+  gajar:        ['carrot', 'carrots', 'gajjar'],
+  gajjar:       ['carrot', 'carrots', 'gajar'],
+  carrot:       ['gajar', 'gajjar', 'carrots'],
+  mooli:        ['radish', 'white radish', 'muli'],
+  muli:         ['radish', 'mooli', 'white radish'],
+  radish:       ['mooli', 'muli'],
+  shalgam:      ['turnip', 'turnips'],
+  turnip:       ['shalgam'],
+  shakarkand:   ['sweet potato', 'yam', 'shakarkandi'],
+  shakarkandi:  ['sweet potato', 'yam', 'shakarkand'],
+  'sweet potato':['shakarkand', 'shakarkandi'],
+  kheera:       ['cucumber', 'kakdi', 'kheere'],
+  kakdi:        ['cucumber', 'kheera'],
+  cucumber:     ['kheera', 'kakdi'],
+  simla:        ['capsicum', 'bell pepper', 'shimla mirch'],
+  'shimla mirch':['capsicum', 'bell pepper', 'simla'],
+  capsicum:     ['shimla mirch', 'bell pepper', 'simla'],
+  'bell pepper':['capsicum', 'shimla mirch'],
+  mirchi:       ['chilli', 'chili', 'green chilli', 'red chilli', 'pepper', 'hari mirch'],
+  'hari mirch': ['green chilli', 'mirchi', 'green pepper'],
+  'lal mirch':  ['red chilli', 'mirchi', 'red pepper'],
+  chilli:       ['mirchi', 'hari mirch', 'chili', 'pepper'],
+  chili:        ['mirchi', 'chilli', 'pepper'],
+  corn:         ['makka', 'maize', 'bhutta', 'sweet corn'],
+  bhutta:       ['corn', 'maize', 'corn cob'],
+  'sweet corn': ['corn', 'makka', 'bhutta'],
+  mushroom:     ['mushroom', 'khumbi', 'dhingri'],
+  khumbi:       ['mushroom', 'dhingri'],
+
+  // ── FRUITS ───────────────────────────────────────────────────────────────
+  kela:         ['banana', 'bananas', 'kele'],
+  kele:         ['banana', 'bananas', 'kela'],
+  banana:       ['kela', 'kele', 'bananas'],
+  seb:          ['apple', 'apples', 'saib'],
+  saib:         ['apple', 'apples', 'seb'],
+  apple:        ['seb', 'saib', 'apples'],
+  aam:          ['mango', 'mangoes', 'ambi'],
+  ambi:         ['raw mango', 'kachcha aam', 'green mango'],
+  mango:        ['aam', 'ambi', 'mangoes'],
+  angoor:       ['grapes', 'grape', 'angur'],
+  angur:        ['grapes', 'grape', 'angoor'],
+  grapes:       ['angoor', 'angur', 'grape'],
+  narangi:      ['orange', 'oranges', 'santra', 'narinja'],
+  santra:       ['orange', 'narangi', 'oranges'],
+  orange:       ['narangi', 'santra', 'oranges'],
+  nimbu:        ['lemon', 'lime', 'nimboo', 'kagzi nimbu'],
+  nimboo:       ['lemon', 'lime', 'nimbu'],
+  lemon:        ['nimbu', 'nimboo', 'lime'],
+  lime:         ['nimbu', 'nimboo', 'lemon'],
+  anaar:        ['pomegranate', 'anar'],
+  anar:         ['pomegranate', 'anaar'],
+  pomegranate:  ['anaar', 'anar'],
+  tarbooz:      ['watermelon', 'water melon'],
+  watermelon:   ['tarbooz', 'water melon'],
+  kharbooja:    ['muskmelon', 'cantaloupe', 'melon'],
+  muskmelon:    ['kharbooja', 'cantaloupe', 'melon'],
+  amrood:       ['guava', 'peru'],
+  peru:         ['guava', 'amrood'],
+  guava:        ['amrood', 'peru'],
+  chikoo:       ['sapota', 'sapodilla', 'sapodila'],
+  papita:       ['papaya', 'papaya fruit'],
+  papaya:       ['papita', 'papaya fruit'],
+  nashpati:     ['pear', 'pears'],
+  pear:         ['nashpati', 'pears'],
+  strawberry:   ['strawberries', 'jangali strawberry'],
+  litchi:       ['lychee', 'lichi', 'lichee'],
+  lychee:       ['litchi', 'lichi'],
+  coconut:      ['nariyal', 'nariyal pani', 'coconut water'],
+  nariyal:      ['coconut', 'coconut water', 'nariyal pani'],
+
+  // ── SPICES & MASALAS ─────────────────────────────────────────────────────
+  masala:       ['spice', 'spices', 'masale', 'spice mix', 'spice blend'],
+  masale:       ['spices', 'masala', 'spice mix'],
+  haldi:        ['turmeric', 'turmeric powder', 'haldi powder'],
+  turmeric:     ['haldi', 'haldi powder'],
+  jeera:        ['cumin', 'cumin seeds', 'zeera', 'jira'],
+  zeera:        ['cumin', 'jeera', 'cumin seeds'],
+  jira:         ['cumin', 'jeera'],
+  cumin:        ['jeera', 'zeera', 'jira', 'cumin seeds'],
+  dhania:       ['coriander', 'cilantro', 'dhania powder', 'coriander powder', 'dhaniya'],
+  dhaniya:      ['coriander', 'dhania', 'cilantro'],
+  coriander:    ['dhania', 'dhaniya', 'cilantro', 'coriander powder'],
+  adrak:        ['ginger', 'ginger powder', 'saunth', 'sonth'],
+  saunth:       ['dry ginger', 'adrak', 'sonth'],
+  sonth:        ['dry ginger', 'adrak', 'saunth'],
+  ginger:       ['adrak', 'saunth', 'sonth', 'ginger powder'],
+  lehsun:       ['garlic', 'garlic paste', 'garlic powder', 'lasun'],
+  lasun:        ['garlic', 'lehsun'],
+  garlic:       ['lehsun', 'lasun', 'garlic powder', 'garlic paste'],
+  kali:         ['black pepper', 'kali mirch', 'black', 'kala'],
+  'kali mirch': ['black pepper', 'pepper', 'kali', 'black peppercorn'],
+  'black pepper':['kali mirch', 'kali', 'pepper'],
+  elaichi:      ['cardamom', 'green cardamom', 'small cardamom'],
+  cardamom:     ['elaichi', 'green cardamom', 'small cardamom'],
+  'badi elaichi':['black cardamom', 'large cardamom'],
+  laung:        ['cloves', 'clove'],
+  cloves:       ['laung', 'clove'],
+  dalchini:     ['cinnamon', 'cinnamon stick'],
+  cinnamon:     ['dalchini', 'cinnamon stick'],
+  tejpatta:     ['bay leaf', 'bay leaves'],
+  'bay leaf':   ['tejpatta', 'bay leaves'],
+  'bay leaves': ['tejpatta', 'bay leaf'],
+  kesar:        ['saffron', 'keshar'],
+  keshar:       ['saffron', 'kesar'],
+  saffron:      ['kesar', 'keshar'],
+  jaiphal:      ['nutmeg', 'nutmeg powder'],
+  nutmeg:       ['jaiphal'],
+  ajwain:       ['carom seeds', 'thymol seeds', 'omam'],
+  carom:        ['ajwain', 'carom seeds'],
+  methi:        ['fenugreek seeds', 'fenugreek', 'methi seeds', 'methi dana'],
+  'methi dana': ['fenugreek seeds', 'methi'],
+  fenugreek:    ['methi', 'methi dana'],
+  hing:         ['asafoetida', 'heeng', 'asafetida'],
+  heeng:        ['asafoetida', 'hing'],
+  asafoetida:   ['hing', 'heeng'],
+  sarsondana:   ['mustard seeds', 'rai', 'mustard'],
+  rai:          ['mustard seeds', 'sarson dana', 'mustard'],
+  'mustard seeds':['rai', 'sarsondana', 'mustard'],
+  'red chilli powder':['lal mirch powder', 'chilli powder', 'mirchi powder'],
+  'garam masala':['spice blend', 'masala', 'mixed spice'],
+  'chaat masala':['chaat', 'masala', 'tangy spice'],
+  'chole masala':['chickpea masala', 'chole spice'],
+  'rajma masala':['kidney bean masala', 'rajma spice'],
+  'biryani masala':['biryani spice', 'pulao masala'],
+  'sambar masala':['sambar powder', 'south indian spice'],
+  'rasam powder':['rasam masala', 'south indian spice'],
+  namak:        ['salt', 'common salt', 'table salt', 'sendha namak', 'rock salt'],
+  salt:         ['namak', 'table salt', 'sendha namak', 'rock salt'],
+  'sendha namak':['rock salt', 'pink salt', 'namak'],
+  cheeni:       ['sugar', 'shakkar', 'white sugar', 'chini'],
+  chini:        ['sugar', 'cheeni', 'shakkar'],
+  shakkar:      ['jaggery', 'raw sugar', 'brown sugar', 'cheeni', 'gur', 'sugar'],
+  sugar:        ['cheeni', 'chini', 'shakkar', 'white sugar'],
+  gur:          ['jaggery', 'gudh', 'shakkar', 'raw sugar'],
+  gudh:         ['jaggery', 'gur', 'raw sugar'],
+  jaggery:      ['gur', 'gudh', 'shakkar'],
+
+  // ── OIL & FATS ───────────────────────────────────────────────────────────
+  tel:          ['oil', 'cooking oil', 'edible oil', 'tael'],
+  oil:          ['tel', 'cooking oil', 'edible oil'],
+  'cooking oil':['tel', 'oil', 'edible oil'],
+  'mustard oil':['sarson ka tel', 'sarson oil', 'kachi ghani', 'mustard'],
+  'sarson ka tel':['mustard oil', 'sarson oil', 'kachi ghani'],
+  'kachi ghani':['mustard oil', 'sarson ka tel', 'cold pressed'],
+  'sunflower oil':['surajmukhi tel', 'sunflower'],
+  'groundnut oil':['peanut oil', 'moongphali tel', 'groundnut'],
+  'coconut oil': ['nariyal tel', 'coconut'],
+  'refined oil': ['tel', 'refined cooking oil', 'refined sunflower'],
+  'palm oil':   ['palm tel', 'vanaspati'],
+  vanaspati:    ['palm oil', 'dalda', 'vegetable fat', 'vegetable oil'],
+  dalda:        ['vanaspati', 'vegetable fat', 'hydrogenated oil'],
+  'olive oil':  ['jaitun tel', 'extra virgin'],
+
+  // ── BEVERAGES ────────────────────────────────────────────────────────────
+  chai:         ['tea', 'chay', 'cha', 'tea leaves', 'tea powder'],
+  chay:         ['tea', 'chai', 'cha'],
+  tea:          ['chai', 'chay', 'cha', 'tea leaves', 'tea powder', 'chai patti'],
+  'chai patti': ['tea leaves', 'chai', 'tea'],
+  'green tea':  ['hari chai', 'herbal tea', 'green tea leaves'],
+  'black tea':  ['kali chai', 'tea', 'chai'],
+  coffee:       ['kafi', 'kafee', 'coffee powder', 'instant coffee'],
+  kafi:         ['coffee', 'kafee'],
+  'filter coffee':['south indian coffee', 'coffee decoction'],
+  'instant coffee':['coffee', 'nescafe', 'bru'],
+  juice:        ['fruit juice', 'juice pack', 'real juice', 'fresh juice'],
+  'fruit juice':['juice', 'pack juice'],
+  sharbat:      ['syrup', 'sherbet', 'sweet drink'],
+  sherbet:      ['sharbat', 'syrup'],
+  nimbu:        ['lemon juice', 'nimbu pani', 'lemon water'],
+  'nimbu pani': ['lemon water', 'lemonade', 'nimbu'],
+  lassi:        ['yogurt drink', 'sweet lassi', 'salted lassi', 'dahi drink'],
+  'cold drink': ['cold drinks', 'soda', 'soft drink', 'cola', 'thanda'],
+  thanda:       ['cold drink', 'soda', 'cool drink', 'cold drinks'],
+  soda:         ['cold drink', 'sparkling water', 'soda water'],
+  'energy drink':['energy', 'sports drink', 'boost'],
+  water:        ['paani', 'mineral water', 'drinking water', 'packaged water'],
+  paani:        ['water', 'mineral water', 'drinking water'],
+  'mineral water':['paani', 'water', 'packaged water'],
+  coconut:      ['nariyal', 'coconut water', 'nariyal pani', 'tender coconut'],
+  'coconut water':['nariyal pani', 'nariyal', 'tender coconut'],
+  'nariyal pani':['coconut water', 'nariyal', 'tender coconut'],
+
+  // ── SNACKS & PACKAGED FOOD ───────────────────────────────────────────────
+  namkeen:      ['snacks', 'salty snacks', 'farsan', 'namkin'],
+  namkin:       ['namkeen', 'snacks', 'salty snacks'],
+  farsan:       ['snacks', 'namkeen', 'gujarati snacks'],
+  chips:        ['crisps', 'potato chips', 'aloo chips', 'wafers'],
+  wafers:       ['chips', 'crisps'],
+  biscuit:      ['cookie', 'biscuits', 'cookies', 'biskut'],
+  biskut:       ['biscuit', 'cookie', 'biscuits'],
+  cookies:      ['biscuit', 'biskut', 'cookie'],
+  namkeen:      ['snacks', 'farsan', 'salty', 'mixture'],
+  mixture:      ['namkeen', 'snacks', 'chivda', 'farsan'],
+  chivda:       ['beaten rice snack', 'poha mix', 'namkeen'],
+  chakli:       ['murukku', 'chakri', 'rice chakli'],
+  murukku:      ['chakli', 'chakri', 'rice snack'],
+  mathri:       ['matthi', 'flaky crackers', 'snack'],
+  matthi:       ['mathri', 'crackers'],
+  'bread':      ['roti', 'pav', 'bun', 'loaf', 'white bread', 'brown bread', 'bread loaf'],
+  pav:          ['bread roll', 'bun', 'dinner roll', 'bread', 'pao'],
+  pao:          ['pav', 'bread roll', 'bun'],
+  rusk:         ['toast', 'dry bread', 'tea rusk', 'khari'],
+  khari:        ['puff pastry', 'flaky biscuit', 'rusk'],
+  papad:        ['papadum', 'papadom', 'urad papad', 'rice papad'],
+  papadum:      ['papad', 'papadom'],
+  popcorn:      ['makka popcorn', 'corn pops'],
+  noodles:      ['maggi', 'instant noodles', 'noodls'],
+  maggi:        ['noodles', 'instant noodles', '2 minute noodles'],
+  pasta:        ['macaroni', 'spaghetti', 'penne', 'pasta'],
+  macaroni:     ['pasta', 'mac'],
+  vermicelli:   ['seviyan', 'sewai', 'semiya'],
+  seviyan:      ['vermicelli', 'sewai', 'semiya'],
+  sewai:        ['vermicelli', 'seviyan', 'semiya'],
+
+  // ── BREAKFAST & CEREAL ───────────────────────────────────────────────────
+  cornflakes:   ['corn flakes', 'breakfast cereal', 'cereal'],
+  'corn flakes':['cornflakes', 'cereal', 'breakfast cereal'],
+  muesli:       ['granola', 'cereal', 'breakfast muesli'],
+  granola:      ['muesli', 'oats', 'breakfast'],
+  oats:         ['oatmeal', 'porridge', 'daliya', 'breakfast oats'],
+  upma:         ['rava upma', 'sooji upma', 'semolina upma'],
+
+  // ── SWEETS & MITHAI ──────────────────────────────────────────────────────
+  mithai:       ['sweets', 'indian sweets', 'meetha', 'mitai'],
+  meetha:       ['sweets', 'mithai', 'sweet'],
+  barfi:        ['burfi', 'milk barfi', 'kaju barfi', 'sweets'],
+  burfi:        ['barfi', 'milk burfi', 'sweets'],
+  ladoo:        ['laddoo', 'besan ladoo', 'sweets'],
+  laddoo:       ['ladoo', 'sweets'],
+  halwa:        ['semolina halwa', 'sooji halwa', 'gajar halwa', 'sweets'],
+  gulab:        ['gulab jamun', 'rose', 'gulab water'],
+  'gulab jamun':['gulab', 'sweets', 'jamun'],
+  rasgulla:     ['rossogolla', 'sweets', 'chhena sweets'],
+  kheer:        ['rice pudding', 'payasam', 'doodh chawal'],
+  halwa:        ['sooji halwa', 'atta halwa', 'gajar halwa'],
+  chocolate:    ['choclate', 'choco', 'dark chocolate', 'milk chocolate'],
+  choclate:     ['chocolate', 'choco'],
+  toffee:       ['candy', 'taffy', 'sweet', 'lollipop'],
+  candy:        ['toffee', 'sweet', 'candies'],
+
+  // ── CONDIMENTS, SAUCES & PICKLES ─────────────────────────────────────────
+  achar:        ['pickle', 'achaar', 'pickles', 'mixed pickle'],
+  achaar:       ['pickle', 'achar', 'pickles'],
+  pickle:       ['achar', 'achaar', 'pickles'],
+  chutney:      ['sauce', 'dip', 'chatni', 'green chutney', 'tamarind chutney'],
+  chatni:       ['chutney', 'sauce', 'dip'],
+  sauce:        ['chutney', 'ketchup', 'tomato sauce', 'soya sauce'],
+  ketchup:      ['tomato sauce', 'sauce', 'tomato ketchup'],
+  'tomato sauce':['ketchup', 'sauce'],
+  'soy sauce':  ['soya sauce', 'dark soy', 'sauce'],
+  'soya sauce': ['soy sauce', 'sauce'],
+  vinegar:      ['sirka', 'sour', 'white vinegar'],
+  sirka:        ['vinegar', 'white vinegar'],
+  mayonnaise:   ['mayo', 'sandwich spread'],
+  mayo:         ['mayonnaise', 'sandwich spread'],
+  'tomato puree':['tamatar puree', 'tomato paste'],
+  'tomato paste':['tomato puree', 'tamatar paste'],
+  'ginger paste':['adrak paste', 'ginger garlic paste'],
+  'garlic paste':['lehsun paste', 'ginger garlic paste'],
+  'ginger garlic paste':['adrak lehsun paste', 'ginger paste', 'garlic paste'],
+  'adrak lehsun':['ginger garlic', 'ginger garlic paste'],
+
+  // ── SUGAR, HONEY & SPREADS ───────────────────────────────────────────────
+  honey:        ['shahad', 'shehad', 'pure honey', 'natural honey'],
+  shahad:       ['honey', 'shehad', 'pure honey'],
+  shehad:       ['honey', 'shahad'],
+  jam:          ['fruit jam', 'preserve', 'jelly'],
+  jelly:        ['jam', 'gelatin', 'fruit jelly'],
+  'peanut butter':['peanut', 'groundnut butter', 'moongphali butter'],
+  tahini:       ['sesame paste', 'til paste'],
+
+  // ── PERSONAL CARE & HYGIENE ──────────────────────────────────────────────
+  soap:         ['sabun', 'bath soap', 'body soap', 'bathing soap'],
+  sabun:        ['soap', 'bath soap', 'laundry soap'],
+  shampoo:      ['hair wash', 'hair cleaner', 'baal shampoo'],
+  conditioner:  ['hair conditioner', 'hair care'],
+  toothpaste:   ['tooth paste', 'dant manjan', 'colgate', 'toothpaste'],
+  'dant manjan':['tooth powder', 'toothpaste'],
+  toothbrush:   ['tooth brush', 'dant brush'],
+  'face wash':  ['face cleanser', 'facewash', 'skin cleanser'],
+  moisturizer:  ['lotion', 'moisturiser', 'body lotion', 'face cream'],
+  deodorant:    ['deo', 'body spray', 'antiperspirant'],
+  sanitizer:    ['hand sanitizer', 'hand rub', 'alcohol gel'],
+  'hand wash':  ['hand soap', 'liquid soap', 'handwash'],
+  diapers:      ['nappies', 'pampers', 'baby diapers'],
+  pampers:      ['diapers', 'nappies'],
+
+  // ── HOUSEHOLD & CLEANING ─────────────────────────────────────────────────
+  detergent:    ['washing powder', 'clothes wash', 'kapde dhone ka powder', 'laundry'],
+  'washing powder':['detergent', 'laundry powder'],
+  'dish wash':  ['utensil cleaner', 'bartan sabun', 'dishwash'],
+  dishwash:     ['dish wash', 'bartan cleaner', 'vim'],
+  'bartan sabun':['dish wash', 'utensil soap'],
+  vim:          ['dish wash', 'dishwash', 'bartan cleaner'],
+  broom:        ['jhadu', 'sweeper', 'floor broom'],
+  jhadu:        ['broom', 'sweeper'],
+  mop:          ['pocha', 'floor cleaner', 'floor mop'],
+  pocha:        ['mop', 'floor wiper'],
+  'floor cleaner':['phool cleaner', 'phenol', 'lizol'],
+  phenol:       ['floor cleaner', 'disinfectant'],
+  'tissue paper':['tissues', 'napkin', 'facial tissue'],
+  tissues:      ['tissue paper', 'napkin'],
+  napkin:       ['tissue paper', 'tissues', 'sanitary napkin'],
+  'toilet paper':['bathroom tissue', 'toilet roll'],
+  'garbage bag':['dustbin bag', 'trash bag', 'polythene bag'],
+
+  // ── UNITS & PACKAGING ────────────────────────────────────────────────────
+  pouch:        ['packet', 'pack', 'sachet', 'polybag'],
+  packet:       ['pack', 'pouch', 'sachet'],
+  pack:         ['packet', 'pouch', 'sachet'],
+  sachet:       ['pouch', 'small pack', 'single use'],
+  '500ml':      ['500 ml', 'half litre', 'half liter'],
+  '1l':         ['1 litre', '1 liter', 'one litre'],
+  '1litre':     ['1 litre', '1l', 'one litre'],
+  '2l':         ['2 litre', '2 liter', 'two litre'],
+  '5l':         ['5 litre', '5 liter', 'five litre', 'big pack'],
+  '250g':       ['250 gram', 'quarter kg'],
+  '500g':       ['500 gram', 'half kg', 'half kilo'],
+  '1kg':        ['1 kg', '1 kilo', 'one kg', 'one kilo'],
+  '2kg':        ['2 kg', '2 kilo', 'two kg'],
+  '5kg':        ['5 kg', '5 kilo', 'five kg', 'big pack'],
+  litre:        ['liter', 'l', 'litre'],
+  liter:        ['litre', 'l'],
+  kg:           ['kilo', 'kilogram', 'kgs'],
+  kilo:         ['kg', 'kilogram'],
+  gram:         ['gm', 'g', 'grams'],
+
+  // ── BRANDS ───────────────────────────────────────────────────────────────
+  amul:         ['amul dairy', 'amul milk', 'amul butter', 'amul dahi', 'amul paneer'],
+  'mother dairy':['md', 'mother dairy milk', 'mother dairy curd'],
+  patanjali:    ['baba ramdev', 'patanjali products'],
+  nestle:       ['nestle milk', 'kitkat', 'nescafe', 'munch'],
+  britannia:    ['bread', 'biscuit', 'dairy', 'cheese'],
+  parle:        ['parle g', 'parle biscuit', 'monaco'],
+  haldiram:     ['namkeen', 'sweets', 'bhujia'],
+  'lays':       ['potato chips', 'chips'],
+  kurkure:      ['snacks', 'chips', 'corn snack'],
+  maggi:        ['noodles', 'instant noodles'],
+  tata:         ['tata salt', 'tata tea', 'tata products'],
+  mdh:          ['spices', 'masala', 'mdh masala'],
+  everest:      ['spices', 'masala', 'everest masala'],
+  'catch':      ['spices', 'masala'],
+  dabur:        ['honey', 'chyawanprash', 'dabur products'],
+  himalaya:     ['herbal', 'ayurvedic', 'himalaya products'],
+  dove:         ['soap', 'shampoo', 'body wash'],
+  lifebuoy:     ['soap', 'handwash', 'sanitizer'],
+  dettol:       ['antiseptic', 'hand wash', 'soap', 'sanitizer'],
+  harpic:       ['toilet cleaner', 'bathroom cleaner'],
+  colgate:      ['toothpaste', 'toothbrush', 'dental care'],
+  sensodyne:    ['toothpaste', 'sensitive toothpaste'],
+  surf:         ['detergent', 'washing powder', 'surf excel'],
+  'surf excel': ['detergent', 'surf', 'washing powder'],
+  ariel:        ['detergent', 'washing powder'],
+  tide:         ['detergent', 'washing powder'],
+  vim:          ['dish wash', 'bartan cleaner'],
+  lizol:        ['floor cleaner', 'disinfectant'],
+
+  // ── MISC FOOD ────────────────────────────────────────────────────────────
+  anda:         ['egg', 'eggs', 'hen egg', 'ande'],
+  ande:         ['eggs', 'anda', 'egg'],
+  egg:          ['anda', 'ande', 'eggs', 'hen egg', 'anday'],
+  eggs:         ['anda', 'ande', 'egg'],
+  murgi:        ['chicken', 'poultry', 'hen'],
+  murghi:       ['chicken', 'hen', 'poultry'],
+  chicken:      ['murga', 'murg', 'murgi', 'murghi', 'poultry'],
+  macchi:       ['fish', 'maachh', 'seafood'],
+  maachh:       ['fish', 'macchi', 'seafood'],
+  fish:         ['macchi', 'maachh', 'seafood'],
+  mutton:       ['gosht', 'lamb', 'goat meat', 'bakre ka gosht'],
+  gosht:        ['mutton', 'meat', 'lamb'],
+  'paneer tikka':['paneer', 'tikka', 'marinated paneer'],
+  samosa:       ['samosa', 'samoosa', 'fried snack'],
+  kachori:      ['kachori', 'stuffed fried bread', 'snack'],
+  dhokla:       ['gujarati snack', 'besan dhokla', 'steamed cake'],
+  idli:         ['idly', 'south indian', 'rice cake'],
+  dosa:         ['dosai', 'south indian', 'rice crepe'],
+  uttapam:      ['south indian', 'thick dosa', 'vegetable uttapam'],
+  'idli batter':['dosa batter', 'idli dosa batter'],
+  'dosa batter':['idli batter', 'idli dosa batter'],
+
 };
+
+// ── AUTO-KEYWORD GENERATOR ────────────────────────────────────────────────────
+// Generates keywords from a product name + brand based on SYNONYMS map
+function autoGenerateKeywords(name, brand) {
+  const text   = `${name} ${brand || ''}`.toLowerCase();
+  const words  = text.split(/[\s,\/\-\(\)\.]+/).filter(Boolean);
+  const result = new Set();
+
+  // Add original name words
+  words.forEach(w => { if (w.length > 1) result.add(w); });
+
+  // For each word, add its synonyms
+  words.forEach(word => {
+    if (SYNONYMS[word]) SYNONYMS[word].forEach(s => result.add(s));
+  });
+
+  // Check multi-word phrases in name
+  for (const phrase of Object.keys(SYNONYMS)) {
+    if (phrase.includes(' ') && text.includes(phrase)) {
+      SYNONYMS[phrase].forEach(s => result.add(s));
+      result.add(phrase);
+    }
+  }
+
+  // Smart unit extraction (e.g. "500ml" → "500 ml", "half litre")
+  const unitMatch = text.match(/(\d+)\s*(ml|l|g|kg|gm|litre|liter|ltr)/i);
+  if (unitMatch) {
+    const num = unitMatch[1], unit = unitMatch[2].toLowerCase();
+    result.add(`${num}${unit}`);
+    result.add(`${num} ${unit}`);
+    if (unit === 'l' || unit === 'litre' || unit === 'liter' || unit === 'ltr') {
+      if (num === '1') { result.add('one litre'); result.add('1 litre'); }
+      if (num === '2') { result.add('two litre'); result.add('2 litre'); }
+      if (num === '500' && unit === 'ml') { result.add('half litre'); result.add('half liter'); }
+    }
+    if (unit === 'kg' || unit === 'kilo') {
+      if (num === '1') { result.add('one kg'); result.add('ek kilo'); }
+      if (num === '5') { result.add('five kg'); result.add('paanch kilo'); }
+    }
+    if (unit === 'g' || unit === 'gm') {
+      if (num === '500') { result.add('half kg'); result.add('aadha kilo'); }
+      if (num === '250') { result.add('quarter kg'); result.add('paav kilo'); }
+    }
+  }
+
+  return [...result].filter(k => k.length > 1 && k.length < 40);
+}
 
 // Expand a query string into all synonym variants (flat, deduplicated)
 function expandQuery(raw) {
@@ -386,11 +908,16 @@ app.delete('/api/admin/subcategories/:id', adminAuth, async (req, res) => {
 // Build a flat token array from all text fields + synonym expansion
 // Stored on the product for fast text-index matching
 function buildSearchTokens(body) {
-  const parts = [
-    body.name || '',
-    body.brand || '',
-    ...(Array.isArray(body.keywords) ? body.keywords : (body.keywords||'').split(','))
-  ];
+  const existingKeywords = Array.isArray(body.keywords)
+    ? body.keywords
+    : (body.keywords||'').split(',').map(k=>k.trim()).filter(Boolean);
+
+  // Auto-generate keywords if none provided
+  const keywords = existingKeywords.length > 0
+    ? existingKeywords
+    : autoGenerateKeywords(body.name || '', body.brand || '');
+
+  const parts = [ body.name || '', body.brand || '', ...keywords ];
   const tokens = new Set();
   parts.forEach(p => {
     const clean = p.toLowerCase().trim();
@@ -1767,7 +2294,30 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'adm
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ── START ─────────────────────────────────────────────────────────────────────
-connectDB().then(() => {
+connectDB().then(async () => {
+  // ── AUTO-FILL KEYWORDS on startup ────────────────────────────────────────
+  // Runs once: fills keywords + searchTokens for any product that has none
+  try {
+    const col      = db.collection('products');
+    const products = await col.find({
+      $or: [{ keywords: { $exists: false } }, { keywords: { $size: 0 } }, { keywords: [] }]
+    }, { projection: { _id: 1, name: 1, brand: 1 } }).toArray();
+
+    if (products.length > 0) {
+      console.log(`🔑 Auto-generating keywords for ${products.length} products...`);
+      let count = 0;
+      for (const p of products) {
+        const keywords     = autoGenerateKeywords(p.name, p.brand);
+        const searchTokens = buildSearchTokens({ name: p.name, brand: p.brand, keywords });
+        await col.updateOne({ _id: p._id }, { $set: { keywords, searchTokens } });
+        count++;
+      }
+      console.log(`✅ Keywords generated for ${count} products`);
+    }
+  } catch (e) {
+    console.error('⚠️ Keyword auto-fill error (non-fatal):', e.message);
+  }
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n✅ BSC Store running at http://localhost:${PORT}`);
     console.log(`🔧 Admin panel: http://localhost:${PORT}/admin`);
