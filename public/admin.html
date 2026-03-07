@@ -284,6 +284,7 @@ tr:hover td{background:#fafafa;}
       <div class="nav-link" onclick="goTo('banners')"><span class="icon">🖼️</span><span>Banners</span></div>
       <div class="nav-link" onclick="goTo('settings')"><span class="icon">⚙️</span><span>Settings</span></div>
       <div class="nav-link" onclick="goTo('loyalty')"><span class="icon">⭐</span><span>Loyalty Points</span></div>
+      <div class="nav-link" onclick="goTo('push')"><span class="icon">🔔</span><span>Push Notifications</span></div>
     </nav>
     <div class="sidebar-footer">
       <button class="logout-btn" onclick="logout()">Logout</button>
@@ -582,14 +583,14 @@ function invalidateCache() { loadAll._cachedAt = 0; }
 
 const ah = () => ({Authorization:'Bearer '+token,'Content-Type':'application/json'});
 
-const PAGE_NAMES = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings','loyalty'];
+const PAGE_NAMES = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings','loyalty','push'];
 
 function goTo(page) {
   currentPage = page;
   document.querySelectorAll('.nav-link').forEach((l,i) => l.classList.toggle('active', PAGE_NAMES[i]===page));
-  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Credit',products:'Products',scanner:'📷 Barcode Scanner',categories:'Categories',subcategories:'Subcategories',banners:'Banners',settings:'Settings',loyalty:'⭐ Loyalty Points'};
+  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Credit',products:'Products',scanner:'📷 Barcode Scanner',categories:'Categories',subcategories:'Subcategories',banners:'Banners',settings:'Settings',loyalty:'⭐ Loyalty Points',push:'🔔 Push Notifications'};
   document.getElementById('pageTitle').textContent = titles[page]||page;
-  const fns = {dashboard:renderDashboard,customers:renderCustomers,orders:renderOrders,milk:renderMilk,udhar:renderUdhar,products:renderProducts,scanner:renderScanner,categories:renderCategories,subcategories:renderSubcategories,banners:renderBanners,settings:renderSettings,loyalty:renderLoyalty};
+  const fns = {dashboard:renderDashboard,customers:renderCustomers,orders:renderOrders,milk:renderMilk,udhar:renderUdhar,products:renderProducts,scanner:renderScanner,categories:renderCategories,subcategories:renderSubcategories,banners:renderBanners,settings:renderSettings,loyalty:renderLoyalty,push:renderPush};
   if (fns[page]) {
     const r = fns[page]();
     if (r && r.then) r.then(() => wrapTables()); else setTimeout(wrapTables, 80);
@@ -4270,6 +4271,113 @@ async function viewLoyaltyHistory(customerId, name) {
       </div>`).join('')
     : '<div style="text-align:center;padding:20px;color:var(--text2)">No transactions</div>'}`;
 }
+
+// ═══════════════════════════════════════
+// PUSH NOTIFICATIONS
+// ═══════════════════════════════════════
+async function renderPush() {
+  const el = document.getElementById('content');
+  el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:60px"><div style="color:var(--text2)">Loading...</div></div>`;
+
+  const statsR = await fetch('/api/admin/push/stats', { headers: ah() });
+  const stats  = statsR.ok ? await statsR.json() : { total: 0 };
+  const custR  = await fetch('/api/admin/customers', { headers: ah() });
+  const customers = custR.ok ? await custR.json() : [];
+
+  el.innerHTML = `
+    <div style="max-width:680px;margin:0 auto;padding:0 0 60px">
+
+      <!-- Subscriber count chip -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;background:rgba(45,211,111,.06);border:1px solid rgba(45,211,111,.18);border-radius:14px;padding:16px 20px">
+        <div style="font-size:2rem">🔔</div>
+        <div>
+          <div style="font-size:1.5rem;font-weight:900;color:var(--green)">${stats.total}</div>
+          <div style="font-size:.78rem;color:var(--text2)">device${stats.total!==1?'s':''} subscribed to notifications</div>
+        </div>
+      </div>
+
+      <!-- Send notification card -->
+      <div class="card" style="margin-bottom:18px">
+        <div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:16px">📤 Send Notification</div>
+
+        <div style="margin-bottom:12px">
+          <label style="font-size:.73rem;color:var(--text2);font-weight:600;display:block;margin-bottom:5px">Title *</label>
+          <input id="pushTitle" type="text" maxlength="60" placeholder="e.g. 🎉 Fresh mangoes are here!" class="form-control" style="width:100%;box-sizing:border-box">
+        </div>
+
+        <div style="margin-bottom:12px">
+          <label style="font-size:.73rem;color:var(--text2);font-weight:600;display:block;margin-bottom:5px">Message *</label>
+          <textarea id="pushBody" rows="2" maxlength="120" placeholder="e.g. Order before 8pm for same-day delivery." class="form-control" style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
+        </div>
+
+        <div style="margin-bottom:16px">
+          <label style="font-size:.73rem;color:var(--text2);font-weight:600;display:block;margin-bottom:5px">Target</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.82rem">
+              <input type="radio" name="pushTarget" value="all" checked onchange="pushTargetChange(this)"> Everyone (${stats.total} devices)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.82rem">
+              <input type="radio" name="pushTarget" value="customer" onchange="pushTargetChange(this)"> Specific Customer
+            </label>
+          </div>
+          <div id="pushCustomerWrap" style="display:none;margin-top:10px">
+            <select id="pushCustomerId" class="form-control" style="width:100%">
+              <option value="">— Select customer —</option>
+              ${customers.map(c => `<option value="${c.customerId}">${c.name} (${c.phone})</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <button onclick="sendPushNotification()" style="width:100%;padding:12px;background:var(--green);color:#000;border:none;border-radius:10px;font-weight:800;font-size:.9rem;cursor:pointer">
+          🚀 Send Notification
+        </button>
+        <div id="pushResult" style="margin-top:10px;font-size:.8rem;text-align:center;color:var(--text2)"></div>
+      </div>
+
+      <!-- Tips -->
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
+        <div style="font-size:.73rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:10px">💡 Tips</div>
+        <ul style="margin:0;padding-left:18px;color:var(--text2);font-size:.78rem;line-height:1.8">
+          <li>Customers must tap <strong style="color:var(--text)">Enable Notifications</strong> in their account page first</li>
+          <li>Notifications work even when the app is closed</li>
+          <li>Keep titles under 50 characters for best display</li>
+          <li>Great uses: flash sales, new stock, order updates, delivery windows</li>
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
+function pushTargetChange(radio) {
+  document.getElementById('pushCustomerWrap').style.display = radio.value === 'customer' ? 'block' : 'none';
+}
+
+async function sendPushNotification() {
+  const title = document.getElementById('pushTitle').value.trim();
+  const body  = document.getElementById('pushBody').value.trim();
+  const target = document.querySelector('input[name="pushTarget"]:checked')?.value;
+  const customerId = target === 'customer' ? document.getElementById('pushCustomerId').value : null;
+  const result = document.getElementById('pushResult');
+
+  if (!title || !body) { result.style.color='#f87171'; result.textContent='⚠️ Title and message are required'; return; }
+  if (target === 'customer' && !customerId) { result.style.color='#f87171'; result.textContent='⚠️ Please select a customer'; return; }
+
+  result.style.color='var(--text2)'; result.textContent='Sending...';
+
+  try {
+    const r = await fetch('/api/admin/push/send', {
+      method: 'POST',
+      headers: { ...ah(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body, customerId: customerId || null })
+    });
+    const d = await r.json();
+    if (!r.ok) { result.style.color='#f87171'; result.textContent='❌ ' + (d.error || 'Failed'); return; }
+    result.style.color='#4ade80';
+    if (d.sent > 0) result.textContent = `✅ Delivered to ${d.sent} device${d.sent!==1?'s':''}${d.failed?', '+d.failed+' failed':''}${d.staleRemoved?' ('+d.staleRemoved+' stale removed)':''}`;
+    else result.textContent = d.message || '✅ Sent (0 active subscribers)';
+  } catch (e) { result.style.color='#f87171'; result.textContent='❌ Network error'; }
+}
+
 
 </script>
 </body>

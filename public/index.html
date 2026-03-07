@@ -941,8 +941,28 @@ function offPct(price, mrp) {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
-  loadCart(); // #9: restore cart from localStorage
+  loadCart(); // restore cart from localStorage
   showSkeleton(); // show shimmer while loading
+
+  // Register service worker + push (non-blocking)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then(reg => {
+        reg.update();
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('App updated! Reload for the latest version.');
+            }
+          });
+        });
+      })
+      .catch(e => console.warn('SW registration failed:', e));
+    checkPushStatus();
+    initPushNotifications();
+  }
+
   try {
     const d = await fetch('/api/store').then(r=>r.json());
     prods=d.products||[]; cats=d.categories||[]; banners=d.banners||[]; settings=d.settings||{}; subcats=d.subcategories||[];
@@ -3922,25 +3942,11 @@ function renderCart() {
   document.getElementById('cartBody').innerHTML = regularHTML + giftHTML;
 
   // Upsell
-  const upsellIds = (settings.upsellProductIds||[]).map(Number);
-  const upsells = upsellIds.map(id => prods.find(p=>p.id===id)).filter(p => {
-    if (!p) return false;
-    const dv = defaultVariant(p);
-    return dv?.inStock && !cart[cartKey(p.id, dv.id)];
-  });
-  const upsellHTML = upsells.length ? `<div class="upsell-wrap">
-    <div class="upsell-label">⚡ You may also need</div>
-    <div class="upsell-scroll">${upsells.map(p => {
-      const dv = defaultVariant(p);
-      const pr = getPrice(dv.priceTiers, 1);
-      const imgUrl = dv.imageUrl || p.imageUrl || '';
-      return `<div class="upsell-card">
-        <div class="upsell-card-img">${imgUrl?`<img src="${imgUrl}">`:'<span style="font-size:1.1rem">📦</span>'}</div>
-        <div class="upsell-card-name">${p.name}</div>
-        <div class="upsell-card-price">₹${pr}</div>
-        <button class="upsell-add-btn" id="uadd${p.id}" onclick="upsellAdd(${p.id})">+ Add</button>
-      </div>`;
-    }).join('')}</div></div>` : '';
+  // ── AI CROSS-SELL: fetch smart recommendations based on actual cart contents ──
+  // Rendered asynchronously so cart draws instantly, AI suggestions appear after
+  const upsellHTML = '<div class="upsell-wrap" id="aiUpsellWrap"><div class="upsell-label">🤖 AI Picks for you</div><div class="upsell-scroll" id="aiUpsellScroll"><div style="display:flex;align-items:center;gap:8px;padding:4px 0;color:var(--text3);font-size:.72rem"><span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Finding perfect add-ons...</div></div></div>';
+  // Trigger async AI call after render
+  setTimeout(() => _loadAiUpsell(), 50);
 
   // Free delivery bar
   const fdPct = Math.min(100, Math.round(t/fdMin*100));
@@ -3994,6 +4000,10 @@ function chQtyCart(key, delta) {
     renderHome();
   }
 }
+
+// Hook AI upsell refresh into updateCart
+const _upsellOrigUpdateCart = updateCart;
+updateCart = function() { _upsellOrigUpdateCart.apply(this, arguments); triggerAiUpsellRefresh(); };
 
 function upsellAdd(id) {
   const p = prods.find(x=>x.id===id); if(!p) return;
@@ -4328,7 +4338,6 @@ function _doPlaceOrder(method) {
   .then(async r=>{
     const resp = await r.json();
     if (!r.ok) { showToast('⚠️ ' + (resp.error || 'Order failed. Try again.')); return; }
-    // Track ordered items for personalised reorder section
     try { _trackOrderedItems(items); } catch {}
     cart={}; giftState={injected:false,claimed:false,prevUnlocked:false}; window._fdUnlocked=false;
     const earnedPts = resp?.order?.pointsEarned || 0;
@@ -4629,6 +4638,13 @@ function renderAccountHome(data) {
         </div>
       </div>
 
+      <!-- Notifications -->
+      <div style="padding:16px 16px 0">
+        <button id="pushToggleBtn" onclick="togglePushNotifications()"
+          style="width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:rgba(255,255,255,.06);color:var(--text2);font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s">
+          🔕 Enable Notifications
+        </button>
+      </div>
       <!-- Logout -->
       <div style="padding:16px 16px 0">
         <button class="acc-btn acc-btn-danger" onclick="logoutAccount()">Logout</button>
@@ -5209,6 +5225,206 @@ function initMobileAnimations() {
   initPullToRefresh();
   initNavIndicator();
 }
+
+
+// ── AI CROSS-SELL ─────────────────────────────────────────────────────────────
+let _aiUpsellCache = null;   // cache AI result per cart snapshot
+let _aiUpsellCart  = '';     // cart snapshot string when cache was built
+let _aiUpsellTimer = null;
+
+function _cartSnapshot() {
+  return Object.entries(cart).map(([k,q])=>k+':'+q).sort().join(',');
+}
+
+async function _loadAiUpsell() {
+  const wrap = document.getElementById('aiUpsellWrap');
+  if (!wrap) return;
+
+  const cartItems = Object.entries(cart).map(([k, qty]) => {
+    const { pid, vid } = parseKey(k);
+    const p = prods.find(x => x.id === pid);
+    const v = p ? getVariant(p, vid) : null;
+    return p && v ? { productId: p.id, name: p.name, catId: p.catId, qty } : null;
+  }).filter(Boolean);
+
+  if (!cartItems.length) { wrap.remove(); return; }
+
+  const snapshot = _cartSnapshot();
+  // Use cache if cart hasn't changed
+  if (_aiUpsellCache && _aiUpsellCart === snapshot) {
+    _renderAiUpsell(_aiUpsellCache);
+    return;
+  }
+
+  try {
+    const r = await fetch('/api/ai-upsell', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cartItems })
+    });
+    const data = await r.json();
+    const ids = data.productIds || [];
+
+    // Resolve product objects
+    const suggestions = ids
+      .map(id => prods.find(p => p.id === id))
+      .filter(p => {
+        if (!p) return false;
+        const dv = defaultVariant(p);
+        return dv?.inStock;
+      });
+
+    _aiUpsellCache = suggestions;
+    _aiUpsellCart = snapshot;
+    _renderAiUpsell(suggestions);
+  } catch {
+    // Fallback: show nothing rather than crash
+    const w = document.getElementById('aiUpsellWrap');
+    if (w) w.remove();
+  }
+}
+
+function _renderAiUpsell(suggestions) {
+  const wrap = document.getElementById('aiUpsellWrap');
+  if (!wrap) return;
+  if (!suggestions.length) { wrap.remove(); return; }
+
+  const scroll = document.getElementById('aiUpsellScroll');
+  if (!scroll) return;
+
+  scroll.innerHTML = suggestions.map(p => {
+    const dv = defaultVariant(p);
+    const pr = getPrice(dv.priceTiers, 1);
+    const imgUrl = dv.imageUrl || p.imageUrl || '';
+    const inCart = !!cart[cartKey(p.id, dv.id)];
+    return `<div class="upsell-card">
+      <div class="upsell-card-img">${imgUrl ? `<img src="${imgUrl}">` : '<span style="font-size:1.1rem">📦</span>'}</div>
+      <div class="upsell-card-name">${p.name}</div>
+      <div class="upsell-card-price">₹${pr}</div>
+      <button class="upsell-add-btn ${inCart?'added':''}" id="uadd${p.id}" onclick="upsellAdd(${p.id})" ${inCart?'disabled':''}>
+        ${inCart ? '✓ Added' : '+ Add'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+// Re-trigger AI upsell when cart changes (debounced 800ms so it doesn't fire on every tap)
+const _origUpdateCart = typeof updateCart === 'function' ? updateCart : null;
+
+function triggerAiUpsellRefresh() {
+  if (_cartSnapshot() === _aiUpsellCart) return; // cart unchanged, skip
+  clearTimeout(_aiUpsellTimer);
+  _aiUpsellTimer = setTimeout(() => {
+    if (document.getElementById('aiUpsellScroll')) _loadAiUpsell();
+  }, 800);
+}
+
+// ── WEB PUSH NOTIFICATIONS ────────────────────────────────────────────────────
+let _pushSubscription = null;
+let _pushVapidKey = null;
+
+async function initPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    // Get VAPID public key
+    const r = await fetch('/api/push/vapid-public-key');
+    const data = await r.json();
+    _pushVapidKey = data.publicKey;
+  } catch { return; }
+}
+
+async function requestPushPermission() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    showToast('Push notifications not supported on this browser');
+    return false;
+  }
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      showToast('Notification permission denied');
+      return false;
+    }
+
+    const reg = await navigator.serviceWorker.ready;
+    if (!_pushVapidKey) {
+      const r = await fetch('/api/push/vapid-public-key');
+      _pushVapidKey = (await r.json()).publicKey;
+    }
+
+    // Convert VAPID key to Uint8Array
+    const keyBytes = Uint8Array.from(atob(_pushVapidKey.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: keyBytes
+    });
+    _pushSubscription = sub;
+
+    // Send to server
+    const tok = getMilkToken();
+    let customerId = null;
+    if (tok) {
+      try {
+        const dr = await fetch('/api/customer/dashboard', { headers: { Authorization: 'Bearer ' + tok } });
+        if (dr.ok) { const dd = await dr.json(); customerId = dd.customer?.customerId || null; }
+      } catch {}
+    }
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON(), customerId })
+    });
+
+    showToast('🔔 Notifications enabled!');
+    updatePushBtn();
+    return true;
+  } catch (e) {
+    showToast('Could not enable notifications: ' + e.message);
+    return false;
+  }
+}
+
+async function disablePushNotifications() {
+  if (!_pushSubscription) return;
+  try {
+    await fetch('/api/push/unsubscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: _pushSubscription.endpoint })
+    });
+    await _pushSubscription.unsubscribe();
+    _pushSubscription = null;
+    showToast('Notifications disabled');
+    updatePushBtn();
+  } catch (e) { showToast('Error: ' + e.message); }
+}
+
+async function checkPushStatus() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    _pushSubscription = await reg.pushManager.getSubscription();
+    updatePushBtn();
+  } catch {}
+}
+
+function updatePushBtn() {
+  const btn = document.getElementById('pushToggleBtn');
+  if (!btn) return;
+  const supported = 'serviceWorker' in navigator && 'PushManager' in window;
+  if (!supported) { btn.style.display = 'none'; return; }
+  const enabled = !!_pushSubscription;
+  btn.textContent = enabled ? '🔔 Notifications On' : '🔕 Enable Notifications';
+  btn.style.background = enabled ? 'rgba(45,211,111,.12)' : 'rgba(255,255,255,.06)';
+  btn.style.color = enabled ? 'var(--green)' : 'var(--text2)';
+  btn.style.borderColor = enabled ? 'rgba(45,211,111,.3)' : 'var(--border)';
+}
+
+function togglePushNotifications() {
+  if (_pushSubscription) disablePushNotifications();
+  else requestPushPermission();
+}
+
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 init();
