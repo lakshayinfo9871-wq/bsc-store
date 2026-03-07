@@ -1105,7 +1105,7 @@ function buildTabs() {
   document.getElementById('catTabs').innerHTML =
     `<div class="ctab active" onclick="tabClick('all',this)"><div class="ti">🛍️</div><div class="tn">All</div></div>` +
     cats.map(c=>`<div class="ctab" onclick="tabClick(${c.id},this)">
-      <div class="ti">${c.imageUrl?`<img src="${c.imageUrl}">`:'📂'}</div>
+      <div class="ti">${c.imageUrl?`<img src="${c.imageUrl}" loading="lazy">`:'📂'}</div>
       <div class="tn">${c.name}</div>
     </div>`).join('');
   // Hide arrow when scrolled to end, show when not
@@ -3737,7 +3737,7 @@ function openProductDetail(pid) {
       <div style="padding:16px 16px 20px">
         <div style="display:flex;gap:14px;margin-bottom:14px">
           <div style="width:100px;height:100px;border-radius:14px;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)">
-            ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:contain;padding:6px">` : '<span style="font-size:2.5rem">📦</span>'}
+            ${imgUrl ? `<img src="${imgUrl}" loading="lazy" style="width:100%;height:100%;object-fit:contain;padding:6px">` : '<span style="font-size:2.5rem">📦</span>'}
           </div>
           <div style="flex:1;min-width:0">
             ${p.isNew ? '<div style="display:inline-block;font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:20px;background:#3b82f6;color:#fff;margin-bottom:5px">NEW ARRIVAL</div>' : ''}
@@ -3913,7 +3913,7 @@ function renderCart() {
     const coach = getBulkCoach(v.priceTiers, qty);
     const imgUrl = v.imageUrl || p.imageUrl || '';
     return `<div class="ci">
-      <div class="ci-img">${imgUrl?`<img src="${imgUrl}">`:'<span style="font-size:1.5rem">📦</span>'}</div>
+      <div class="ci-img">${imgUrl?`<img src="${imgUrl}" loading="lazy">`:'<span style="font-size:1.5rem">📦</span>'}</div>
       <div class="ci-info">
         <div class="ci-name">${p.name}</div>
         <div class="ci-meta">${v.label}</div>
@@ -5145,11 +5145,10 @@ function _showNotifPrompt() {
   setTimeout(() => el.classList.add('show'), 2500); // wait 2.5s after app load
 }
 
-async function notifPromptAllow() {
+function notifPromptAllow() {
   document.getElementById('notifPrompt').classList.remove('show');
-  const granted = await requestPushPermission();
-  // Only mark as 'granted' if it actually succeeded; otherwise snooze so prompt can retry later
-  localStorage.setItem(NOTIF_KEY, granted ? 'granted' : Date.now().toString());
+  localStorage.setItem(NOTIF_KEY, 'granted');
+  requestPushPermission();
 }
 
 function notifPromptDismiss() {
@@ -5172,15 +5171,7 @@ async function requestPushPermission() {
   }
   try {
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      if (Notification.permission === 'denied') {
-        localStorage.setItem(NOTIF_KEY, 'granted'); // suppress prompt permanently — user must go to Settings
-        showToast('🔕 Notifications blocked — please enable in your browser/phone Settings');
-      } else {
-        showToast('Notification permission not granted');
-      }
-      return false;
-    }
+    if (permission !== 'granted') { showToast('Notification permission denied'); return false; }
     const reg = await navigator.serviceWorker.ready;
     if (!_pushVapidKey) {
       const r = await fetch('/api/push/vapid-public-key');

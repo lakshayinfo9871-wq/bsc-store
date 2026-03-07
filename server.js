@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { MongoClient } = require('mongodb');
+let sharp; try { sharp = require('sharp'); } catch { sharp = null; }
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,7 +53,14 @@ setInterval(() => {
 }, 30 * 60 * 1000);
 
 app.use(express.json({ limit: '500kb' })); // #4: reduced from 10mb
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '30d',
+  setHeaders: (res, filePath) => {
+    if (filePath.match(/\.(jpg|jpeg|png|webp|gif|ico|svg)$/i)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+    }
+  }
+}));
 
 // ── MONGODB ───────────────────────────────────────────────────────────────────
 let db;
@@ -912,9 +920,26 @@ app.post('/api/admin/login', loginRateLimit, async (req, res) => {
 app.get('/api/admin/verify', adminAuth, (req, res) => res.json({ ok: true }));
 
 // ── UPLOAD ────────────────────────────────────────────────────────────────────
-app.post('/api/admin/upload', adminAuth, upload.single('image'), (req, res) => {
+app.post('/api/admin/upload', adminAuth, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
-  res.json({ url: '/uploads/' + req.file.filename });
+  const orig = req.file.path;
+  const webpName = path.basename(orig, path.extname(orig)) + '.webp';
+  const webpPath = path.join(path.dirname(orig), webpName);
+  try {
+    if (sharp) {
+      await sharp(orig)
+        .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toFile(webpPath);
+      fs.unlinkSync(orig); // remove original
+      res.json({ url: '/uploads/' + webpName });
+    } else {
+      res.json({ url: '/uploads/' + req.file.filename });
+    }
+  } catch (e) {
+    // fallback to original if sharp fails
+    res.json({ url: '/uploads/' + req.file.filename });
+  }
 });
 
 // ── CATEGORIES ────────────────────────────────────────────────────────────────
