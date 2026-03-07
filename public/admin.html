@@ -283,6 +283,7 @@ tr:hover td{background:#fafafa;}
       <div class="nav-link" onclick="goTo('subcategories')"><span class="icon">🗂️</span><span>Subcategories</span></div>
       <div class="nav-link" onclick="goTo('banners')"><span class="icon">🖼️</span><span>Banners</span></div>
       <div class="nav-link" onclick="goTo('settings')"><span class="icon">⚙️</span><span>Settings</span></div>
+      <div class="nav-link" onclick="goTo('loyalty')"><span class="icon">⭐</span><span>Loyalty Points</span></div>
     </nav>
     <div class="sidebar-footer">
       <button class="logout-btn" onclick="logout()">Logout</button>
@@ -581,14 +582,14 @@ function invalidateCache() { loadAll._cachedAt = 0; }
 
 const ah = () => ({Authorization:'Bearer '+token,'Content-Type':'application/json'});
 
-const PAGE_NAMES = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'];
+const PAGE_NAMES = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings','loyalty'];
 
 function goTo(page) {
   currentPage = page;
   document.querySelectorAll('.nav-link').forEach((l,i) => l.classList.toggle('active', PAGE_NAMES[i]===page));
-  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Credit',products:'Products',scanner:'📷 Barcode Scanner',categories:'Categories',subcategories:'Subcategories',banners:'Banners',settings:'Settings'};
+  const titles = {dashboard:'Dashboard',customers:'Customers',orders:'Orders',milk:'Milk Delivery',udhar:'Udhar / Credit',products:'Products',scanner:'📷 Barcode Scanner',categories:'Categories',subcategories:'Subcategories',banners:'Banners',settings:'Settings',loyalty:'⭐ Loyalty Points'};
   document.getElementById('pageTitle').textContent = titles[page]||page;
-  const fns = {dashboard:renderDashboard,customers:renderCustomers,orders:renderOrders,milk:renderMilk,udhar:renderUdhar,products:renderProducts,scanner:renderScanner,categories:renderCategories,subcategories:renderSubcategories,banners:renderBanners,settings:renderSettings};
+  const fns = {dashboard:renderDashboard,customers:renderCustomers,orders:renderOrders,milk:renderMilk,udhar:renderUdhar,products:renderProducts,scanner:renderScanner,categories:renderCategories,subcategories:renderSubcategories,banners:renderBanners,settings:renderSettings,loyalty:renderLoyalty};
   if (fns[page]) {
     const r = fns[page]();
     if (r && r.then) r.then(() => wrapTables()); else setTimeout(wrapTables, 80);
@@ -3972,7 +3973,7 @@ async function vaExecuteAction(act) {
 
   // NAVIGATE
   if (act.action === 'navigate') {
-    const valid = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings'];
+    const valid = ['dashboard','customers','orders','milk','udhar','products','scanner','categories','subcategories','banners','settings','loyalty'];
     const p = (act.page||'').toLowerCase();
     if (valid.includes(p)) { goTo(p); return 'Going to '+p+'!'; }
     return 'Unknown page: '+act.page;
@@ -4079,6 +4080,196 @@ document.addEventListener('keydown', e => {
   if (e.altKey && e.key === 'v') { e.preventDefault(); toggleVoicePanel(); }
   if (e.altKey && e.key === 'm') { e.preventDefault(); if (_vaOpen) toggleMic(); }
 });
+
+// ═══════════════════════════════════════
+// LOYALTY POINTS
+// ═══════════════════════════════════════
+async function renderLoyalty() {
+  document.getElementById('content').innerHTML = `<div style="text-align:center;padding:60px;color:var(--text2)">Loading...</div>`;
+  const [lr, sr] = await Promise.all([
+    fetch('/api/admin/loyalty', { headers: ah() }),
+    fetch('/api/admin/settings', { headers: ah() })
+  ]);
+  const { customers, loyalty } = await lr.json();
+  const settings = await sr.json();
+  const lc = loyalty || {};
+
+  document.getElementById('content').innerHTML = `
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:1.2rem;max-width:1100px;align-items:start">
+
+      <!-- LEFT: Settings -->
+      <div style="display:flex;flex-direction:column;gap:1.2rem">
+        <div class="card">
+          <div class="card-header"><h2>⭐ Loyalty Settings</h2></div>
+          <div class="card-body">
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border:1.5px solid ${lc.enabled?'var(--green)':'var(--border)'};border-radius:10px;cursor:pointer;margin-bottom:16px;transition:border-color .2s">
+              <div>
+                <div style="font-weight:700;font-size:.9rem">Enable Loyalty Points</div>
+                <div style="font-size:.75rem;color:var(--text2);margin-top:2px">Customers earn & redeem points on orders</div>
+              </div>
+              <input type="checkbox" id="lpEnabled" ${lc.enabled?'checked':''} style="width:18px;height:18px;accent-color:var(--green)">
+            </label>
+            <div class="form-group">
+              <label>Points earned per ₹1 spent</label>
+              <input type="number" id="lpPerRupee" value="${lc.pointsPerRupee||1}" min="0.1" step="0.1" placeholder="1">
+              <div class="form-hint">e.g. 1 = 1 point per ₹1, 2 = double points</div>
+            </div>
+            <div class="form-group">
+              <label>Redeem rate (points per ₹1 discount)</label>
+              <input type="number" id="lpRedeemRate" value="${lc.redeemRate||100}" min="1" placeholder="100">
+              <div class="form-hint">e.g. 100 = 100 points = ₹1 off</div>
+            </div>
+            <div class="form-group">
+              <label>Minimum points to redeem</label>
+              <input type="number" id="lpMinRedeem" value="${lc.minRedeem||100}" min="1" placeholder="100">
+              <div class="form-hint">Customer must have at least this many points to use them</div>
+            </div>
+            <div class="form-group">
+              <label>Max discount per order (%)</label>
+              <input type="number" id="lpMaxPct" value="${lc.maxRedeemPct||50}" min="1" max="100" placeholder="50">
+              <div class="form-hint">Points can cover at most this % of the order total</div>
+            </div>
+            <div style="background:var(--blue-bg);border:1px solid #bfdbfe;border-radius:10px;padding:12px;font-size:.78rem;color:var(--blue);margin-bottom:14px;line-height:1.6">
+              💡 <strong>Example:</strong> With current settings, spending ₹200 earns <strong>${lc.pointsPerRupee||1}×200 = ${(lc.pointsPerRupee||1)*200} pts</strong>. Redeeming ${lc.redeemRate||100} pts gives <strong>₹1 off</strong>.
+            </div>
+            <button class="btn btn-green" style="width:100%;justify-content:center" onclick="saveLoyaltySettings()">💾 Save Settings</button>
+          </div>
+        </div>
+
+        <!-- Manual Adjust -->
+        <div class="card">
+          <div class="card-header"><h2>✏️ Manual Adjustment</h2></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Customer ID</label>
+              <input type="number" id="lpAdjCid" placeholder="e.g. 1042">
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <select id="lpAdjType" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:.58rem .8rem;font-size:.88rem">
+                <option value="earn">➕ Add Points (Earn)</option>
+                <option value="redeem">➖ Deduct Points (Redeem)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Points</label>
+              <input type="number" id="lpAdjPoints" placeholder="e.g. 100" min="1">
+            </div>
+            <div class="form-group">
+              <label>Note</label>
+              <input type="text" id="lpAdjNote" placeholder="e.g. Bonus for referral">
+            </div>
+            <button class="btn btn-green" style="width:100%;justify-content:center" onclick="saveLoyaltyAdjust()">Apply Adjustment</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Leaderboard -->
+      <div class="card">
+        <div class="card-header">
+          <h2>🏆 Points Leaderboard</h2>
+          <span style="font-size:.78rem;color:var(--text2)">${customers.length} customers with points</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          ${customers.length ? `
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="padding:10px 16px;text-align:left;font-size:.72rem;color:var(--text2);font-weight:700">#</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.72rem;color:var(--text2);font-weight:700">Customer</th>
+                <th style="padding:10px 16px;text-align:right;font-size:.72rem;color:var(--text2);font-weight:700">Points</th>
+                <th style="padding:10px 16px;text-align:right;font-size:.72rem;color:var(--text2);font-weight:700">Value</th>
+                <th style="padding:10px 16px;text-align:right;font-size:.72rem;color:var(--text2);font-weight:700">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${customers.map((c, i) => {
+                const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+                const redeemVal = Math.floor(c.points / (lc.redeemRate||100));
+                return `<tr style="border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+                  <td style="padding:12px 16px;font-size:.85rem;font-weight:700;color:var(--text2)">${medal||'#'+(i+1)}</td>
+                  <td style="padding:12px 16px">
+                    <div style="font-weight:700;font-size:.88rem">${c.name}</div>
+                    <div style="font-size:.72rem;color:var(--text2)">${c.phone} · ID ${c.customerId}</div>
+                  </td>
+                  <td style="padding:12px 16px;text-align:right">
+                    <span style="font-size:.95rem;font-weight:900;color:#d97706">⭐ ${c.points.toLocaleString()}</span>
+                  </td>
+                  <td style="padding:12px 16px;text-align:right;font-size:.82rem;font-weight:700;color:var(--green)">₹${redeemVal}</td>
+                  <td style="padding:12px 16px;text-align:right">
+                    <button onclick="viewLoyaltyHistory(${c.customerId},'${c.name}')" style="background:var(--blue-bg);color:var(--blue);border:1px solid #bfdbfe;border-radius:7px;padding:4px 10px;font-size:.72rem;font-weight:700;cursor:pointer">History</button>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>` : `<div style="text-align:center;padding:50px;color:var(--text2)">
+            <div style="font-size:2.5rem;margin-bottom:10px">⭐</div>
+            <div style="font-weight:700;margin-bottom:6px">No loyalty points yet</div>
+            <div style="font-size:.82rem">${lc.enabled?'Points will appear here once customers place orders':'Enable loyalty points in settings to get started'}</div>
+          </div>`}
+        </div>
+      </div>
+    </div>
+
+    <!-- History modal -->
+    <div id="lpHistModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
+      <div style="background:var(--white);border-radius:16px;width:min(480px,95vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:1.2rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <h3 id="lpHistTitle" style="font-size:1rem;font-weight:800">Points History</h3>
+          <button onclick="document.getElementById('lpHistModal').style.display='none'" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text2)">×</button>
+        </div>
+        <div id="lpHistBody" style="overflow-y:auto;padding:1rem 1.4rem"></div>
+      </div>
+    </div>`;
+}
+
+async function saveLoyaltySettings() {
+  const body = {
+    enabled: document.getElementById('lpEnabled').checked,
+    pointsPerRupee: parseFloat(document.getElementById('lpPerRupee').value) || 1,
+    redeemRate: parseInt(document.getElementById('lpRedeemRate').value) || 100,
+    minRedeem: parseInt(document.getElementById('lpMinRedeem').value) || 100,
+    maxRedeemPct: parseInt(document.getElementById('lpMaxPct').value) || 50,
+  };
+  const r = await fetch('/api/admin/loyalty/settings', { method:'PUT', headers:ah(), body:JSON.stringify(body) });
+  if (r.ok) { toast('✅ Loyalty settings saved!'); renderLoyalty(); }
+  else toast('Error saving settings');
+}
+
+async function saveLoyaltyAdjust() {
+  const customerId = document.getElementById('lpAdjCid').value;
+  const type = document.getElementById('lpAdjType').value;
+  const points = document.getElementById('lpAdjPoints').value;
+  const note = document.getElementById('lpAdjNote').value;
+  if (!customerId || !points) return toast('Fill all fields');
+  const r = await fetch('/api/admin/loyalty/adjust', { method:'POST', headers:ah(), body:JSON.stringify({ customerId, type, points, note }) });
+  if (r.ok) { toast(`✅ ${type==='earn'?'Added':'Deducted'} ${points} points`); renderLoyalty(); }
+  else { const e = await r.json(); toast('Error: ' + e.error); }
+}
+
+async function viewLoyaltyHistory(customerId, name) {
+  document.getElementById('lpHistTitle').textContent = `${name}'s Points History`;
+  document.getElementById('lpHistBody').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text2)">Loading...</div>';
+  document.getElementById('lpHistModal').style.display = 'flex';
+  const r = await fetch(`/api/admin/loyalty/${customerId}`, { headers: ah() });
+  const { balance, transactions } = await r.json();
+  document.getElementById('lpHistBody').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px">
+      <span style="font-weight:700;color:#92400e">Current Balance</span>
+      <span style="font-size:1.1rem;font-weight:900;color:#d97706">⭐ ${balance.toLocaleString()} pts</span>
+    </div>
+    ${transactions.length ? transactions.map(t => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:.85rem;font-weight:600">${t.note||'Adjustment'}</div>
+          <div style="font-size:.7rem;color:var(--text2);margin-top:2px">${new Date(t.createdAt).toLocaleDateString('default',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+        <div style="font-size:.95rem;font-weight:900;color:${t.type==='earn'?'var(--green)':'var(--red)'}">
+          ${t.type==='earn'?'+':'-'}${t.points}
+        </div>
+      </div>`).join('')
+    : '<div style="text-align:center;padding:20px;color:var(--text2)">No transactions</div>'}`;
+}
 
 </script>
 </body>

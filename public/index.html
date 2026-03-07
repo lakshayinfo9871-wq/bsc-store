@@ -734,6 +734,14 @@ select.ck-inp option{background:var(--bg2);}
 
 /* Outstanding badge */
 .outstanding-banner{background:rgba(255,71,87,.06);border:1px solid rgba(255,71,87,.15);border-radius:14px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+
+/* ── LOYALTY POINTS ── */
+.lp-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(251,191,36,.15),rgba(245,158,11,.08));border:1px solid rgba(251,191,36,.3);border-radius:20px;padding:4px 12px;font-size:.72rem;font-weight:800;color:#fbbf24;}
+.lp-card{background:linear-gradient(135deg,#1a1400,#0f0a00);border:1px solid rgba(251,191,36,.2);border-radius:18px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;}
+.lp-card::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,rgba(251,191,36,.12),transparent 70%);}
+.lp-redeem-row{display:flex;align-items:center;gap:8px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:12px;padding:10px 12px;margin-top:8px;}
+.lp-tx{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.lp-tx:last-child{border-bottom:none;}
 .ob-label{font-size:.72rem;color:var(--text3);font-weight:600;}
 .ob-amount{font-size:1.4rem;font-weight:900;color:var(--red);}
 .ob-amount.clear{color:var(--green);}
@@ -899,6 +907,7 @@ const CART_KEY = 'bsc_cart_v2';
 function saveCart() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch(e){} }
 function loadCart() { try { const s = localStorage.getItem(CART_KEY); if(s) cart = JSON.parse(s)||{}; } catch(e){} }
 let giftState = { injected:false, claimed:false, prevUnlocked:false };
+let _loyaltyPoints = 0; // customer's current points balance (loaded with dashboard)
 let bIdx=0, bTimer=null;
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -4119,11 +4128,63 @@ function renderCkoPage() {
   });
   const totalItems = cartItems.reduce((s,{qty})=>s+qty,0);
 
+  // ── LOYALTY REDEMPTION ────────────────────────────────────────────────────
+  const loyaltyCfg = settings.loyalty || {};
+  const canRedeem = loyaltyCfg.enabled && getMilkToken() && _loyaltyPoints >= (loyaltyCfg.minRedeem || 100);
+  const maxRedeemPoints = Math.min(_loyaltyPoints, Math.floor(sellingTotal * (loyaltyCfg.maxRedeemPct||50)/100 * (loyaltyCfg.redeemRate||100)));
+  window._redeemPoints = window._redeemPoints || 0;
+  // Clamp to valid range
+  if (window._redeemPoints > maxRedeemPoints) window._redeemPoints = maxRedeemPoints;
+  if (window._redeemPoints < 0) window._redeemPoints = 0;
+  const redeemDiscount = window._redeemPoints > 0 ? parseFloat((window._redeemPoints / (loyaltyCfg.redeemRate||100)).toFixed(2)) : 0;
+
+  const loyaltyHTML = canRedeem ? `
+    <div style="background:linear-gradient(135deg,#1a1400,#0f0a00);border:1px solid rgba(251,191,36,.25);border-radius:14px;padding:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-size:1.1rem">⭐</span>
+          <div>
+            <div style="font-size:.8rem;font-weight:800;color:#fbbf24">Use Loyalty Points</div>
+            <div style="font-size:.65rem;color:rgba(255,255,255,.35)">You have ${_loyaltyPoints.toLocaleString()} pts available</div>
+          </div>
+        </div>
+        <label style="position:relative;display:inline-flex;align-items:center;cursor:pointer">
+          <input type="checkbox" id="lpToggle" ${window._redeemPoints>0?'checked':''} onchange="toggleLoyaltyRedeem()" style="opacity:0;width:0;height:0;position:absolute">
+          <div id="lpToggleTrack" style="width:42px;height:24px;background:${window._redeemPoints>0?'var(--green)':'var(--bg4)'};border-radius:12px;transition:background .2s;position:relative">
+            <div style="position:absolute;top:3px;left:${window._redeemPoints>0?'21':'3'}px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s"></div>
+          </div>
+        </label>
+      </div>
+      ${window._redeemPoints > 0 ? `
+      <div style="background:rgba(45,211,111,.06);border:1px solid rgba(45,211,111,.15);border-radius:10px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:.75rem;color:var(--text2)">Redeeming <strong style="color:#fbbf24">${window._redeemPoints} pts</strong></div>
+        <div style="font-size:.9rem;font-weight:900;color:var(--green)">−₹${redeemDiscount.toFixed(0)}</div>
+      </div>
+      <div style="margin-top:8px">
+        <input type="range" id="lpSlider" min="0" max="${maxRedeemPoints}" step="${loyaltyCfg.redeemRate||100}" value="${window._redeemPoints}"
+          oninput="updateLoyaltySlider(this.value)"
+          style="width:100%;accent-color:#fbbf24">
+        <div style="display:flex;justify-content:space-between;font-size:.62rem;color:rgba(255,255,255,.3);margin-top:3px">
+          <span>0 pts</span><span>${maxRedeemPoints.toLocaleString()} pts max</span>
+        </div>
+      </div>` : ''}
+    </div>` : (loyaltyCfg.enabled && getMilkToken() ? `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.1rem">⭐</span>
+      <div style="flex:1">
+        <div style="font-size:.78rem;font-weight:700;color:var(--text2)">Loyalty Points</div>
+        <div style="font-size:.65rem;color:var(--text3)">${_loyaltyPoints} pts — earn ${loyaltyCfg.pointsPerRupee||1} pt per ₹1 on this order!</div>
+      </div>
+    </div>` : '');
+
   // Build clean breakdown rows
   let sumRows = '';
   sumRows += `<div class="ck-sum-row"><span>MRP (${totalItems} item${totalItems!==1?'s':''})</span><span>₹${mrpTotal.toFixed(0)}</span></div>`;
   if (discountTotal > 0) {
     sumRows += `<div class="ck-sum-row ck-row-save"><span>Product discount</span><span>−₹${discountTotal.toFixed(0)}</span></div>`;
+  }
+  if (redeemDiscount > 0) {
+    sumRows += `<div class="ck-sum-row ck-row-save"><span>⭐ Points redeemed</span><span>−₹${redeemDiscount.toFixed(0)}</span></div>`;
   }
   if (giftState.injected && cfg) {
     if (cfg.discountPrice === 0) {
@@ -4134,10 +4195,11 @@ function renderCkoPage() {
   }
   sumRows += `<div class="ck-sum-row ${fdUnlocked?'ck-row-free':''}"><span>Delivery</span><span>${fdUnlocked?'FREE ✓':'Paid on delivery'}</span></div>`;
   sumRows += `<div class="ck-sum-divider"></div>`;
-  const finalTotal = sellingTotal + giftCharge;
-  sumRows += `<div class="ck-sum-total"><span>Total to Pay</span><span class="ck-sum-total-num">₹${finalTotal.toFixed(0)}</span></div>`;
-  if (discountTotal > 0) {
-    sumRows += `<div style="margin-top:8px;background:rgba(45,211,111,.07);border:1px solid rgba(45,211,111,.15);border-radius:10px;padding:8px 10px;font-size:.75rem;font-weight:700;color:var(--green);text-align:center">🎉 You save ₹${discountTotal.toFixed(0)} on this order!</div>`;
+  const finalTotal = sellingTotal + giftCharge - redeemDiscount;
+  sumRows += `<div class="ck-sum-total"><span>Total to Pay</span><span class="ck-sum-total-num">₹${Math.max(0,finalTotal).toFixed(0)}</span></div>`;
+  const totalSaved = discountTotal + redeemDiscount;
+  if (totalSaved > 0) {
+    sumRows += `<div style="margin-top:8px;background:rgba(45,211,111,.07);border:1px solid rgba(45,211,111,.15);border-radius:10px;padding:8px 10px;font-size:.75rem;font-weight:700;color:var(--green);text-align:center">🎉 You save ₹${totalSaved.toFixed(0)} on this order!</div>`;
   }
 
   const summaryHTML = `<div class="ck-sum-box">${sumRows}</div>`;
@@ -4145,7 +4207,28 @@ function renderCkoPage() {
   document.getElementById('ckoBody').innerHTML = `
     <div class="cko-section"><div class="cko-sec-label">Delivery address</div>${dlvCardHTML}</div>
     <div class="cko-section" style="padding-top:14px"><div class="cko-sec-label">Payment method</div>${payHTML}</div>
+    ${loyaltyHTML ? `<div class="cko-section" style="padding-top:14px"><div class="cko-sec-label">Loyalty points</div>${loyaltyHTML}</div>` : ''}
     <div class="cko-section" style="padding-top:14px"><div class="cko-sec-label">Order summary</div>${summaryHTML}</div>`;
+}
+
+function toggleLoyaltyRedeem() {
+  const loyaltyCfg = settings.loyalty || {};
+  const checked = document.getElementById('lpToggle')?.checked;
+  if (checked) {
+    const maxRedeemPoints = Math.min(_loyaltyPoints, Math.floor(total() * (loyaltyCfg.maxRedeemPct||50)/100 * (loyaltyCfg.redeemRate||100)));
+    window._redeemPoints = maxRedeemPoints;
+  } else {
+    window._redeemPoints = 0;
+  }
+  renderCkoPage();
+}
+
+function updateLoyaltySlider(val) {
+  const loyaltyCfg = settings.loyalty || {};
+  window._redeemPoints = parseInt(val) || 0;
+  const redeemDiscount = parseFloat((window._redeemPoints / (loyaltyCfg.redeemRate||100)).toFixed(2));
+  // Live-update just the discount row and total without full re-render
+  renderCkoPage();
 }
 
 function _ckDlvFields(ud) {
@@ -4241,18 +4324,24 @@ function _doPlaceOrder(method) {
     setTimeout(()=>{ window.open('https://wa.me/'+wa+'?text='+encodeURIComponent(msg),'_blank'); },300);
   }
 
-  fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:d.name,phone:d.phone,block:d.block,villa:d.villa,note:d.note,items,total:t,freeGift:freeGiftLabel,paymentMethod:method})})
+  fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:d.name,phone:d.phone,block:d.block,villa:d.villa,note:d.note,items,total:t,freeGift:freeGiftLabel,paymentMethod:method,redeemPoints:window._redeemPoints||0})})
   .then(r=>r.json())
   .then(resp=>{
     // Track ordered items for personalised reorder section
     try { _trackOrderedItems(items); } catch {}
-    cart={}; giftState={injected:false,claimed:false,prevUnlocked:false}; window._fdUnlocked=false; saveCart();
+    cart={}; giftState={injected:false,claimed:false,prevUnlocked:false}; window._fdUnlocked=false;
+    const earnedPts = resp?.order?.pointsEarned || 0;
+    const redeemedPts = resp?.order?.pointsRedeemed || 0;
+    if (earnedPts) _loyaltyPoints = Math.max(0, (_loyaltyPoints - redeemedPts) + earnedPts);
+    window._redeemPoints = 0;
+    saveCart();
     closeCkoPage();
     // Refresh account data if logged in (so passbook is up to date)
     if (method==='account') { _accData=null; }
     const addedToAcc = resp?.order?.addedToAccount;
     const accMsg = addedToAcc ? '<br><span style="color:#4ade80;font-size:.78rem">✓ Added to your account khata</span>' : '';
-    document.getElementById('successMsg').innerHTML=`Order for <strong>${d.name}</strong> placed!<br>Block ${d.block}, Villa ${d.villa} · ₹${t}<br>We'll deliver soon 🚀${accMsg}`;
+    const ptsMsg = earnedPts > 0 ? `<br><span style="color:#fbbf24;font-size:.78rem">⭐ +${earnedPts} loyalty points earned!</span>` : '';
+    document.getElementById('successMsg').innerHTML=`Order for <strong>${d.name}</strong> placed!<br>Block ${d.block}, Villa ${d.villa} · ₹${t}<br>We'll deliver soon 🚀${accMsg}${ptsMsg}`;
     document.getElementById('success').classList.add('show');
     updateCart(); renderHome();
   }).catch(()=>showToast('Error placing order. Try again.'));
@@ -4422,9 +4511,11 @@ let _accSection = 'home'; // 'home'|'orders'|'passbook'
 function renderAccountHome(data) {
   _accData = data;
   _accSection = 'home';
-  const { customer: c, orders, udharBalance, milkAmt, milkPaid, totalLitres } = data;
+  const { customer: c, orders, udharBalance, milkAmt, milkPaid, totalLitres, loyaltyPoints } = data;
+  _loyaltyPoints = loyaltyPoints || 0;
   const milkDue = Math.max(0, milkAmt - milkPaid);
   const totalBalance = udharBalance + milkDue;
+  const loyaltyCfg = settings.loyalty || {};
 
   document.getElementById('accTopTitle').textContent = c.name;
   document.getElementById('accTopSub').textContent = c.phone;
@@ -4477,6 +4568,31 @@ function renderAccountHome(data) {
           <div class="aqb-label">Milk Log</div>
         </div>
       </div>
+
+      ${loyaltyCfg.enabled ? `
+      <!-- Loyalty Points Card -->
+      <div style="padding:12px 16px 0">
+        <div class="lp-card" onclick="openLoyaltySection()" style="cursor:pointer">
+          <div style="display:flex;align-items:center;justify-content:space-between;position:relative">
+            <div>
+              <div style="font-size:.62rem;font-weight:800;color:rgba(251,191,36,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">⭐ Loyalty Points</div>
+              <div style="font-size:2rem;font-weight:900;color:#fbbf24;line-height:1">${_loyaltyPoints.toLocaleString()}</div>
+              <div style="font-size:.68rem;color:rgba(255,255,255,.35);margin-top:4px">≈ ₹${Math.floor(_loyaltyPoints / (loyaltyCfg.redeemRate||100))} redeemable value</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:.65rem;color:rgba(251,191,36,.5);font-weight:600;margin-bottom:6px">Earn ${loyaltyCfg.pointsPerRupee||1} pt per ₹1 spent</div>
+              <div style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:8px;padding:5px 12px;font-size:.7rem;font-weight:800">View History →</div>
+            </div>
+          </div>
+          ${_loyaltyPoints >= (loyaltyCfg.minRedeem||100) ? `
+          <div style="margin-top:10px;background:rgba(45,211,111,.08);border:1px solid rgba(45,211,111,.2);border-radius:10px;padding:7px 12px;font-size:.68rem;color:var(--green);font-weight:700">
+            ✓ You can redeem points at checkout to save money!
+          </div>` : `
+          <div style="margin-top:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:7px 12px;font-size:.68rem;color:rgba(255,255,255,.35);font-weight:600">
+            Earn ${(loyaltyCfg.minRedeem||100) - _loyaltyPoints} more pts to unlock redemption
+          </div>`}
+        </div>
+      </div>` : ''}
 
       <!-- Recent orders preview -->
       <div style="padding:16px 16px 0">
@@ -4594,6 +4710,73 @@ function openOrdersSection() {
       ${!orders.length ? '<div class="empty-state"><div class="ei">🛒</div><p>No orders yet</p></div>' : ''}
     </div>`;
 }
+function openLoyaltySection() {
+  if (!_accData) return;
+  const loyaltyCfg = settings.loyalty || {};
+  document.getElementById('accTopTitle').textContent = '⭐ Loyalty Points';
+  document.getElementById('accTopSub').textContent = `${_loyaltyPoints.toLocaleString()} pts`;
+  const tok = getMilkToken();
+  fetch('/api/customer/loyalty', { headers: { Authorization: 'Bearer ' + tok } })
+    .then(r => r.json())
+    .then(data => {
+      const { balance, transactions } = data;
+      _loyaltyPoints = balance;
+      const redeemValue = Math.floor(balance / (loyaltyCfg.redeemRate || 100));
+      document.getElementById('milkBody').innerHTML = `
+        <div style="overflow-y:auto;height:100%;padding:16px 16px 80px">
+          <!-- Points hero -->
+          <div class="lp-card" style="cursor:default">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-size:.62rem;font-weight:800;color:rgba(251,191,36,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Total Points</div>
+                <div style="font-size:2.4rem;font-weight:900;color:#fbbf24;line-height:1">${balance.toLocaleString()}</div>
+                <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-top:5px">Worth ₹${redeemValue} in savings</div>
+              </div>
+              <div style="font-size:3rem">⭐</div>
+            </div>
+            <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;text-align:center">
+                <div style="font-size:.62rem;color:rgba(255,255,255,.35);font-weight:600;margin-bottom:3px">Earn Rate</div>
+                <div style="font-size:.9rem;font-weight:800;color:#fbbf24">${loyaltyCfg.pointsPerRupee||1} pt / ₹1</div>
+              </div>
+              <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;text-align:center">
+                <div style="font-size:.62rem;color:rgba(255,255,255,.35);font-weight:600;margin-bottom:3px">Redeem Rate</div>
+                <div style="font-size:.9rem;font-weight:800;color:#fbbf24">${loyaltyCfg.redeemRate||100} pts = ₹1</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- How it works -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px">
+            <div style="font-size:.72rem;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">How It Works</div>
+            ${[
+              {icon:'🛒', text:`Earn ${loyaltyCfg.pointsPerRupee||1} point for every ₹1 you spend`},
+              {icon:'⭐', text:`Collect ${loyaltyCfg.minRedeem||100} points minimum to redeem`},
+              {icon:'💰', text:`${loyaltyCfg.redeemRate||100} points = ₹1 off your order`},
+              {icon:'✂️', text:`Use at checkout — up to ${loyaltyCfg.maxRedeemPct||50}% of order total`},
+            ].map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0"><div style="font-size:1.1rem;width:24px;text-align:center">${r.icon}</div><div style="font-size:.78rem;color:var(--text2)">${r.text}</div></div>`).join('')}
+          </div>
+
+          <!-- Transaction history -->
+          <div style="font-size:.7rem;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Transaction History</div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:0 14px">
+            ${transactions.length ? transactions.map(t => `
+              <div class="lp-tx">
+                <div>
+                  <div style="font-size:.82rem;font-weight:700">${t.note || (t.type==='earn'?'Points earned':'Points redeemed')}</div>
+                  <div style="font-size:.65rem;color:var(--text3);margin-top:2px">${new Date(t.createdAt).toLocaleDateString('default',{day:'numeric',month:'short',year:'numeric'})}</div>
+                </div>
+                <div style="font-size:.92rem;font-weight:900;color:${t.type==='earn'?'var(--green)':'var(--red)'}">
+                  ${t.type==='earn'?'+':'-'}${t.points} pts
+                </div>
+              </div>`).join('') : '<div style="text-align:center;padding:24px;color:var(--text3);font-size:.82rem">No transactions yet.<br>Place an order to start earning!</div>'}
+          </div>
+        </div>`;
+    }).catch(() => {
+      document.getElementById('milkBody').innerHTML = '<div class="empty-state"><div class="ei">⚠️</div><p>Could not load points</p></div>';
+    });
+}
+
 function openMilkSection() {
   if (!_accData) return;
   const { log, totalLitres, milkAmt, milkPaid, pricePerLitre, month } = _accData;

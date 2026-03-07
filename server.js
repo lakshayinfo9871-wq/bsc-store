@@ -75,6 +75,8 @@ async function connectDB() {
   await db.collection('udharPayments').createIndex({ customerId: 1 });
   // Subcategories
   await db.collection('subcategories').createIndex({ catId: 1 });
+  // Loyalty points
+  await db.collection('loyaltyTx').createIndex({ customerId: 1, createdAt: -1 });
   // Smart search — compound text index across all searchable fields
   await db.collection('products').createIndex(
     { name: 'text', brand: 'text', keywords: 'text', searchTokens: 'text' },
@@ -93,7 +95,8 @@ async function connectDB() {
       whatsapp: '', upiId: '', minOrder: 99, storeName: 'BSC Store',
       milkPrice: 60, freeDeliveryMin: 99,
       freeGift: { threshold: 100, productId: null, qty: 1, autoAdd: false, label: '', discountPrice: 0 },
-      upsellProductIds: []
+      upsellProductIds: [],
+      loyalty: { enabled: false, pointsPerRupee: 1, redeemRate: 100, minRedeem: 100, maxRedeemPct: 50 }
     });
   }
 }
@@ -892,6 +895,13 @@ app.get('/api/store', async (req, res) => {
           openTime: settings.shopStatus?.openTime || '08:00',
           closeTime: settings.shopStatus?.closeTime || '22:00',
           closedMessage: settings.shopStatus?.closedMessage || "We're closed right now. Orders open at",
+        },
+        loyalty: {
+          enabled: settings.loyalty?.enabled || false,
+          pointsPerRupee: settings.loyalty?.pointsPerRupee || 1,
+          redeemRate: settings.loyalty?.redeemRate || 100,
+          minRedeem: settings.loyalty?.minRedeem || 100,
+          maxRedeemPct: settings.loyalty?.maxRedeemPct || 50,
         }
       }
     });
@@ -1702,7 +1712,7 @@ app.post('/api/admin/orders/:id/mark-paid', adminAuth, async (req, res) => {
 // PUBLIC: Place order
 app.post('/api/orders', async (req, res) => {
   try {
-    const { customerName, phone, block, villa, note, items, freeGift, paymentMethod } = req.body;
+    const { customerName, phone, block, villa, note, items, freeGift, paymentMethod, redeemPoints } = req.body;
     if (!customerName || !phone || !items?.length) return res.status(400).json({ error: 'Missing fields' });
 
     // ── SHOP OPEN/CLOSED CHECK ────────────────────────────────────────────────
@@ -1710,7 +1720,6 @@ app.post('/api/orders', async (req, res) => {
     const ss = storeSettings?.shopStatus || {};
     const manualOpen = ss.manualOpen !== false;
     if (!manualOpen) return res.status(503).json({ error: "Shop is currently closed. Please check back later." });
-    // Check time window
     const now = new Date();
     const pad = n => String(n).padStart(2,'0');
     const nowStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -1720,14 +1729,11 @@ app.post('/api/orders', async (req, res) => {
       if (nowStr < openTime || nowStr >= closeTime)
         return res.status(503).json({ error: `Shop is closed. Orders are accepted between ${openTime} and ${closeTime}.` });
     } else {
-      // overnight window e.g. 20:00 – 02:00
       if (nowStr < openTime && nowStr >= closeTime)
         return res.status(503).json({ error: `Shop is closed. Orders are accepted between ${openTime} and ${closeTime}.` });
     }
-    // ─────────────────────────────────────────────────────────────────────────
 
-    // ── SERVER-SIDE PRICE RECALCULATION (#3) ─────────────────────────────────
-    // Never trust client-submitted prices — recalculate from DB
+    // ── SERVER-SIDE PRICE RECALCULATION ──────────────────────────────────────
     const regularItems = items.filter(i => !i.isFreeGift);
     let recalcTotal = 0;
     const validatedItems = [];
@@ -1747,7 +1753,6 @@ app.post('/api/orders', async (req, res) => {
           return res.status(400).json({ error: `"${product.name}" stock changed during checkout. Please try again.` });
         }
       }
-      // Find the matching variant and tier to get the real server-side price
       const migrated = migrateProduct(product);
       const variant = migrated.variants.find(v => v.id === item.variantId) || migrated.variants[0];
       const tiers = [...(variant?.priceTiers || [])].sort((a, b) => a.minQty - b.minQty);
@@ -1756,24 +1761,50 @@ app.post('/api/orders', async (req, res) => {
       recalcTotal += serverPrice * item.qty;
       validatedItems.push({ ...item, price: serverPrice });
     }
-    // Handle free gift pricing from settings
     const settings = await db.collection('settings').findOne({ _id: 'main' });
     if (freeGift) {
       const giftPrice = settings?.freeGift?.discountPrice ?? 0;
       recalcTotal += giftPrice;
     }
+
+    // ── LOYALTY POINTS REDEMPTION ─────────────────────────────────────────────
+    const loyalty = settings?.loyalty || {};
+    let pointsRedeemed = 0;
+    let pointsDiscount = 0;
+    const customer = await db.collection('customers').findOne({ phone });
+
+    if (loyalty.enabled && redeemPoints && customer) {
+      // Calculate customer's current points balance
+      const txs = await db.collection('loyaltyTx').find({ customerId: customer.customerId }).toArray();
+      const currentPoints = txs.reduce((s, t) => t.type === 'earn' ? s + t.points : s - t.points, 0);
+
+      const redeemRate = loyalty.redeemRate || 100; // points per ₹1
+      const minRedeem = loyalty.minRedeem || 100;
+      const maxRedeemPct = loyalty.maxRedeemPct || 50;
+
+      const requestedPoints = parseInt(redeemPoints) || 0;
+      const maxAllowedByPct = Math.floor((recalcTotal * maxRedeemPct / 100) * redeemRate);
+      const actualPoints = Math.min(requestedPoints, currentPoints, maxAllowedByPct);
+
+      if (actualPoints >= minRedeem) {
+        pointsRedeemed = actualPoints;
+        pointsDiscount = parseFloat((actualPoints / redeemRate).toFixed(2));
+        recalcTotal = Math.max(0, recalcTotal - pointsDiscount);
+      }
+    }
+
     const total = parseFloat(recalcTotal.toFixed(2));
-    // ─────────────────────────────────────────────────────────────────────────
 
     const id = await getNextId('orderId');
-    const customer = await db.collection('customers').findOne({ phone });
     const order = {
       id, customerName, phone, block, villa: villa || '', note: note || '',
       items: [...validatedItems, ...(items.filter(i => i.isFreeGift))],
       total, freeGift: freeGift || null, paymentMethod: paymentMethod || 'cod',
       customerId: customer ? customer.customerId : null,
+      pointsRedeemed, pointsDiscount,
       status: 'pending', addedToUdhar: false, createdAt: new Date().toISOString()
     };
+
     if (paymentMethod === 'account' && customer) {
       const udharItems = validatedItems.map(i => ({
         name: i.name + (i.variant ? ` (${i.variant})` : ''), qty: i.qty, price: i.price
@@ -1800,6 +1831,38 @@ app.post('/api/orders', async (req, res) => {
       order.addedToUdhar = true;
     }
     await db.collection('orders').insertOne(order);
+
+    // ── LOYALTY: Deduct redeemed points & earn new points ─────────────────────
+    if (loyalty.enabled && customer) {
+      const originalTotal = validatedItems.reduce((s, i) => s + i.price * i.qty, 0);
+      const pointsPerRupee = loyalty.pointsPerRupee || 1;
+      const pointsEarned = Math.floor(originalTotal * pointsPerRupee);
+
+      if (pointsRedeemed > 0) {
+        await db.collection('loyaltyTx').insertOne({
+          id: await getNextId('loyaltyTxId'),
+          customerId: customer.customerId,
+          type: 'redeem',
+          points: pointsRedeemed,
+          note: `Redeemed on Order #${id}`,
+          orderId: id,
+          createdAt: new Date().toISOString()
+        });
+      }
+      if (pointsEarned > 0) {
+        await db.collection('loyaltyTx').insertOne({
+          id: await getNextId('loyaltyTxId'),
+          customerId: customer.customerId,
+          type: 'earn',
+          points: pointsEarned,
+          note: `Earned on Order #${id} (₹${originalTotal.toFixed(0)})`,
+          orderId: id,
+          createdAt: new Date().toISOString()
+        });
+      }
+      order.pointsEarned = pointsEarned;
+    }
+
     res.json({ ok: true, order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2176,7 +2239,7 @@ app.get('/api/customer/dashboard', customerAuth, async (req, res) => {
     if (!c) return res.status(404).json({ error: 'Not found' });
     const settings = await db.collection('settings').findOne({ _id: 'main' });
     const key = new Date().toISOString().slice(0, 7);
-    const [milkSub, log, milkPayments, orders, ledgerEntries, udharEntries, udharPayments] = await Promise.all([
+    const [milkSub, log, milkPayments, orders, ledgerEntries, udharEntries, udharPayments, loyaltyTxs] = await Promise.all([
       db.collection('milkSubscriptions').findOne({ customerId: c.customerId }),
       db.collection('milkLogs').find({ customerId: c.customerId, month: key }).toArray(),
       db.collection('milkPayments').find({ customerId: c.customerId, month: key }).toArray(),
@@ -2184,6 +2247,7 @@ app.get('/api/customer/dashboard', customerAuth, async (req, res) => {
       db.collection('ledger').find({ customerId: c.customerId }).toArray(),
       db.collection('udharEntries').find({ customerId: c.customerId }).toArray(),
       db.collection('udharPayments').find({ customerId: c.customerId }).toArray(),
+      db.collection('loyaltyTx').find({ customerId: c.customerId }).toArray(),
     ]);
     const pricePerLitre = milkSub?.pricePerLitre || settings.milkPrice || 60;
     const totalLitres = log.reduce((s, l) => s + l.qty, 0);
@@ -2195,11 +2259,13 @@ app.get('/api/customer/dashboard', customerAuth, async (req, res) => {
     const ledgerBalance = ledgerEntries.reduce((s, e) => e.type === 'credit' ? s + e.amount : s - e.amount, 0);
     const oldUdharBalance = udharEntries.reduce((s, e) => s + (e.amount || 0), 0) - udharPayments.reduce((s, p) => s + (p.amount || 0), 0);
     const { pin, ...safeCustomer } = c;
+    const loyaltyPoints = loyaltyTxs.reduce((s, t) => t.type === 'earn' ? s + t.points : s - t.points, 0);
     res.json({
       customer: safeCustomer, milkSubscription: milkSub || null,
       log, totalLitres, milkAmt, milkPaid, pricePerLitre, month: key,
       orders, udharEntries, udharPayments, ledgerEntries,
-      udharBalance: ledgerBalance + oldUdharBalance
+      udharBalance: ledgerBalance + oldUdharBalance,
+      loyaltyPoints
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2274,6 +2340,97 @@ app.get('/api/customer/ledger/months', customerAuth, async (req, res) => {
     udharEntries.filter(e => e.date).forEach(e => monthSet.add(e.date.slice(0, 7)));
     udharPayments.filter(p => p.date).forEach(p => monthSet.add(p.date.slice(0, 7)));
     res.json({ months: [...monthSet].sort().reverse() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── LOYALTY POINTS ────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Helper: compute points balance for a customer
+async function getLoyaltyBalance(customerId) {
+  const txs = await db.collection('loyaltyTx').find({ customerId }).toArray();
+  return txs.reduce((s, t) => t.type === 'earn' ? s + t.points : s - t.points, 0);
+}
+
+// GET /api/customer/loyalty — customer's own points balance + history
+app.get('/api/customer/loyalty', customerAuth, async (req, res) => {
+  try {
+    const cid = req.user.cid;
+    const [txs, settings] = await Promise.all([
+      db.collection('loyaltyTx').find({ customerId: cid }).sort({ createdAt: -1 }).toArray(),
+      db.collection('settings').findOne({ _id: 'main' })
+    ]);
+    const balance = txs.reduce((s, t) => t.type === 'earn' ? s + t.points : s - t.points, 0);
+    const loyalty = settings?.loyalty || {};
+    res.json({ balance, transactions: txs, loyalty });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/admin/loyalty — all customers with point balances
+app.get('/api/admin/loyalty', adminAuth, async (req, res) => {
+  try {
+    const [customers, allTxs, settings] = await Promise.all([
+      db.collection('customers').find({ deleted: { $ne: true } }).toArray(),
+      db.collection('loyaltyTx').find().toArray(),
+      db.collection('settings').findOne({ _id: 'main' })
+    ]);
+    const balMap = {};
+    allTxs.forEach(t => {
+      if (!balMap[t.customerId]) balMap[t.customerId] = 0;
+      balMap[t.customerId] += t.type === 'earn' ? t.points : -t.points;
+    });
+    const result = customers
+      .map(c => ({ customerId: c.customerId, name: c.name, phone: c.phone, points: balMap[c.customerId] || 0 }))
+      .filter(c => c.points > 0)
+      .sort((a, b) => b.points - a.points);
+    res.json({ customers: result, loyalty: settings?.loyalty || {} });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/admin/loyalty/:customerId — single customer tx history
+app.get('/api/admin/loyalty/:customerId', adminAuth, async (req, res) => {
+  try {
+    const customerId = parseInt(req.params.customerId);
+    const txs = await db.collection('loyaltyTx').find({ customerId }).sort({ createdAt: -1 }).toArray();
+    const balance = txs.reduce((s, t) => t.type === 'earn' ? s + t.points : s - t.points, 0);
+    res.json({ balance, transactions: txs });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/admin/loyalty/adjust — manually add or deduct points
+app.post('/api/admin/loyalty/adjust', adminAuth, async (req, res) => {
+  try {
+    const { customerId, type, points, note } = req.body;
+    if (!customerId || !type || !points) return res.status(400).json({ error: 'customerId, type, points required' });
+    if (!['earn', 'redeem'].includes(type)) return res.status(400).json({ error: 'type must be earn or redeem' });
+    const tx = {
+      id: await getNextId('loyaltyTxId'),
+      customerId: parseInt(customerId),
+      type,
+      points: parseInt(points),
+      note: note || (type === 'earn' ? 'Manual adjustment' : 'Manual deduction'),
+      createdAt: new Date().toISOString()
+    };
+    await db.collection('loyaltyTx').insertOne(tx);
+    res.json({ ok: true, tx });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT /api/admin/settings/loyalty — update loyalty config
+app.put('/api/admin/loyalty/settings', adminAuth, async (req, res) => {
+  try {
+    const { enabled, pointsPerRupee, redeemRate, minRedeem, maxRedeemPct } = req.body;
+    await db.collection('settings').updateOne({ _id: 'main' }, { $set: {
+      loyalty: {
+        enabled: !!enabled,
+        pointsPerRupee: parseFloat(pointsPerRupee) || 1,
+        redeemRate: parseInt(redeemRate) || 100,
+        minRedeem: parseInt(minRedeem) || 100,
+        maxRedeemPct: parseInt(maxRedeemPct) || 50,
+      }
+    }});
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
