@@ -380,6 +380,19 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .upsell-card-price{font-size:.68rem;font-weight:800;color:var(--green);margin-bottom:4px;}
 .upsell-add-btn{width:100%;background:var(--green);color:#000;border-radius:6px;padding:4px 0;font-size:.6rem;font-weight:800;border:none;cursor:pointer;}
 .upsell-add-btn.added{background:var(--bg4);color:var(--text3);}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── NOTIFICATION PROMPT ── */
+#notifPrompt{position:fixed;bottom:0;left:0;right:0;z-index:9999;padding:0 0 env(safe-area-inset-bottom);transform:translateY(110%);transition:transform .35s cubic-bezier(.4,0,.2,1);}
+#notifPrompt.show{transform:translateY(0);}
+.np-inner{margin:12px 12px calc(12px + env(safe-area-inset-bottom));background:#1a1a2e;border:1.5px solid rgba(45,211,111,.25);border-radius:20px;padding:20px 18px 18px;box-shadow:0 -8px 40px rgba(0,0,0,.6);}
+.np-row{display:flex;align-items:flex-start;gap:14px;}
+.np-icon{font-size:2rem;flex-shrink:0;margin-top:2px;}
+.np-title{font-size:.95rem;font-weight:900;color:#fff;margin-bottom:4px;}
+.np-sub{font-size:.78rem;color:rgba(255,255,255,.5);line-height:1.4;}
+.np-btns{display:flex;gap:8px;margin-top:14px;}
+.np-allow{flex:1;background:var(--green);color:#000;border:none;border-radius:11px;padding:11px;font-weight:800;font-size:.85rem;cursor:pointer;}
+.np-later{flex:0 0 auto;background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);border:none;border-radius:11px;padding:11px 16px;font-weight:700;font-size:.82rem;cursor:pointer;}
 
 /* ── GIFT PROGRESS ── */
 @keyframes giftPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,.2)}50%{box-shadow:0 0 0 6px rgba(251,191,36,0)}}
@@ -754,6 +767,24 @@ select.ck-inp option{background:var(--bg2);}
 </head>
 <body>
 
+<!-- ── NOTIFICATION PERMISSION PROMPT ─────────────────────────────────────── -->
+<div id="notifPrompt">
+  <div class="np-inner">
+    <div class="np-row">
+      <div class="np-icon">🔔</div>
+      <div>
+        <div class="np-title">Stay in the loop</div>
+        <div class="np-sub">Get notified about new stock, deals, and your order updates — even when the app is closed.</div>
+      </div>
+    </div>
+    <div class="np-btns">
+      <button class="np-allow" onclick="notifPromptAllow()">Enable Notifications</button>
+      <button class="np-later" onclick="notifPromptDismiss()">Not now</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- TOPBAR: Collapsing header (logo+search) + sticky tabs -->
 <div class="topbar" id="topbar">
   <!-- COLLAPSIBLE SECTION: hides on scroll down, shows on scroll up -->
@@ -941,10 +972,10 @@ function offPct(price, mrp) {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
-  loadCart(); // restore cart from localStorage
-  showSkeleton(); // show shimmer while loading
+  loadCart();
+  showSkeleton();
 
-  // Register service worker + push (non-blocking)
+  // Register SW + init push (non-blocking)
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
       .then(reg => {
@@ -952,15 +983,16 @@ async function init() {
         reg.addEventListener('updatefound', () => {
           const nw = reg.installing;
           nw.addEventListener('statechange', () => {
-            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-              showToast('App updated! Reload for the latest version.');
-            }
+            if (nw.state==='installed' && navigator.serviceWorker.controller)
+              showToast('App updated — reload for latest version');
           });
         });
       })
-      .catch(e => console.warn('SW registration failed:', e));
+      .catch(e => console.warn('SW:', e));
     checkPushStatus();
-    initPushNotifications();
+    initPushNotifications().then(() => {
+      if (_shouldShowNotifPrompt()) _showNotifPrompt();
+    });
   }
 
   try {
@@ -3942,11 +3974,8 @@ function renderCart() {
   document.getElementById('cartBody').innerHTML = regularHTML + giftHTML;
 
   // Upsell
-  // ── AI CROSS-SELL: fetch smart recommendations based on actual cart contents ──
-  // Rendered asynchronously so cart draws instantly, AI suggestions appear after
   const upsellHTML = '<div class="upsell-wrap" id="aiUpsellWrap"><div class="upsell-label">🤖 AI Picks for you</div><div class="upsell-scroll" id="aiUpsellScroll"><div style="display:flex;align-items:center;gap:8px;padding:4px 0;color:var(--text3);font-size:.72rem"><span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Finding perfect add-ons...</div></div></div>';
-  // Trigger async AI call after render
-  setTimeout(() => _loadAiUpsell(), 50);
+  setTimeout(() => _loadAiUpsell(), 80);
 
   // Free delivery bar
   const fdPct = Math.min(100, Math.round(t/fdMin*100));
@@ -4000,10 +4029,6 @@ function chQtyCart(key, delta) {
     renderHome();
   }
 }
-
-// Hook AI upsell refresh into updateCart
-const _upsellOrigUpdateCart = updateCart;
-updateCart = function() { _upsellOrigUpdateCart.apply(this, arguments); triggerAiUpsellRefresh(); };
 
 function upsellAdd(id) {
   const p = prods.find(x=>x.id===id); if(!p) return;
@@ -5227,10 +5252,10 @@ function initMobileAnimations() {
 }
 
 
-// ── AI CROSS-SELL ─────────────────────────────────────────────────────────────
-let _aiUpsellCache = null;   // cache AI result per cart snapshot
-let _aiUpsellCart  = '';     // cart snapshot string when cache was built
-let _aiUpsellTimer = null;
+// ══════════════════════════════════════════════════════════════════════════════
+// ── AI CROSS-SELL
+// ══════════════════════════════════════════════════════════════════════════════
+let _aiUpsellCache = null, _aiUpsellCart = '', _aiUpsellTimer = null;
 
 function _cartSnapshot() {
   return Object.entries(cart).map(([k,q])=>k+':'+q).sort().join(',');
@@ -5239,164 +5264,135 @@ function _cartSnapshot() {
 async function _loadAiUpsell() {
   const wrap = document.getElementById('aiUpsellWrap');
   if (!wrap) return;
-
-  const cartItems = Object.entries(cart).map(([k, qty]) => {
+  const cartItems = Object.entries(cart).map(([k,qty]) => {
     const { pid, vid } = parseKey(k);
-    const p = prods.find(x => x.id === pid);
-    const v = p ? getVariant(p, vid) : null;
-    return p && v ? { productId: p.id, name: p.name, catId: p.catId, qty } : null;
+    const p = prods.find(x=>x.id===pid); const v = p?getVariant(p,vid):null;
+    return p&&v ? { productId:p.id, name:p.name, catId:p.catId, qty } : null;
   }).filter(Boolean);
-
   if (!cartItems.length) { wrap.remove(); return; }
-
   const snapshot = _cartSnapshot();
-  // Use cache if cart hasn't changed
-  if (_aiUpsellCache && _aiUpsellCart === snapshot) {
-    _renderAiUpsell(_aiUpsellCache);
-    return;
-  }
-
+  if (_aiUpsellCache && _aiUpsellCart === snapshot) { _renderAiUpsell(_aiUpsellCache); return; }
   try {
-    const r = await fetch('/api/ai-upsell', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cartItems })
-    });
+    const r = await fetch('/api/ai-upsell', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cartItems}) });
     const data = await r.json();
-    const ids = data.productIds || [];
-
-    // Resolve product objects
-    const suggestions = ids
-      .map(id => prods.find(p => p.id === id))
-      .filter(p => {
-        if (!p) return false;
-        const dv = defaultVariant(p);
-        return dv?.inStock;
-      });
-
-    _aiUpsellCache = suggestions;
-    _aiUpsellCart = snapshot;
+    const suggestions = (data.productIds||[]).map(id=>prods.find(p=>p.id===id)).filter(p=>p&&defaultVariant(p)?.inStock);
+    _aiUpsellCache = suggestions; _aiUpsellCart = snapshot;
     _renderAiUpsell(suggestions);
-  } catch {
-    // Fallback: show nothing rather than crash
-    const w = document.getElementById('aiUpsellWrap');
-    if (w) w.remove();
-  }
+  } catch { const w=document.getElementById('aiUpsellWrap'); if(w) w.remove(); }
 }
 
 function _renderAiUpsell(suggestions) {
   const wrap = document.getElementById('aiUpsellWrap');
   if (!wrap) return;
   if (!suggestions.length) { wrap.remove(); return; }
-
   const scroll = document.getElementById('aiUpsellScroll');
   if (!scroll) return;
-
   scroll.innerHTML = suggestions.map(p => {
-    const dv = defaultVariant(p);
-    const pr = getPrice(dv.priceTiers, 1);
-    const imgUrl = dv.imageUrl || p.imageUrl || '';
-    const inCart = !!cart[cartKey(p.id, dv.id)];
+    const dv = defaultVariant(p); const pr = getPrice(dv.priceTiers,1);
+    const imgUrl = dv.imageUrl||p.imageUrl||'';
+    const inCart = !!cart[cartKey(p.id,dv.id)];
     return `<div class="upsell-card">
-      <div class="upsell-card-img">${imgUrl ? `<img src="${imgUrl}">` : '<span style="font-size:1.1rem">📦</span>'}</div>
+      <div class="upsell-card-img">${imgUrl?`<img src="${imgUrl}">`:'<span style="font-size:1.1rem">📦</span>'}</div>
       <div class="upsell-card-name">${p.name}</div>
       <div class="upsell-card-price">₹${pr}</div>
       <button class="upsell-add-btn ${inCart?'added':''}" id="uadd${p.id}" onclick="upsellAdd(${p.id})" ${inCart?'disabled':''}>
-        ${inCart ? '✓ Added' : '+ Add'}
-      </button>
-    </div>`;
+        ${inCart?'✓ Added':'+ Add'}
+      </button></div>`;
   }).join('');
 }
 
-// Re-trigger AI upsell when cart changes (debounced 800ms so it doesn't fire on every tap)
-const _origUpdateCart = typeof updateCart === 'function' ? updateCart : null;
-
 function triggerAiUpsellRefresh() {
-  if (_cartSnapshot() === _aiUpsellCart) return; // cart unchanged, skip
+  if (_cartSnapshot()===_aiUpsellCart) return;
   clearTimeout(_aiUpsellTimer);
-  _aiUpsellTimer = setTimeout(() => {
-    if (document.getElementById('aiUpsellScroll')) _loadAiUpsell();
-  }, 800);
+  _aiUpsellTimer = setTimeout(()=>{ if(document.getElementById('aiUpsellScroll')) _loadAiUpsell(); }, 800);
 }
 
-// ── WEB PUSH NOTIFICATIONS ────────────────────────────────────────────────────
-let _pushSubscription = null;
-let _pushVapidKey = null;
+// Hook updateCart to trigger AI refresh
+const _origUpdateCart = updateCart;
+updateCart = function() { _origUpdateCart.apply(this,arguments); triggerAiUpsellRefresh(); };
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── WEB PUSH NOTIFICATIONS
+// ══════════════════════════════════════════════════════════════════════════════
+let _pushSubscription = null, _pushVapidKey = null;
+
+// ── Home screen permission prompt ─────────────────────────────────────────────
+const NOTIF_KEY = 'bsc_notif_asked';
+
+function _shouldShowNotifPrompt() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+  if (Notification.permission === 'granted' || Notification.permission === 'denied') return false;
+  const asked = localStorage.getItem(NOTIF_KEY);
+  if (!asked) return true;
+  // Show again after 7 days if they tapped "Not now"
+  return (Date.now() - parseInt(asked)) > 7 * 24 * 60 * 60 * 1000;
+}
+
+function _showNotifPrompt() {
+  const el = document.getElementById('notifPrompt');
+  if (!el) return;
+  setTimeout(() => el.classList.add('show'), 2500); // wait 2.5s after app load
+}
+
+function notifPromptAllow() {
+  document.getElementById('notifPrompt').classList.remove('show');
+  localStorage.setItem(NOTIF_KEY, 'granted');
+  requestPushPermission();
+}
+
+function notifPromptDismiss() {
+  document.getElementById('notifPrompt').classList.remove('show');
+  localStorage.setItem(NOTIF_KEY, Date.now().toString());
+}
 
 async function initPushNotifications() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
   try {
-    // Get VAPID public key
     const r = await fetch('/api/push/vapid-public-key');
     const data = await r.json();
     _pushVapidKey = data.publicKey;
-  } catch { return; }
+  } catch {}
 }
 
 async function requestPushPermission() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    showToast('Push notifications not supported on this browser');
-    return false;
+    showToast('Push notifications not supported on this browser'); return false;
   }
   try {
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      showToast('Notification permission denied');
-      return false;
-    }
-
+    if (permission !== 'granted') { showToast('Notification permission denied'); return false; }
     const reg = await navigator.serviceWorker.ready;
     if (!_pushVapidKey) {
       const r = await fetch('/api/push/vapid-public-key');
       _pushVapidKey = (await r.json()).publicKey;
     }
-
-    // Convert VAPID key to Uint8Array
-    const keyBytes = Uint8Array.from(atob(_pushVapidKey.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
-
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: keyBytes
-    });
+    const keyBytes = Uint8Array.from(atob(_pushVapidKey.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:keyBytes });
     _pushSubscription = sub;
-
-    // Send to server
-    const tok = getMilkToken();
     let customerId = null;
-    if (tok) {
-      try {
-        const dr = await fetch('/api/customer/dashboard', { headers: { Authorization: 'Bearer ' + tok } });
-        if (dr.ok) { const dd = await dr.json(); customerId = dd.customer?.customerId || null; }
-      } catch {}
-    }
-    await fetch('/api/push/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscription: sub.toJSON(), customerId })
-    });
-
+    try {
+      const tok = getMilkToken();
+      if (tok) {
+        const dr = await fetch('/api/customer/dashboard', { headers:{ Authorization:'Bearer '+tok } });
+        if (dr.ok) { const dd=await dr.json(); customerId=dd.customer?.customerId||null; }
+      }
+    } catch {}
+    await fetch('/api/push/subscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ subscription:sub.toJSON(), customerId }) });
     showToast('🔔 Notifications enabled!');
     updatePushBtn();
     return true;
-  } catch (e) {
-    showToast('Could not enable notifications: ' + e.message);
-    return false;
-  }
+  } catch(e) { showToast('Could not enable notifications: ' + e.message); return false; }
 }
 
 async function disablePushNotifications() {
   if (!_pushSubscription) return;
   try {
-    await fetch('/api/push/unsubscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ endpoint: _pushSubscription.endpoint })
-    });
+    await fetch('/api/push/unsubscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ endpoint:_pushSubscription.endpoint }) });
     await _pushSubscription.unsubscribe();
     _pushSubscription = null;
     showToast('Notifications disabled');
     updatePushBtn();
-  } catch (e) { showToast('Error: ' + e.message); }
+  } catch(e) { showToast('Error: '+e.message); }
 }
 
 async function checkPushStatus() {
@@ -5412,12 +5408,12 @@ function updatePushBtn() {
   const btn = document.getElementById('pushToggleBtn');
   if (!btn) return;
   const supported = 'serviceWorker' in navigator && 'PushManager' in window;
-  if (!supported) { btn.style.display = 'none'; return; }
-  const enabled = !!_pushSubscription;
-  btn.textContent = enabled ? '🔔 Notifications On' : '🔕 Enable Notifications';
-  btn.style.background = enabled ? 'rgba(45,211,111,.12)' : 'rgba(255,255,255,.06)';
-  btn.style.color = enabled ? 'var(--green)' : 'var(--text2)';
-  btn.style.borderColor = enabled ? 'rgba(45,211,111,.3)' : 'var(--border)';
+  if (!supported) { btn.style.display='none'; return; }
+  const on = !!_pushSubscription;
+  btn.textContent = on ? '🔔 Notifications On' : '🔕 Enable Notifications';
+  btn.style.background = on ? 'rgba(45,211,111,.12)' : 'rgba(255,255,255,.06)';
+  btn.style.color = on ? 'var(--green)' : 'var(--text2)';
+  btn.style.borderColor = on ? 'rgba(45,211,111,.3)' : 'var(--border)';
 }
 
 function togglePushNotifications() {

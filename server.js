@@ -2283,259 +2283,189 @@ app.get('/api/customer/ledger/months', customerAuth, async (req, res) => {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ── AI CROSS-SELL — smart cart recommendations via Groq/Gemini ────────────────
+// ── AI CROSS-SELL
 // ═══════════════════════════════════════════════════════════════════════════════
-
 app.post('/api/ai-upsell', async (req, res) => {
   try {
-    const { cartItems } = req.body; // [{ name, catId, qty }]
+    const { cartItems } = req.body;
     if (!cartItems?.length) return res.json({ productIds: [] });
-
-    // Load all in-stock products (excluding what's in cart)
-    const cartIds = new Set((cartItems || []).map(i => i.productId));
+    const cartIds = new Set((cartItems||[]).map(i => i.productId));
     const allProds = await db.collection('products').find({ disabled: { $ne: true } }).toArray();
-    const candidates = allProds
-      .filter(p => !cartIds.has(p.id))
-      .map(p => ({ id: p.id, name: p.name, cat: p.catId, brand: p.brand || '' }))
-      .slice(0, 80); // cap to avoid token limits
-
+    const candidates = allProds.filter(p => !cartIds.has(p.id))
+      .map(p => ({ id: p.id, name: p.name, cat: p.catId, brand: p.brand||'' })).slice(0, 80);
     const cartSummary = cartItems.map(i => `${i.name} x${i.qty}`).join(', ');
     const catalogue = candidates.map(p => `${p.id}:${p.name}${p.brand?' ('+p.brand+')':''}`).join(' | ');
-
-    const system = `You are a smart grocery recommendation engine for an Indian neighbourhood store.
-Given what is already in a customer's cart, suggest up to 6 products from the catalogue that COMPLEMENT the cart.
-Rules:
-- NEVER suggest anything already in the cart
-- Suggest things the customer NEEDS alongside what they have (e.g. bread→butter, milk→sugar→tea, rice→dal→oil)
-- Think about a full meal or use-case, not just similar items
-- Prefer variety across categories
-- Respond ONLY with a JSON array of product IDs (numbers), nothing else. Example: [12,45,7,33]`;
-
+    const system = `You are a smart grocery recommendation engine for an Indian neighbourhood store. Given what is already in a customer's cart, suggest up to 6 products from the catalogue that COMPLEMENT the cart. Rules: NEVER suggest anything already in the cart. Suggest things the customer NEEDS alongside what they have (e.g. bread→butter, milk→sugar→tea, rice→dal→oil). Think about a full meal or use-case, not just similar items. Prefer variety across categories. Respond ONLY with a JSON array of product IDs (numbers), nothing else. Example: [12,45,7,33]`;
     const userMsg = `Cart: ${cartSummary}
 
 Catalogue (id:name): ${catalogue}
 
 Return up to 6 complementary product IDs as JSON array:`;
-
     async function tryGroq() {
-      const key = process.env.GROQ_API_KEY || '';
-      if (!key) throw new Error('no key');
-      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({
-          model: 'llama-3.1-8b-instant',
-          max_tokens: 80,
-          temperature: 0.3,
-          messages: [{ role: 'system', content: system }, { role: 'user', content: userMsg }]
-        })
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d?.error?.message || 'Groq error');
+      const key = process.env.GROQ_API_KEY || ''; if (!key) throw new Error('no key');
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`}, body: JSON.stringify({ model:'llama-3.1-8b-instant', max_tokens:80, temperature:0.3, messages:[{role:'system',content:system},{role:'user',content:userMsg}] }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d?.error?.message||'Groq error');
       return d.choices?.[0]?.message?.content || '[]';
     }
-
     async function tryGemini() {
-      const keys = [
-        process.env.GEMINI_KEY_1 || process.env.GEMINI_KEY || process.env.GEMINI_API_KEY || '',
-        process.env.GEMINI_KEY_2 || '',
-      ].filter(k => k);
+      const keys = [process.env.GEMINI_KEY_1||process.env.GEMINI_KEY||process.env.GEMINI_API_KEY||'',process.env.GEMINI_KEY_2||''].filter(k=>k);
       if (!keys.length) throw new Error('no key');
-      const key = keys[Math.floor(Math.random() * keys.length)];
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: system }] },
-            contents: [{ role: 'user', parts: [{ text: userMsg }] }],
-            generationConfig: { maxOutputTokens: 80, temperature: 0.3 }
-          })
-        }
-      );
-      const d = await r.json();
-      if (!r.ok) throw new Error(d?.error?.message || 'Gemini error');
+      const key = keys[Math.floor(Math.random()*keys.length)];
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ system_instruction:{parts:[{text:system}]}, contents:[{role:'user',parts:[{text:userMsg}]}], generationConfig:{maxOutputTokens:80,temperature:0.3} }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d?.error?.message||'Gemini error');
       return d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
     }
-
     let text = '[]';
-    try { text = await tryGroq(); }
-    catch { try { text = await tryGemini(); } catch { return res.json({ productIds: [] }); } }
-
-    // Parse the JSON array from AI response
+    try { text = await tryGroq(); } catch { try { text = await tryGemini(); } catch { return res.json({ productIds: [] }); } }
     const match = text.match(/\[.*?\]/s);
-    const productIds = match ? JSON.parse(match[0]).filter(id => !cartIds.has(id)).slice(0, 6) : [];
+    const productIds = match ? JSON.parse(match[0]).filter(id => !cartIds.has(id)).slice(0,6) : [];
     res.json({ productIds });
-  } catch (e) {
-    console.error('AI upsell error:', e.message);
-    res.json({ productIds: [] });
-  }
+  } catch(e) { console.error('AI upsell:', e.message); res.json({ productIds: [] }); }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ── WEB PUSH NOTIFICATIONS ────────────────────────────────────────────────────
-// Uses the Web Push Protocol directly (no web-push npm package needed).
-// VAPID keys generated once and stored in settings.
+// ── WEB PUSH NOTIFICATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Generate VAPID key pair (run once, store in settings)
+// Generate/retrieve VAPID keys — stored in settings collection
 async function getOrCreateVapidKeys() {
   const s = await db.collection('settings').findOne({ _id: 'main' });
   if (s?.vapid?.publicKey) return s.vapid;
-  // Generate a new ECDH P-256 key pair
-  const { publicKey, privateKey } = crypto.generateKeyPairSync('ec', {
+
+  // Generate P-256 key pair
+  const { publicKey: pubDer, privateKey: privDer } = crypto.generateKeyPairSync('ec', {
     namedCurve: 'prime256v1',
-    publicKeyEncoding: { type: 'spki', format: 'der' },
+    publicKeyEncoding:  { type: 'spki',  format: 'der' },
     privateKeyEncoding: { type: 'pkcs8', format: 'der' }
   });
-  // Convert to URL-safe base64 (uncompressed point format for public key)
-  const pubKeyB64 = publicKey.subarray(27).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  const privKeyB64 = privateKey.subarray(36).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  const vapid = { publicKey: pubKeyB64, privateKey: privKeyB64 };
+
+  // Public key: uncompressed point = last 65 bytes of SPKI DER (starts with 0x04)
+  const pubRaw  = pubDer.slice(-65);
+  // Private key: raw 32-byte scalar = bytes 36-68 of PKCS8 DER
+  const privRaw = privDer.slice(36, 68);
+
+  const publicKey  = pubRaw.toString('base64url');
+  const privateKey = privRaw.toString('base64url');
+
+  const vapid = { publicKey, privateKey };
   await db.collection('settings').updateOne({ _id: 'main' }, { $set: { vapid } });
+  console.log('✅ VAPID keys generated. Public key length:', publicKey.length);
   return vapid;
 }
 
-// GET /api/push/vapid-public-key — frontend needs this to subscribe
 app.get('/api/push/vapid-public-key', async (req, res) => {
   try {
     const vapid = await getOrCreateVapidKeys();
     res.json({ publicKey: vapid.publicKey });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/push/subscribe — save a customer's push subscription
 app.post('/api/push/subscribe', async (req, res) => {
   try {
     const { subscription, customerId } = req.body;
     if (!subscription?.endpoint) return res.status(400).json({ error: 'No subscription' });
     await db.collection('pushSubscriptions').updateOne(
       { endpoint: subscription.endpoint },
-      { $set: { subscription, customerId: customerId || null, createdAt: new Date().toISOString() } },
+      { $set: { subscription, customerId: customerId||null, createdAt: new Date().toISOString() } },
       { upsert: true }
     );
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/push/unsubscribe — remove a subscription
 app.post('/api/push/unsubscribe', async (req, res) => {
   try {
     const { endpoint } = req.body;
     await db.collection('pushSubscriptions').deleteOne({ endpoint });
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/admin/push/stats — how many subscribers
 app.get('/api/admin/push/stats', adminAuth, async (req, res) => {
   try {
     const total = await db.collection('pushSubscriptions').countDocuments();
     res.json({ total });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/admin/push/send — send a push notification to all or specific customer
 app.post('/api/admin/push/send', adminAuth, async (req, res) => {
   try {
     const { title, body, url, customerId } = req.body;
     if (!title || !body) return res.status(400).json({ error: 'title and body required' });
-
     const filter = customerId ? { customerId: parseInt(customerId) } : {};
     const subs = await db.collection('pushSubscriptions').find(filter).toArray();
     if (!subs.length) return res.json({ ok: true, sent: 0, message: 'No subscribers' });
 
     const vapid = await getOrCreateVapidKeys();
-    const payload = JSON.stringify({ title, body, url: url || '/', tag: 'bsc-admin-' + Date.now() });
-
-    // Send using Web Push protocol with VAPID
+    const payload = JSON.stringify({ title, body, url: url||'/', tag: 'bsc-'+Date.now() });
     const { webcrypto } = require('crypto');
     let sent = 0, failed = 0, stale = [];
 
     for (const sub of subs) {
       try {
         const s = sub.subscription;
-        const endpoint = s.endpoint;
-        const auth = s.keys?.auth;
-        const p256dh = s.keys?.p256dh;
-        if (!auth || !p256dh) { stale.push(sub._id); continue; }
+        if (!s.keys?.auth || !s.keys?.p256dh) { stale.push(sub._id); continue; }
 
-        // Build VAPID JWT header
+        const endpoint = s.endpoint;
         const origin = new URL(endpoint).origin;
-        const now = Math.floor(Date.now() / 1000);
-        const jwtHeader = Buffer.from(JSON.stringify({ typ: 'JWT', alg: 'ES256' })).toString('base64url');
-        const jwtPayload = Buffer.from(JSON.stringify({ aud: origin, exp: now + 12 * 3600, sub: 'mailto:admin@bscstore.com' })).toString('base64url');
+        const now = Math.floor(Date.now()/1000);
+
+        // Build VAPID JWT
+        const jwtHeader  = Buffer.from(JSON.stringify({typ:'JWT',alg:'ES256'})).toString('base64url');
+        const jwtPayload = Buffer.from(JSON.stringify({aud:origin,exp:now+43200,sub:'mailto:admin@bscstore.com'})).toString('base64url');
         const sigInput = `${jwtHeader}.${jwtPayload}`;
 
-        // Import private key and sign
-        const privKeyBytes = Buffer.from(vapid.privateKey.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
-        const privKey = await webcrypto.subtle.importKey(
-          'raw', privKeyBytes, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']
-        );
-        const sig = await webcrypto.subtle.sign(
-          { name: 'ECDSA', hash: 'SHA-256' },
-          privKey,
-          Buffer.from(sigInput)
-        );
-        const jwtSig = Buffer.from(sig).toString('base64url');
-        const jwt = `${sigInput}.${jwtSig}`;
-        const pubKeyHeader = vapid.publicKey;
+        const privKeyBytes = Buffer.from(vapid.privateKey.replace(/-/g,'+').replace(/_/g,'/'), 'base64');
+        const privKey = await webcrypto.subtle.importKey('raw', privKeyBytes, {name:'ECDSA',namedCurve:'P-256'}, false, ['sign']);
+        const sig = await webcrypto.subtle.sign({name:'ECDSA',hash:'SHA-256'}, privKey, Buffer.from(sigInput));
+        const jwt = `${sigInput}.${Buffer.from(sig).toString('base64url')}`;
 
-        // Encrypt payload with ECDH + AES-GCM (RFC 8291)
-        const serverKeys = await webcrypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey', 'deriveBits']);
-        const serverPubRaw = await webcrypto.subtle.exportKey('raw', serverKeys.publicKey);
+        // Encrypt payload (RFC 8291 / aes128gcm)
+        const serverECDH = await webcrypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'}, true, ['deriveKey','deriveBits']);
+        const serverPubRaw = Buffer.from(await webcrypto.subtle.exportKey('raw', serverECDH.publicKey));
 
-        const clientPubBytes = Buffer.from(p256dh.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
-        const clientPubKey = await webcrypto.subtle.importKey('raw', clientPubBytes, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+        const clientPubKey = await webcrypto.subtle.importKey('raw',
+          Buffer.from(s.keys.p256dh.replace(/-/g,'+').replace(/_/g,'/'),'base64'),
+          {name:'ECDH',namedCurve:'P-256'}, false, []);
+        const authBytes = Buffer.from(s.keys.auth.replace(/-/g,'+').replace(/_/g,'/'),'base64');
 
-        const sharedBits = await webcrypto.subtle.deriveBits({ name: 'ECDH', public: clientPubKey }, serverKeys.privateKey, 256);
-        const authBytes = Buffer.from(auth.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+        const sharedBits = await webcrypto.subtle.deriveBits({name:'ECDH',public:clientPubKey}, serverECDH.privateKey, 256);
         const salt = webcrypto.getRandomValues(new Uint8Array(16));
 
-        // HKDF to derive content encryption key and nonce (RFC 8291)
-        const ikm = await webcrypto.subtle.importKey('raw', sharedBits, 'HKDF', false, ['deriveBits']);
-        const prk = await webcrypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: authBytes, info: Buffer.from('Content-Encoding: auth\0') }, ikm, 256);
-
+        const ikm    = await webcrypto.subtle.importKey('raw', sharedBits, 'HKDF', false, ['deriveBits']);
+        const prk    = await webcrypto.subtle.deriveBits({name:'HKDF',hash:'SHA-256',salt:authBytes,info:Buffer.from('Content-Encoding: auth\0')}, ikm, 256);
         const prkKey = await webcrypto.subtle.importKey('raw', prk, 'HKDF', false, ['deriveBits']);
-        const serverPubBuf = Buffer.from(serverPubRaw);
 
-        const keyInfo = Buffer.concat([Buffer.from('Content-Encoding: aes128gcm\0'), Buffer.alloc(1), Buffer.from([0x41]), serverPubBuf, Buffer.from([0x41]), clientPubBytes]);
+        const clientPubRaw = Buffer.from(s.keys.p256dh.replace(/-/g,'+').replace(/_/g,'/'),'base64');
+        const keyInfo   = Buffer.concat([Buffer.from('Content-Encoding: aes128gcm\0'), Buffer.alloc(1), Buffer.from([0x41]), serverPubRaw, Buffer.from([0x41]), clientPubRaw]);
         const nonceInfo = Buffer.concat([Buffer.from('Content-Encoding: nonce\0'), Buffer.alloc(1)]);
 
-        const cekBits = await webcrypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info: keyInfo }, prkKey, 128);
-        const nonceBits = await webcrypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info: nonceInfo }, prkKey, 96);
+        const cekBits   = await webcrypto.subtle.deriveBits({name:'HKDF',hash:'SHA-256',salt,info:keyInfo},   prkKey, 128);
+        const nonceBits = await webcrypto.subtle.deriveBits({name:'HKDF',hash:'SHA-256',salt,info:nonceInfo}, prkKey, 96);
 
         const cek = await webcrypto.subtle.importKey('raw', cekBits, 'AES-GCM', false, ['encrypt']);
-        const plaintext = Buffer.concat([Buffer.from(payload), Buffer.from([2])]); // padding delimiter
-        const ciphertext = await webcrypto.subtle.encrypt({ name: 'AES-GCM', iv: nonceBits, tagLength: 128 }, cek, plaintext);
+        const ciphertext = await webcrypto.subtle.encrypt({name:'AES-GCM',iv:nonceBits,tagLength:128}, cek,
+          Buffer.concat([Buffer.from(payload), Buffer.from([2])]));
 
-        // Build aes128gcm content-encoding header
         const recordSize = Buffer.alloc(4); recordSize.writeUInt32BE(4096);
-        const header = Buffer.concat([Buffer.from(salt), recordSize, Buffer.from([serverPubBuf.length]), serverPubBuf]);
+        const header = Buffer.concat([Buffer.from(salt), recordSize, Buffer.from([serverPubRaw.length]), serverPubRaw]);
         const body2send = Buffer.concat([header, Buffer.from(ciphertext)]);
 
         const pushRes = await fetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Authorization': `vapid t=${jwt},k=${pubKeyHeader}`,
-            'Content-Type': 'application/octet-stream',
-            'Content-Encoding': 'aes128gcm',
-            'TTL': '86400',
-          },
+          headers: { 'Authorization': `vapid t=${jwt},k=${vapid.publicKey}`, 'Content-Type': 'application/octet-stream', 'Content-Encoding': 'aes128gcm', 'TTL': '86400' },
           body: body2send
         });
 
-        if (pushRes.status === 201 || pushRes.status === 200) { sent++; }
-        else if (pushRes.status === 410 || pushRes.status === 404) { stale.push(sub._id); }
-        else { failed++; console.warn('Push failed:', pushRes.status, await pushRes.text()); }
-      } catch (err) { failed++; console.warn('Push send error:', err.message); }
+        if (pushRes.status === 201 || pushRes.status === 200) sent++;
+        else if (pushRes.status === 410 || pushRes.status === 404) stale.push(sub._id);
+        else { failed++; console.warn('Push failed:', pushRes.status, endpoint.slice(0,50)); }
+      } catch(err) { failed++; console.warn('Push err:', err.message); }
     }
 
-    // Clean up stale subscriptions
     if (stale.length) await db.collection('pushSubscriptions').deleteMany({ _id: { $in: stale } });
-    res.json({ ok: true, sent, failed, staleRemoved: stale.length });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    res.json({ ok:true, sent, failed, staleRemoved: stale.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── SERVE PAGES ───────────────────────────────────────────────────────────────
