@@ -4327,10 +4327,7 @@ function _doPlaceOrder(method) {
   fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:d.name,phone:d.phone,block:d.block,villa:d.villa,note:d.note,items,total:t,freeGift:freeGiftLabel,paymentMethod:method,redeemPoints:window._redeemPoints||0})})
   .then(async r=>{
     const resp = await r.json();
-    if (!r.ok) {
-      showToast('⚠️ ' + (resp.error || 'Order failed. Try again.'));
-      return;
-    }
+    if (!r.ok) { showToast('⚠️ ' + (resp.error || 'Order failed. Try again.')); return; }
     // Track ordered items for personalised reorder section
     try { _trackOrderedItems(items); } catch {}
     cart={}; giftState={injected:false,claimed:false,prevUnlocked:false}; window._fdUnlocked=false;
@@ -4340,7 +4337,6 @@ function _doPlaceOrder(method) {
     window._redeemPoints = 0;
     saveCart();
     closeCkoPage();
-    // Refresh account data if logged in (so passbook is up to date)
     if (method==='account') { _accData=null; }
     const addedToAcc = resp?.order?.addedToAccount;
     const accMsg = addedToAcc ? '<br><span style="color:#4ade80;font-size:.78rem">✓ Added to your account khata</span>' : '';
@@ -4348,7 +4344,7 @@ function _doPlaceOrder(method) {
     document.getElementById('successMsg').innerHTML=`Order for <strong>${d.name}</strong> placed!<br>Block ${d.block}, Villa ${d.villa} · ₹${t}<br>We'll deliver soon 🚀${accMsg}${ptsMsg}`;
     document.getElementById('success').classList.add('show');
     updateCart(); renderHome();
-  }).catch(()=>showToast('Network error. Check connection and try again.'));
+  }).catch(e=>showToast('Network error. Check connection and try again.'));
 }
 
 function closeSuccess() { document.getElementById('success').classList.remove('show'); }

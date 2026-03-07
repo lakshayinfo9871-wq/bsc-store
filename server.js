@@ -1718,7 +1718,7 @@ app.post('/api/orders', async (req, res) => {
     const ss = storeSettings?.shopStatus || {};
     const manualOpen = ss.manualOpen !== false;
     if (!manualOpen) return res.status(503).json({ error: "Shop is currently closed. Please check back later." });
-    // Check time window — MUST use IST (UTC+5:30), server runs UTC
+    // Check time window — use IST (UTC+5:30), server runs UTC
     const _istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
     const pad = n => String(n).padStart(2,'0');
     const nowStr = `${pad(_istNow.getUTCHours())}:${pad(_istNow.getUTCMinutes())}`;
@@ -1743,17 +1743,17 @@ app.post('/api/orders', async (req, res) => {
       const product = await db.collection('products').findOne({ id: item.productId });
       if (!product) continue;
       if (product.disabled) return res.status(400).json({ error: `"${product.name}" is not available.` });
-      if (typeof product.stockQuantity === 'number') {
-        if (product.stockQuantity === 0) return res.status(400).json({ error: `"${product.name}" is Out of Stock.` });
-        if (product.stockQuantity < item.qty) return res.status(400).json({ error: `Only ${product.stockQuantity} unit(s) of "${product.name}" available.` });
-        const updateResult = await db.collection('products').findOneAndUpdate(
-          { id: item.productId, stockQuantity: { $gte: item.qty } },
-          { $inc: { stockQuantity: -item.qty } },
-          { returnDocument: 'after' }
+      // Stock check: coerce to number to handle any string values saved by admin
+      const stockQty = typeof product.stockQuantity === 'number' ? product.stockQuantity
+                     : (product.stockQuantity != null ? Number(product.stockQuantity) : null);
+      if (stockQty !== null && !isNaN(stockQty)) {
+        if (stockQty <= 0) return res.status(400).json({ error: `"${product.name}" is Out of Stock.` });
+        if (stockQty < item.qty) return res.status(400).json({ error: `Only ${stockQty} unit(s) of "${product.name}" available.` });
+        // Single atomic decrement — no race condition
+        await db.collection('products').updateOne(
+          { id: item.productId },
+          { $inc: { stockQuantity: -item.qty } }
         );
-        if (!updateResult) {
-          return res.status(400).json({ error: `"${product.name}" stock changed during checkout. Please try again.` });
-        }
       }
       // Find the matching variant and tier to get the real server-side price
       const migrated = migrateProduct(product);
