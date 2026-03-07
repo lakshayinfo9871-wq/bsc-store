@@ -1718,10 +1718,11 @@ app.post('/api/orders', async (req, res) => {
     const ss = storeSettings?.shopStatus || {};
     const manualOpen = ss.manualOpen !== false;
     if (!manualOpen) return res.status(503).json({ error: "Shop is currently closed. Please check back later." });
-    // Check time window
-    const now = new Date();
+    // Check time window — use IST (UTC+5:30), not server UTC
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const nowIST = new Date(Date.now() + IST_OFFSET_MS);
     const pad = n => String(n).padStart(2,'0');
-    const nowStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const nowStr = `${pad(nowIST.getUTCHours())}:${pad(nowIST.getUTCMinutes())}`;
     const openTime = ss.openTime || '08:00';
     const closeTime = ss.closeTime || '22:00';
     if (openTime < closeTime) {
