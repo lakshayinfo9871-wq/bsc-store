@@ -4,9 +4,17 @@ self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promis
 self.addEventListener('fetch',e=>{
   const {request}=e,url=new URL(request.url);
   if(request.method!=='GET'||url.origin!==self.location.origin)return;
-  if(url.pathname==='/api/store'){e.respondWith(fetch(request).then(res=>{caches.open(API_CACHE).then(c=>c.put(request,res.clone()));return res;}).catch(async()=>{const cached=await caches.match(request);if(cached){const data=await cached.json();return new Response(JSON.stringify({...data,_offline:true}),{headers:{'Content-Type':'application/json'}});}return new Response(JSON.stringify({_offline:true,products:[],categories:[],settings:{}}),{headers:{'Content-Type':'application/json'}});}));return;}
+  if(url.pathname==='/api/store'){e.respondWith(fetch(request).then(res=>{
+    // FIX: Clone immediately (synchronously) before any async gap.
+    // Calling res.clone() inside caches.open().then() is a race condition —
+    // by the time that callback runs, the browser may have already started
+    // consuming res's body, causing "Response body is already used".
+    const clone=res.clone();
+    caches.open(API_CACHE).then(c=>c.put(request,clone));
+    return res;
+  }).catch(async()=>{const cached=await caches.match(request);if(cached){const data=await cached.json();return new Response(JSON.stringify({...data,_offline:true}),{headers:{'Content-Type':'application/json'}});}return new Response(JSON.stringify({_offline:true,products:[],categories:[],settings:{}}),{headers:{'Content-Type':'application/json'}});}));return;}
   if(SHELL_URLS.includes(url.pathname)){e.respondWith(caches.match(request).then(c=>c||fetch(request)));return;}
-  if(url.pathname.startsWith('/uploads/')||url.pathname.startsWith('/icons/')){e.respondWith(caches.open(IMG_CACHE).then(async c=>{const cached=await c.match(request);const fresh=fetch(request).then(res=>{c.put(request,res.clone());return res;}).catch(()=>null);return cached||await fresh;}));return;}
+  if(url.pathname.startsWith('/uploads/')||url.pathname.startsWith('/icons/')){e.respondWith(caches.open(IMG_CACHE).then(async c=>{const cached=await c.match(request);const fresh=fetch(request).then(res=>{const clone=res.clone();c.put(request,clone);return res;}).catch(()=>null);return cached||await fresh;}));return;}
   if(url.pathname.startsWith('/api/'))return;
   e.respondWith(fetch(request).catch(()=>caches.match(request)));
 });
