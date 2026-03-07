@@ -3246,7 +3246,97 @@ async function renderSettings() {
           <button class="btn btn-green" style="width:100%;justify-content:center;margin-top:12px" onclick="saveSettings()">💾 Save Upsell</button>
         </div>
       </div>
+      <div class="card" style="align-self:start;margin-top:1.2rem">
+        <div class="card-header"><h2>🏠 Home Screen Layout</h2></div>
+        <div class="card-body">
+          <div style="font-size:.8rem;color:var(--text2);margin-bottom:14px;line-height:1.5">Drag to reorder which sections appear first on the home screen. Toggle the eye to show/hide a section.</div>
+          <div id="homeLayoutList" style="display:flex;flex-direction:column;gap:7px"></div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:16px 0 12px">
+          <div style="font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📦 Category Strip Order</div>
+          <div style="font-size:.78rem;color:var(--text3);margin-bottom:10px">Drag categories to control which product rows appear first under "Shop by Category".</div>
+          <div id="catOrderList" style="display:flex;flex-direction:column;gap:6px"></div>
+          <button class="btn btn-green" style="width:100%;justify-content:center;margin-top:16px" onclick="saveHomeLayout()">💾 Save Layout</button>
+        </div>
+      </div>
     </div>`;
+  // Init drag-and-drop for home layout
+  _initHomeLayoutDnd(s.homeLayout || ['personalised','banners','featured','new','categories','cat_strips'], s.homeLayoutHidden || []);
+  // Init category order dnd
+  const cats2 = await (await fetch('/api/admin/categories',{headers:ah()})).json();
+  _initCatOrderDnd(cats2, s.catOrder || []);
+}
+
+// ── HOME LAYOUT DRAG & DROP ──────────────────────────────────────────────────
+const _HL_LABELS = {
+  personalised: { icon:'🌤', label:'Auto Banners', sub:'Weather & time-based smart sections' },
+  banners:       { icon:'🖼', label:'Image Banners', sub:'Your uploaded promo banners' },
+  featured:      { icon:'⭐', label:'Featured Products', sub:'Products marked as featured' },
+  new:           { icon:'✨', label:'New Arrivals', sub:'Products marked as new' },
+  categories:    { icon:'🏷', label:'Category Grid', sub:'"Shop by Category" tile grid' },
+  cat_strips:    { icon:'📦', label:'Category Product Rows', sub:'Horizontal product strips per category' },
+};
+function _makeDndList(containerId, items, renderItem) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  let dragSrc = null;
+  items.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.dataset.id = typeof item === 'object' ? item.id : item;
+    row.draggable = true;
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;cursor:grab;user-select:none;transition:opacity .2s,border-color .2s';
+    row.innerHTML = renderItem(item, i);
+    row.addEventListener('dragstart', e => { dragSrc = row; row.style.opacity = '.4'; e.dataTransfer.effectAllowed = 'move'; });
+    row.addEventListener('dragend', () => { dragSrc = null; el.querySelectorAll('[data-id]').forEach(r => { r.style.opacity='1'; r.style.borderColor='var(--border)'; }); });
+    row.addEventListener('dragover', e => { e.preventDefault(); if (row !== dragSrc) row.style.borderColor='var(--green)'; });
+    row.addEventListener('dragleave', () => { row.style.borderColor='var(--border)'; });
+    row.addEventListener('drop', e => {
+      e.preventDefault(); row.style.borderColor='var(--border)';
+      if (dragSrc && dragSrc !== row) {
+        const allRows = [...el.querySelectorAll('[data-id]')];
+        const srcIdx = allRows.indexOf(dragSrc), dstIdx = allRows.indexOf(row);
+        if (srcIdx < dstIdx) el.insertBefore(dragSrc, row.nextSibling); else el.insertBefore(dragSrc, row);
+      }
+    });
+    el.appendChild(row);
+  });
+}
+function _initHomeLayoutDnd(layout, hidden) {
+  window._hlHidden = new Set(hidden);
+  _makeDndList('homeLayoutList', layout, (id) => {
+    const info = _HL_LABELS[id] || { icon:'📄', label:id, sub:'' };
+    const isHidden = window._hlHidden.has(id);
+    return '<span style="font-size:1.1rem;flex-shrink:0">☰</span>'
+      + '<span style="font-size:1.3rem;flex-shrink:0">'+info.icon+'</span>'
+      + '<span style="flex:1;min-width:0">'
+      + '<span style="font-size:.88rem;font-weight:800;display:block;'+(isHidden?'opacity:.4':'')+'">'+info.label+'</span>'
+      + '<span style="font-size:.72rem;color:var(--text3)">'+info.sub+'</span>'
+      + '</span>'
+      + '<button onclick="event.stopPropagation();_toggleHlHidden(\''+id+'\',this)" style="background:none;border:1.5px solid var(--border);border-radius:7px;padding:3px 8px;font-size:.85rem;cursor:pointer;color:'+(isHidden?'var(--text3)':'var(--green)')+'" title="'+(isHidden?'Hidden':'Visible')+'">'+(isHidden?'🙈':'👁')+'</button>';
+  });
+}
+function _toggleHlHidden(id, btn) {
+  if (window._hlHidden.has(id)) { window._hlHidden.delete(id); btn.textContent='👁'; btn.style.color='var(--green)'; btn.closest('[data-id]').querySelector('[style*="font-weight:800"]').style.opacity='1'; }
+  else { window._hlHidden.add(id); btn.textContent='🙈'; btn.style.color='var(--text3)'; btn.closest('[data-id]').querySelector('[style*="font-weight:800"]').style.opacity='.4'; }
+}
+function _initCatOrderDnd(cats, catOrder) {
+  const ordered = [...catOrder.map(id => cats.find(c=>c.id===id)).filter(Boolean),
+                   ...cats.filter(c=>!catOrder.includes(c.id))];
+  _makeDndList('catOrderList', ordered, (cat) =>
+    '<span style="font-size:1rem;flex-shrink:0">☰</span>'
+    + '<span style="flex-shrink:0">'+(cat.imageUrl?'<img src="'+cat.imageUrl+'" style="width:24px;height:24px;border-radius:5px;object-fit:cover">':'📁')+'</span>'
+    + '<span style="font-size:.88rem;font-weight:700;flex:1">'+cat.name+'</span>'
+  );
+}
+async function saveHomeLayout() {
+  const layoutEl = document.getElementById('homeLayoutList');
+  const catEl = document.getElementById('catOrderList');
+  if (!layoutEl || !catEl) return;
+  const homeLayout = [...layoutEl.querySelectorAll('[data-id]')].map(r=>r.dataset.id);
+  const homeLayoutHidden = [...(window._hlHidden||[])];
+  const catOrder = [...catEl.querySelectorAll('[data-id]')].map(r=>parseInt(r.dataset.id));
+  const r = await fetch('/api/admin/settings',{method:'PUT',headers:ah(),body:JSON.stringify({homeLayout,homeLayoutHidden,catOrder})});
+  if (r.ok) toast('✅ Home layout saved!'); else toast('❌ Failed to save');
 }
 
 async function saveSettings() {

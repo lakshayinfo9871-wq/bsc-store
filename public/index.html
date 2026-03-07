@@ -3080,58 +3080,71 @@ function _renderCtxGrid(list) {
 
 
 function renderHome() {
-  let h = '';
-  // Banners
-  if (banners.length) {
-    h += `<div class="banner-wrap"><div class="banner-slider"><div class="banner-track" id="btrack">
-      ${banners.map(b=>`<div class="banner-slide" onclick="bannerClick(${b.id})" style="${!b.imageUrl?'background:'+b.bgColor:''}">
-        ${b.imageUrl?`<img src="${b.imageUrl}" loading="lazy">`:''}
-        ${b.title?`<div class="b-text"><div class="b-title">${b.title}</div>${b.subtitle?`<div class="b-sub">${b.subtitle}</div>`:''}</div>`:''}
-      </div>`).join('')}
-    </div></div>
-    ${banners.length>1?`<div class="bdots" id="bdots">${banners.map((_,i)=>`<div class="bdot ${i===0?'active':''}" onclick="goBanner(${i})"></div>`).join('')}</div>`:''}</div>`;
-    startBanner();
-  }
-  // Featured & New
-  const feat = prods.filter(p => p.featured); // #7: include OOS, card shows grey badge
-  const newP  = prods.filter(p => p.isNew);  // #7: include OOS
-  if (feat.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">⭐ Featured</span></div><div class="pstrip">${feat.map(pCard).join('')}</div></div>`;
-  if (newP.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">✨ New Arrivals</span></div><div class="pstrip">${newP.map(pCard).join('')}</div></div>`;
+  const layout = settings.homeLayout || ['personalised','banners','featured','new','categories','cat_strips'];
+  const hidden = new Set(settings.homeLayoutHidden || []);
+  const catOrder = settings.catOrder || [];
 
-  // Category grid (Blinkit style)
+  const orderedCats = catOrder.length
+    ? [...catOrder.map(id => cats.find(c=>c.id===id)).filter(Boolean),
+       ...cats.filter(c=>!catOrder.includes(c.id))]
+    : cats;
+
   const catEmojis = {'Vegetables & Fruits':'🥦','Dairy & Eggs':'🥛','Snacks':'🍿','Drinks':'🥤','Grocery':'🛒','Atta, Rice & Dal':'🌾','Oil, Ghee & Masala':'🫙','Bakery':'🍞','Chicken, Meat & Fish':'🍗','default':'📦'};
-  if (cats.length) h += `<div class="sec"><div class="sec-hd"><span class="sec-title">Shop by Category</span><span class="see-all" onclick="openCatsPage()">See all →</span></div>
-    <div class="cat-grid">${cats.map((c,i) => {
-      const emoji = catEmojis[c.name] || catEmojis['default'];
-      return `<div class="cat-card ${getCcBg(i)}" onclick="openFP(${c.id})">
-        <div class="cc-img">${c.imageUrl?`<img src="${c.imageUrl}" loading="lazy">`:`<span class="cc-emoji">${emoji}</span>`}</div>
-        <div class="cc-name">${c.name}</div>
-      </div>`;
-    }).join('')}</div></div>`;
+  const feat = prods.filter(p => p.featured);
+  const newP  = prods.filter(p => p.isNew);
 
-  // Per-category strips
-  cats.forEach(c => {
-    const ps = prods.filter(p => p.catId===c.id); // #7: include OOS
-    if (!ps.length) return;
-    h += `<div class="sec"><div class="sec-hd"><span class="sec-title">${c.name}</span><span class="see-all" onclick="openFP(${c.id})">See all →</span></div>
-      <div class="pstrip">${ps.slice(0,8).map(pCard).join('')}</div></div>`;
-  });
+  const sections = {
+    banners: () => {
+      if (!banners.length) return '';
+      let h = `<div class="banner-wrap"><div class="banner-slider"><div class="banner-track" id="btrack">
+        ${banners.map(b=>`<div class="banner-slide" onclick="bannerClick(${b.id})" style="${!b.imageUrl?'background:'+b.bgColor:''}">
+          ${b.imageUrl?`<img src="${b.imageUrl}" loading="lazy">`:''}
+          ${b.title?`<div class="b-text"><div class="b-title">${b.title}</div>${b.subtitle?`<div class="b-sub">${b.subtitle}</div>`:''}</div>`:''}
+        </div>`).join('')}
+      </div></div>
+      ${banners.length>1?`<div class="bdots" id="bdots">${banners.map((_,i)=>`<div class="bdot ${i===0?'active':''}" onclick="goBanner(${i})"></div>`).join('')}</div>`:''}</div>`;
+      startBanner();
+      return h;
+    },
+    featured: () => feat.length ? `<div class="sec"><div class="sec-hd"><span class="sec-title">⭐ Featured</span></div><div class="pstrip">${feat.map(pCard).join('')}</div></div>` : '',
+    new:      () => newP.length  ? `<div class="sec"><div class="sec-hd"><span class="sec-title">✨ New Arrivals</span></div><div class="pstrip">${newP.map(pCard).join('')}</div></div>` : '',
+    categories: () => orderedCats.length ? `<div class="sec"><div class="sec-hd"><span class="sec-title">Shop by Category</span><span class="see-all" onclick="openCatsPage()">See all →</span></div>
+      <div class="cat-grid">${orderedCats.map((c,i) => {
+        const emoji = catEmojis[c.name] || catEmojis['default'];
+        return `<div class="cat-card ${getCcBg(i)}" onclick="openFP(${c.id})">
+          <div class="cc-img">${c.imageUrl?`<img src="${c.imageUrl}" loading="lazy">`:`<span class="cc-emoji">${emoji}</span>`}</div>
+          <div class="cc-name">${c.name}</div>
+        </div>`;
+      }).join('')}</div></div>` : '',
+    cat_strips: () => orderedCats.map(c => {
+      const ps = prods.filter(p => p.catId===c.id);
+      if (!ps.length) return '';
+      return `<div class="sec"><div class="sec-hd"><span class="sec-title">${c.name}</span><span class="see-all" onclick="openFP(${c.id})">See all →</span></div>
+        <div class="pstrip">${ps.slice(0,8).map(pCard).join('')}</div></div>`;
+    }).join(''),
+    personalised: () => '',
+  };
 
-  if (!h) h = '<div class="empty-state" style="margin-top:4rem"><div class="ei">🛍️</div><p>No products yet.</p></div>';
+  let h = layout.filter(id => !hidden.has(id)).map(id => sections[id] ? sections[id]() : '').join('');
+  if (!h.trim()) h = '<div class="empty-state" style="margin-top:4rem"><div class="ei">🛍️</div><p>No products yet.</p></div>';
   document.getElementById('home').innerHTML = h;
   document.getElementById('scroll').scrollTop = 0;
 
-  // ── PERSONALISED SECTIONS (async, appended above static content) ───────────
-  // Runs after static home renders so the page feels instant on first paint.
-  buildPersonalisedHome().then(persHtml => {
-    if (!persHtml) return;
-    const homeEl = document.getElementById('home');
-    if (!homeEl) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'pers-block';
-    wrap.innerHTML = persHtml;
-    homeEl.insertBefore(wrap, homeEl.firstChild);
-  }).catch(() => {});
+  // ── PERSONALISED SECTIONS (async, inserted at configured position) ─────────
+  if (!hidden.has('personalised')) {
+    const persIdx = layout.indexOf('personalised');
+    buildPersonalisedHome().then(persHtml => {
+      if (!persHtml) return;
+      const homeEl = document.getElementById('home');
+      if (!homeEl) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'pers-block';
+      wrap.innerHTML = persHtml;
+      const visibleBefore = layout.slice(0, persIdx).filter(id => !hidden.has(id) && id !== 'personalised').length;
+      const children = [...homeEl.children].filter(el => !el.classList.contains('pers-block'));
+      homeEl.insertBefore(wrap, children[visibleBefore] || null);
+    }).catch(() => {});
+  }
 }
 
 // ── PRODUCT CARD ──────────────────────────────────────────────────────────────
