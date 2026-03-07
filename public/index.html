@@ -5145,10 +5145,11 @@ function _showNotifPrompt() {
   setTimeout(() => el.classList.add('show'), 2500); // wait 2.5s after app load
 }
 
-function notifPromptAllow() {
+async function notifPromptAllow() {
   document.getElementById('notifPrompt').classList.remove('show');
-  localStorage.setItem(NOTIF_KEY, 'granted');
-  requestPushPermission();
+  const granted = await requestPushPermission();
+  // Only mark as 'granted' if it actually succeeded; otherwise snooze so prompt can retry later
+  localStorage.setItem(NOTIF_KEY, granted ? 'granted' : Date.now().toString());
 }
 
 function notifPromptDismiss() {
@@ -5171,7 +5172,15 @@ async function requestPushPermission() {
   }
   try {
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') { showToast('Notification permission denied'); return false; }
+    if (permission !== 'granted') {
+      if (Notification.permission === 'denied') {
+        localStorage.setItem(NOTIF_KEY, 'granted'); // suppress prompt permanently — user must go to Settings
+        showToast('🔕 Notifications blocked — please enable in your browser/phone Settings');
+      } else {
+        showToast('Notification permission not granted');
+      }
+      return false;
+    }
     const reg = await navigator.serviceWorker.ready;
     if (!_pushVapidKey) {
       const r = await fetch('/api/push/vapid-public-key');
