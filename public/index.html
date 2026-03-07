@@ -905,7 +905,10 @@ select.ck-inp option{background:var(--bg2);}
     <div id="upiConfirmAmt" style="font-size:1.6rem;font-weight:900;color:var(--green);margin:14px 0 4px"></div>
     <div id="upiConfirmUpiId" style="font-size:.75rem;color:var(--text3);margin-bottom:22px"></div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <button onclick="upiConfirmPaid()" style="background:var(--green);color:#000;border:none;border-radius:14px;padding:1rem;font-size:.95rem;font-weight:900;cursor:pointer;letter-spacing:.02em">✅ I Have Paid — Place Order</button>
+      <button id="upiPaidBtn" onclick="upiConfirmPaid()" disabled
+        style="background:var(--bg3);color:var(--text3);border:none;border-radius:14px;padding:1rem;font-size:.95rem;font-weight:900;cursor:not-allowed;transition:all .3s">
+        ✅ I Have Paid — Place Order (<span id="upiTimer">15</span>s)
+      </button>
       <button onclick="upiRetryOpen()" style="background:var(--bg3);color:var(--text);border:1.5px solid var(--border);border-radius:14px;padding:.85rem;font-size:.88rem;font-weight:700;cursor:pointer">🔄 Reopen UPI App</button>
       <button onclick="upiConfirmCancel()" style="background:none;color:var(--text3);border:none;padding:.6rem;font-size:.82rem;cursor:pointer">Cancel</button>
     </div>
@@ -4283,7 +4286,11 @@ function ckoPlace() {
     // Show amount and UPI ID in modal
     document.getElementById('upiConfirmAmt').textContent = `₹${total()}`;
     document.getElementById('upiConfirmUpiId').textContent = `Paying to: ${settings.upiId}`;
+    // Reset button to disabled state with timer
+    const btn = document.getElementById('upiPaidBtn');
+    if (btn) { btn.disabled = true; btn.style.background = 'var(--bg3)'; btn.style.color = 'var(--text3)'; btn.style.cursor = 'not-allowed'; btn.innerHTML = '✅ I Have Paid — Place Order (<span id="upiTimer">15</span>s)'; }
     document.getElementById('upiConfirmOverlay').style.display = 'flex';
+    _startUpiTimer();
     // Open UPI app
     _openUpiApp();
     return;
@@ -4293,14 +4300,42 @@ function ckoPlace() {
 
 function upiRetryOpen() {
   _openUpiApp();
+  const btn = document.getElementById('upiPaidBtn');
+  if (btn) { btn.disabled = true; btn.style.background = 'var(--bg3)'; btn.style.color = 'var(--text3)'; btn.style.cursor = 'not-allowed'; btn.innerHTML = '✅ I Have Paid — Place Order (<span id="upiTimer">15</span>s)'; }
+  _startUpiTimer();
+}
+
+let _upiTimerInterval = null;
+
+function _startUpiTimer() {
+  let secs = 15;
+  const btn = document.getElementById('upiPaidBtn');
+  const timerEl = document.getElementById('upiTimer');
+  clearInterval(_upiTimerInterval);
+  _upiTimerInterval = setInterval(() => {
+    secs--;
+    if (timerEl) timerEl.textContent = secs;
+    if (secs <= 0) {
+      clearInterval(_upiTimerInterval);
+      if (btn) {
+        btn.disabled = false;
+        btn.style.background = 'var(--green)';
+        btn.style.color = '#000';
+        btn.style.cursor = 'pointer';
+        btn.innerHTML = '✅ I Have Paid — Place Order';
+      }
+    }
+  }, 1000);
 }
 
 function upiConfirmPaid() {
+  clearInterval(_upiTimerInterval);
   document.getElementById('upiConfirmOverlay').style.display = 'none';
   _doPlaceOrder(window._upiPendingMethod || 'upi');
 }
 
 function upiConfirmCancel() {
+  clearInterval(_upiTimerInterval);
   document.getElementById('upiConfirmOverlay').style.display = 'none';
   showToast('Payment cancelled — your cart is still saved');
 }
@@ -4320,16 +4355,17 @@ function _doPlaceOrder(method) {
   }
   const freeGiftLabel=(giftState.injected&&cfg)?(cfg.label||cfg.prod.name):null;
 
-  // WhatsApp notification — skip for UPI (UPI app itself confirms payment)
+  // WhatsApp notification — send for all methods; UPI sends after customer confirms payment
   const wa=settings.whatsapp||'';
-  if (wa && method !== 'upi') {
+  if (wa) {
     const lineItems=items.filter(i=>!i.isFreeGift).map(i=>`  • ${i.name}${i.variant?' ('+i.variant+')':''} × ${i.qty} = ₹${i.price*i.qty}`).join('\n');
-    const payLabel = method==='cod'?'Cash on Delivery':method==='account'?'Add to Account (Khata)':'UPI Payment';
+    const payLabel = method==='cod'?'Cash on Delivery':method==='account'?'Add to Account (Khata)':'✅ UPI Paid';
     let msg=`🛒 *New Order — ${settings.storeName||'BSC Store'}*\n\n👤 *${d.name}*\n📞 ${d.phone}\n📍 Block ${d.block}, Villa ${d.villa}${d.note?'\n📝 '+d.note:''}\n\n📦 *Items:*\n${lineItems}\n\n${freeGiftLabel?`🎁 Free Gift: ${freeGiftLabel}\n\n`:''}💰 *Total: ₹${t}*\n💳 Payment: ${payLabel}${method==='account'?' (added to khata)':''}\n\n_Sent from BSC Store App_`;
     setTimeout(()=>{ window.open('https://wa.me/'+wa+'?text='+encodeURIComponent(msg),'_blank'); },300);
   }
 
-  fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:d.name,phone:d.phone,block:d.block,villa:d.villa,note:d.note,items,total:t,freeGift:freeGiftLabel,paymentMethod:method})})
+  const upiUtr = method === 'upi' ? (window._upiUtr || null) : null;
+  fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:d.name,phone:d.phone,block:d.block,villa:d.villa,note:d.note,items,total:t,freeGift:freeGiftLabel,paymentMethod:method,upiUtr})})
   .then(async r=>{
     const resp = await r.json();
     if (!r.ok) { showToast('⚠️ ' + (resp.error || 'Order failed. Try again.')); return; }
