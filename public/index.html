@@ -34,8 +34,25 @@ img{display:block;max-width:100%;}
 .fpage,.acc-page{transform:translateX(100%);opacity:0;transition:transform .35s cubic-bezier(.22,.61,.36,1),opacity .25s;position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;}
 .fpage.open,.acc-page.open{transform:translateX(0);opacity:1;}
 
-/* ── PRESS FEEDBACK ── */
-button:active,.cat-card:active,.pcard:active{transform:scale(.96);filter:brightness(.85);}
+/* ── PRESS FEEDBACK (mobile spring) ── */
+button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month-card{
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+.add-btn{transition:transform .12s cubic-bezier(.34,1.56,.64,1),filter .12s ease;}
+.add-btn:active{transform:scale(.88);filter:brightness(.85);}
+@keyframes springBack{0%{transform:scale(.88);}60%{transform:scale(1.06);}100%{transform:scale(1);}}
+.add-btn.was-pressed{animation:springBack .32s cubic-bezier(.34,1.56,.64,1) forwards;}
+.pcard:active{transform:scale(.97);}
+.cat-card:active{transform:scale(.93);filter:brightness(.85);}
+.bn-item:active{transform:scale(.88);}
+.acc-quick-btn:active{transform:scale(.93);border-color:var(--green);}
+.filter-chip:active{transform:scale(.94);}
+.month-card:active{transform:scale(.98);border-color:var(--green);}
+/* Ripple on add button */
+.add-btn{position:relative;overflow:hidden;}
+.add-btn .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:rippleAnim .45s linear;pointer-events:none;}
+@keyframes rippleAnim{to{transform:scale(4);opacity:0;}}
 
 /* ══════════════════════ TOPBAR (Collapsing) ══════════════════════ */
 /* Outer wrapper: stacks collapse section + tabs section */
@@ -564,6 +581,73 @@ select.ck-inp option{background:var(--bg2);}
 /* Udhar rows */
 .su2,.su3,.su4{margin-bottom:12px;}
 
+/* ══════════════════════ MOBILE ANIMATIONS ══════════════════════ */
+
+/* Skeleton shimmer loading */
+@keyframes shimmer{0%{background-position:-300px 0}100%{background-position:300px 0}}
+.skel{background:linear-gradient(90deg,#1a1a1a 25%,#252525 50%,#1a1a1a 75%);background-size:600px 100%;animation:shimmer 1.4s infinite linear;border-radius:14px;}
+
+/* Cart drawer drag handle pulse */
+@keyframes handlePulse{0%,100%{width:40px;background:var(--bg5);}50%{width:52px;background:rgba(45,211,111,.4);}}
+.cart-drag{animation:handlePulse 2.5s ease-in-out infinite;}
+
+/* Cart drawer smooth feel */
+.cart-drawer{transition:transform .42s cubic-bezier(.32,.72,0,1);will-change:transform;}
+
+/* Bottom nav tab pop */
+@keyframes tabPop{0%{transform:scale(1);}50%{transform:scale(1.35) translateY(-3px);}100%{transform:scale(1);}}
+.bn-item.active .ni{animation:tabPop .3s cubic-bezier(.34,1.56,.64,1);}
+
+/* Bottom nav sliding indicator */
+.bnav{position:relative;}
+.bnav-indicator{position:absolute;top:0;height:2.5px;width:33.33%;background:var(--green);border-radius:0 0 4px 4px;transition:left .35s cubic-bezier(.34,1.56,.64,1);box-shadow:0 0 8px rgba(45,211,111,.5);}
+
+/* Fly to cart animation */
+.fly-clone{position:fixed;width:32px;height:32px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:.9rem;z-index:9999;pointer-events:none;transition:all .55s cubic-bezier(.25,.46,.45,.94);}
+
+/* Pull to refresh indicator */
+.ptr-indicator{text-align:center;padding:10px;font-size:.78rem;color:var(--green);font-weight:700;transition:all .2s;}
+
+/* Page slide transition upgrade */
+.fpage,.acc-page{transition:transform .38s cubic-bezier(.22,.61,.36,1),opacity .28s ease;}
+
+/* Qty ctrl spring */
+.qty-ctrl button{transition:transform .1s cubic-bezier(.34,1.56,.64,1),background .1s;}
+.qty-ctrl button:active{transform:scale(.82);}
+
+/* Toast upgrade — bouncy */
+.toast{transition:opacity .25s,transform .38s cubic-bezier(.34,1.56,.64,1);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+.toast:not(.show){transform:translateX(-50%) translateY(16px) scale(.92);}
+
+/* Cart CTA pulse */
+@keyframes ctaPulse{0%,100%{box-shadow:0 4px 22px rgba(45,211,111,.3);}50%{box-shadow:0 4px 32px rgba(45,211,111,.6);}}
+.cart-cta-btn{animation:ctaPulse 2.5s ease-in-out infinite;}
+
+/* Section fade in on scroll */
+@keyframes secFadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+.sec{animation:secFadeUp .4s cubic-bezier(.22,.61,.36,1) both;}
+.sec:nth-child(1){animation-delay:.05s;}
+.sec:nth-child(2){animation-delay:.1s;}
+.sec:nth-child(3){animation-delay:.15s;}
+.sec:nth-child(4){animation-delay:.2s;}
+.sec:nth-child(5){animation-delay:.25s;}
+
+/* Product image zoom on press */
+.pcard:active .pc-img-wrap img{transform:scale(1.04);transition:transform .15s ease;}
+.pc-img-wrap img{transition:transform .2s ease;}
+
+/* Success icon bounce upgrade */
+@keyframes successBounce{0%{transform:scale(0) rotate(-10deg);}50%{transform:scale(1.25) rotate(5deg);}75%{transform:scale(.92) rotate(-2deg);}100%{transform:scale(1) rotate(0);}}
+.s-icon{animation:successBounce .65s cubic-bezier(.34,1.56,.64,1) both;}
+
+/* Banner dots upgrade */
+.bdot{transition:all .35s cubic-bezier(.34,1.56,.64,1);}
+.bdot.active{width:20px;border-radius:3px;background:var(--green);}
+
+/* Input focus glow */
+.ck-inp:focus,.acc-inp:focus,.search-bar:focus-within{box-shadow:0 0 0 2px rgba(45,211,111,.18);}
+
 /* ══════════════════════ PIN INPUT ══════════════════════ */
 .pin-input-row{display:flex;gap:10px;justify-content:center;margin:6px 0;}
 .pin-box{width:56px;height:60px;border-radius:14px;background:var(--bg3);border:2px solid var(--border);text-align:center;font-size:1.4rem;font-weight:900;color:var(--text);outline:none;transition:border-color .2s;-webkit-text-security:disc;}
@@ -849,6 +933,7 @@ function offPct(price, mrp) {
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
   loadCart(); // #9: restore cart from localStorage
+  showSkeleton(); // show shimmer while loading
   try {
     const d = await fetch('/api/store').then(r=>r.json());
     prods=d.products||[]; cats=d.categories||[]; banners=d.banners||[]; settings=d.settings||{}; subcats=d.subcategories||[];
@@ -861,6 +946,7 @@ async function init() {
       });
     });
     buildTabs(); renderHome(); updateCart(); // re-render with restored cart
+    initMobileAnimations(); // start all mobile animations
   } catch(e) {
     document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
   }
@@ -988,6 +1074,10 @@ function tabClick(id, el) {
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
 function setNav(id) {
   ['bn0','bn1','bn3'].forEach(b => { const el=document.getElementById(b); if(el) el.classList.toggle('active', b===id); });
+  // Slide indicator
+  const map = { bn0:0, bn1:1, bn3:2 };
+  const el = document.getElementById('bnavIndicator');
+  if (el) el.style.left = ((map[id]??0) * 33.33) + '%';
 }
 function goHome() {
   document.querySelectorAll('.ctab')[0]?.classList.add('active');
@@ -3666,9 +3756,13 @@ function chQty(pid, vid, delta) {
     });
   }
 
-  // Bounce pill
+  // Bounce pill + fly-to-cart animation
   const fc = document.getElementById('fcart');
-  if (delta > 0) { fc.classList.add('bounce'); setTimeout(() => fc.classList.remove('bounce'), 500); }
+  if (delta > 0) {
+    fc.classList.add('bounce'); setTimeout(() => fc.classList.remove('bounce'), 500);
+    const srcCard = document.querySelector(`.pcard[data-pid="${pid}"][data-vid="${vid}"]`);
+    flyToCart(srcCard || fc);
+  }
 }
 
 function itemsTotal() {
@@ -4787,6 +4881,151 @@ document.addEventListener('click', (e) => {
     }
   }
 }, true);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── MOBILE ANIMATIONS ─────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── 1. RIPPLE on ADD button ───────────────────────────────────────────────────
+document.addEventListener('touchstart', (e) => {
+  const btn = e.target.closest('.add-btn');
+  if (!btn) return;
+  const touch = e.touches[0];
+  const rect  = btn.getBoundingClientRect();
+  const size  = Math.max(rect.width, rect.height) * 1.5;
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${touch.clientX-rect.left-size/2}px;top:${touch.clientY-rect.top-size/2}px;`;
+  btn.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+}, { passive: true });
+
+// ── 2. SPRING BACK on add btn touchend ───────────────────────────────────────
+document.addEventListener('touchend', (e) => {
+  const btn = e.target.closest('.add-btn');
+  if (!btn) return;
+  btn.classList.add('was-pressed');
+  btn.addEventListener('animationend', () => btn.classList.remove('was-pressed'), { once: true });
+}, { passive: true });
+
+// ── 3. FLY TO CART animation ──────────────────────────────────────────────────
+function flyToCart(sourceEl) {
+  const cartEl = document.getElementById('fcart');
+  if (!cartEl || !sourceEl) return;
+  const srcRect  = sourceEl.getBoundingClientRect();
+  const cartRect = cartEl.getBoundingClientRect();
+  const clone = document.createElement('div');
+  clone.className = 'fly-clone';
+  clone.textContent = '🛒';
+  clone.style.left = (srcRect.left + srcRect.width / 2 - 16) + 'px';
+  clone.style.top  = (srcRect.top  + srcRect.height / 2 - 16) + 'px';
+  document.body.appendChild(clone);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    clone.style.left      = (cartRect.left + cartRect.width / 2 - 16) + 'px';
+    clone.style.top       = (cartRect.top  + cartRect.height / 2 - 16) + 'px';
+    clone.style.transform = 'scale(0.25)';
+    clone.style.opacity   = '0';
+  }));
+  setTimeout(() => clone.remove(), 600);
+}
+
+// ── 4. SWIPE TO CLOSE cart drawer ─────────────────────────────────────────────
+function initSwipeToClose(drawerId, closeFn) {
+  const drawer = document.getElementById(drawerId);
+  if (!drawer) return;
+  let startY = 0, curY = 0, dragging = false;
+  drawer.addEventListener('touchstart', (e) => {
+    startY   = e.touches[0].clientY;
+    dragging = true;
+    drawer.style.transition = 'none';
+  }, { passive: true });
+  drawer.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    curY = e.touches[0].clientY;
+    const diff = Math.max(0, curY - startY);
+    drawer.style.transform = `translateX(-50%) translateY(${diff}px)`;
+  }, { passive: true });
+  drawer.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    drawer.style.transition = '';
+    if (curY - startY > 110) {
+      closeFn();
+    } else {
+      drawer.style.transform = '';
+    }
+    startY = curY = 0;
+  });
+}
+
+// ── 5. PULL TO REFRESH ────────────────────────────────────────────────────────
+function initPullToRefresh() {
+  const scroll = document.getElementById('scroll');
+  if (!scroll) return;
+  let startY = 0, pulling = false, indicator = null;
+  scroll.addEventListener('touchstart', (e) => {
+    if (scroll.scrollTop === 0) { startY = e.touches[0].clientY; pulling = true; }
+  }, { passive: true });
+  scroll.addEventListener('touchmove', (e) => {
+    if (!pulling) return;
+    const dist = Math.min(e.touches[0].clientY - startY, 90);
+    if (dist > 12) {
+      if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.className = 'ptr-indicator';
+        scroll.prepend(indicator);
+      }
+      indicator.textContent = dist > 65 ? '↑ Release to refresh' : '↓ Pull to refresh';
+      scroll.style.transform = `translateY(${dist * 0.38}px)`;
+      scroll.style.transition = 'none';
+    }
+  }, { passive: true });
+  scroll.addEventListener('touchend', (e) => {
+    if (!pulling) return;
+    const dist = e.changedTouches[0].clientY - startY;
+    scroll.style.transition = 'transform .3s ease';
+    scroll.style.transform  = '';
+    setTimeout(() => { scroll.style.transition = ''; }, 320);
+    if (dist > 65) {
+      if (indicator) indicator.textContent = '🔄 Refreshing...';
+      setTimeout(() => { renderHome(); indicator?.remove(); indicator = null; }, 400);
+    } else {
+      indicator?.remove(); indicator = null;
+    }
+    pulling = false; startY = 0;
+  });
+}
+
+// ── 6. BOTTOM NAV sliding indicator ──────────────────────────────────────────
+function initNavIndicator() {
+  const bnav = document.querySelector('.bnav');
+  if (!bnav || document.getElementById('bnavIndicator')) return;
+  bnav.insertAdjacentHTML('afterbegin', '<div class="bnav-indicator" id="bnavIndicator"></div>');
+}
+
+// ── 7. SKELETON loading before products load ──────────────────────────────────
+function showSkeleton() {
+  const cards = Array(4).fill(`
+    <div style="flex-shrink:0;width:148px">
+      <div class="skel" style="height:155px;margin-bottom:8px"></div>
+      <div class="skel" style="height:11px;width:75%;margin-bottom:6px"></div>
+      <div class="skel" style="height:11px;width:50%;margin-bottom:6px"></div>
+      <div class="skel" style="height:28px;margin-top:4px"></div>
+    </div>`).join('');
+  document.getElementById('home').innerHTML = `
+    <div style="padding:14px;margin-bottom:4px">
+      <div class="skel" style="height:170px;border-radius:16px"></div>
+    </div>
+    <div style="padding:0 14px 4px;display:flex;gap:10px;overflow:hidden">${cards}</div>
+    <div style="padding:0 14px;display:flex;gap:10px;overflow:hidden">${cards}</div>`;
+}
+
+// ── INIT all animations ───────────────────────────────────────────────────────
+function initMobileAnimations() {
+  initSwipeToClose('cartDrawer', closeCart);
+  initPullToRefresh();
+  initNavIndicator();
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 init();
