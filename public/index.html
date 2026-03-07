@@ -896,6 +896,22 @@ select.ck-inp option{background:var(--bg2);}
   <div class="cart-foot" id="cartFoot"></div>
 </div>
 
+<!-- UPI PAYMENT CONFIRMATION MODAL -->
+<div id="upiConfirmOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:700;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:28px 24px 36px;width:100%;max-width:480px;text-align:center;border-top:1px solid var(--border);">
+    <div style="font-size:2.8rem;margin-bottom:12px">📱</div>
+    <div style="font-size:1.1rem;font-weight:900;margin-bottom:6px">Complete UPI Payment</div>
+    <div style="font-size:.82rem;color:var(--text2);line-height:1.6;margin-bottom:6px">Your UPI app should have opened.<br>Pay the amount and come back here.</div>
+    <div id="upiConfirmAmt" style="font-size:1.6rem;font-weight:900;color:var(--green);margin:14px 0 4px"></div>
+    <div id="upiConfirmUpiId" style="font-size:.75rem;color:var(--text3);margin-bottom:22px"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button onclick="upiConfirmPaid()" style="background:var(--green);color:#000;border:none;border-radius:14px;padding:1rem;font-size:.95rem;font-weight:900;cursor:pointer;letter-spacing:.02em">✅ I Have Paid — Place Order</button>
+      <button onclick="upiRetryOpen()" style="background:var(--bg3);color:var(--text);border:1.5px solid var(--border);border-radius:14px;padding:.85rem;font-size:.88rem;font-weight:700;cursor:pointer">🔄 Reopen UPI App</button>
+      <button onclick="upiConfirmCancel()" style="background:none;color:var(--text3);border:none;padding:.6rem;font-size:.82rem;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- SUCCESS -->
 <div class="success" id="success">
   <div class="s-icon">🎉</div>
@@ -4246,15 +4262,47 @@ function ckoValidate() {
   saveUD({name,phone,block,villa,note}); return {name,phone,block,villa,note};
 }
 
+function _openUpiApp() {
+  const upiUrl = `upi://pay?pa=${encodeURIComponent(settings.upiId)}&pn=${encodeURIComponent(settings.storeName||'BSC Store')}&am=${total()}&cu=INR&tn=${encodeURIComponent('BSC Order')}`;
+  // Use a hidden link click — avoids navigating the app away (window.location.href breaks SPA)
+  const a = document.createElement('a');
+  a.href = upiUrl;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 500);
+}
+
 function ckoPlace() {
   if (!getMilkToken()) { showToast('Please login first'); return; }
-  const method=window._payMethod||'cod';
-  if (method==='upi' && settings.upiId?.trim()) {
-    const d=ckoValidate(); if(!d) return;
-    window.location.href=`upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.storeName||'BSC Store')}&am=${total()}&cu=INR&tn=BSC+Order`;
-    setTimeout(()=>_doPlaceOrder(method),800); return;
+  const method = window._payMethod || 'cod';
+  if (method === 'upi' && settings.upiId?.trim()) {
+    const d = ckoValidate(); if (!d) return;
+    // Store validated data so modal can use it
+    window._upiPendingMethod = method;
+    // Show amount and UPI ID in modal
+    document.getElementById('upiConfirmAmt').textContent = `₹${total()}`;
+    document.getElementById('upiConfirmUpiId').textContent = `Paying to: ${settings.upiId}`;
+    document.getElementById('upiConfirmOverlay').style.display = 'flex';
+    // Open UPI app
+    _openUpiApp();
+    return;
   }
   _doPlaceOrder(method);
+}
+
+function upiRetryOpen() {
+  _openUpiApp();
+}
+
+function upiConfirmPaid() {
+  document.getElementById('upiConfirmOverlay').style.display = 'none';
+  _doPlaceOrder(window._upiPendingMethod || 'upi');
+}
+
+function upiConfirmCancel() {
+  document.getElementById('upiConfirmOverlay').style.display = 'none';
+  showToast('Payment cancelled — your cart is still saved');
 }
 
 function _doPlaceOrder(method) {
@@ -4272,9 +4320,9 @@ function _doPlaceOrder(method) {
   }
   const freeGiftLabel=(giftState.injected&&cfg)?(cfg.label||cfg.prod.name):null;
 
-  // WhatsApp notification
+  // WhatsApp notification — skip for UPI (UPI app itself confirms payment)
   const wa=settings.whatsapp||'';
-  if (wa) {
+  if (wa && method !== 'upi') {
     const lineItems=items.filter(i=>!i.isFreeGift).map(i=>`  • ${i.name}${i.variant?' ('+i.variant+')':''} × ${i.qty} = ₹${i.price*i.qty}`).join('\n');
     const payLabel = method==='cod'?'Cash on Delivery':method==='account'?'Add to Account (Khata)':'UPI Payment';
     let msg=`🛒 *New Order — ${settings.storeName||'BSC Store'}*\n\n👤 *${d.name}*\n📞 ${d.phone}\n📍 Block ${d.block}, Villa ${d.villa}${d.note?'\n📝 '+d.note:''}\n\n📦 *Items:*\n${lineItems}\n\n${freeGiftLabel?`🎁 Free Gift: ${freeGiftLabel}\n\n`:''}💰 *Total: ₹${t}*\n💳 Payment: ${payLabel}${method==='account'?' (added to khata)':''}\n\n_Sent from BSC Store App_`;
