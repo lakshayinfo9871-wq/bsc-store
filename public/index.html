@@ -2927,18 +2927,6 @@ async function buildPersonalisedHome() {
     window._persCtx = { hero: slot1, sections: [slot1, slot2].filter(Boolean) };
     h += `<div class="sec">${_ctxSecHd(slot1.title, slot1.kw, slot1.id)}<div class="pstrip">${slot1Prods.slice(0,5).map(pCard).join('')}</div></div>`;
 
-    // Order Again — from local history
-    const reorderIds = _getTopReorderedIds(6);
-    if (reorderIds.length >= 2) {
-      const rp = reorderIds
-        .map(id => prods.find(p => p.id === id))
-        .filter(p => p && !p.disabled && p.variants?.[0]?.inStock !== false)
-        .slice(0, 5);
-      if (rp.length >= 2) {
-        const reorderKw = reorderIds.map(id => { const p = prods.find(x => x.id === id); return p ? (p.name||'').split(' ')[0].toLowerCase() : ''; }).filter(Boolean);
-        h += `<div class="sec">${_ctxSecHd('🔁 Order Again', reorderKw, 'reorder')}<div class="pstrip">${rp.map(pCard).join('')}</div></div>`;
-      }
-    }
 
     // SLOT 2 — Compact banner + product strip
     // SLOT 2 — Compact banner + product strip
@@ -5366,7 +5354,8 @@ async function requestPushPermission() {
       const r = await fetch('/api/push/vapid-public-key');
       _pushVapidKey = (await r.json()).publicKey;
     }
-    const keyBytes = Uint8Array.from(atob(_pushVapidKey.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
+    const b64 = _pushVapidKey.replace(/-/g,'+').replace(/_/g,'/');
+    const keyBytes = Uint8Array.from(atob(b64 + '='.repeat((4 - b64.length % 4) % 4)), c=>c.charCodeAt(0));
     const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:keyBytes });
     _pushSubscription = sub;
     let customerId = null;
