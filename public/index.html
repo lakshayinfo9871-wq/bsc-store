@@ -243,137 +243,208 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .cc-bg-6{background:linear-gradient(145deg,#1a3a3a,#0d2424);}
 .cc-bg-7{background:linear-gradient(145deg,#3a3a1a,#242408);}
 
-/* ══════════════════════ FRESH HUB SECTION ══════════════════════ */
-/* Outer container — ONE unified gradient block, no gap between banner + products */
+/* ══════════════════════ FRESH HUB SECTION — FRUITS & VEG ══════════════════════ */
 .fresh-hub{margin:18px 14px 0;border-radius:22px;overflow:hidden;position:relative;}
 
-/* ── Animated diagonal lines layer (sits above bg, below content) ── */
-@keyframes fhbLines{from{background-position:0 0}to{background-position:72px 0}}
+/* ── Floating fruit emoji animations ── */
+@keyframes fhFloat1{0%,100%{transform:translateY(0) rotate(-8deg) scale(1);}50%{transform:translateY(-10px) rotate(5deg) scale(1.08);}}
+@keyframes fhFloat2{0%,100%{transform:translateY(0) rotate(6deg) scale(1);}50%{transform:translateY(-14px) rotate(-4deg) scale(1.1);}}
+@keyframes fhFloat3{0%,100%{transform:translateY(0) rotate(-3deg) scale(1);}50%{transform:translateY(-8px) rotate(7deg) scale(1.06);}}
+@keyframes fhFloat4{0%,100%{transform:translateY(0) rotate(10deg) scale(1);}50%{transform:translateY(-12px) rotate(-6deg) scale(1.09);}}
+@keyframes fhOrbit{0%{transform:rotate(0deg) translateX(120px) rotate(0deg);}100%{transform:rotate(360deg) translateX(120px) rotate(-360deg);}}
+@keyframes fhPop{0%{opacity:0;transform:scale(0.5);}60%{transform:scale(1.15);}100%{opacity:1;transform:scale(1);}}
+@keyframes fhLeafSway{0%,100%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}}
+@keyframes fhShine{0%{left:-80%;}100%{left:120%;}}
+@keyframes fhGlowPulse{0%,100%{opacity:.4;transform:scale(1);}50%{opacity:.8;transform:scale(1.25);}}
+@keyframes fhSlideUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fhTagPulse{0%,100%{box-shadow:0 0 0 0 rgba(45,211,111,.45);}60%{box-shadow:0 0 0 8px transparent;}}
+@keyframes fhBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+@keyframes fhLines{from{background-position:0 0}to{background-position:72px 0}}
+
+/* Animated subtle lines */
 .fhb-lines{
   position:absolute;inset:0;pointer-events:none;z-index:0;
-  background:repeating-linear-gradient(72deg,transparent 0,transparent 26px,rgba(255,255,255,.025) 26px,rgba(255,255,255,.025) 27px);
-  animation:fhbLines 8s linear infinite;
+  background:repeating-linear-gradient(72deg,transparent 0,transparent 26px,rgba(255,255,255,.022) 26px,rgba(255,255,255,.022) 27px);
+  animation:fhLines 10s linear infinite;
 }
-/* ── Glow orbs ── */
-@keyframes fhbGlowPulse{0%,100%{opacity:.5;transform:scale(1);}50%{opacity:1;transform:scale(1.2);}}
-.fhb-orb1{position:absolute;top:-40px;left:-40px;width:200px;height:200px;border-radius:50%;pointer-events:none;z-index:0;animation:fhbGlowPulse 4s ease-in-out infinite;}
-.fhb-orb2{position:absolute;bottom:-30px;right:30%;width:160px;height:160px;border-radius:50%;pointer-events:none;z-index:0;animation:fhbGlowPulse 5s ease-in-out infinite 1.5s;}
 
-/* ── Banner area ── */
-.fhb{position:relative;padding:22px 18px 18px;min-height:148px;cursor:pointer;overflow:hidden;}
-/* Real image — right half, fades into the gradient via a gradient mask */
+/* Glow orbs */
+.fhb-orb1{position:absolute;top:-50px;left:-50px;width:220px;height:220px;border-radius:50%;pointer-events:none;z-index:0;animation:fhGlowPulse 4s ease-in-out infinite;}
+.fhb-orb2{position:absolute;bottom:-40px;right:20%;width:180px;height:180px;border-radius:50%;pointer-events:none;z-index:0;animation:fhGlowPulse 5.5s ease-in-out infinite 1.5s;}
+
+/* Floating fruit emojis */
+.fhb-fruit{position:absolute;pointer-events:none;font-size:1.6rem;z-index:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4));user-select:none;}
+.fhb-fruit:nth-child(1){top:12px;right:8%;animation:fhFloat1 3.8s ease-in-out infinite;}
+.fhb-fruit:nth-child(2){top:28px;right:30%;animation:fhFloat2 4.5s ease-in-out infinite .8s;}
+.fhb-fruit:nth-child(3){top:55%;right:5%;animation:fhFloat3 3.2s ease-in-out infinite .3s;}
+.fhb-fruit:nth-child(4){bottom:22px;right:22%;animation:fhFloat4 4.1s ease-in-out infinite 1.2s;}
+.fhb-fruit:nth-child(5){top:18px;right:52%;animation:fhFloat1 5s ease-in-out infinite .6s;font-size:1.2rem;opacity:.6;}
+
+/* Banner area */
+.fhb{position:relative;padding:26px 18px 22px;min-height:165px;cursor:pointer;overflow:hidden;}
+
+/* Background image — right half */
 .fhb-img{
-  position:absolute;right:0;top:0;bottom:0;width:52%;
+  position:absolute;right:0;top:0;bottom:0;width:55%;
   pointer-events:none;z-index:1;
 }
-.fhb-img img{
-  width:100%;height:100%;object-fit:cover;object-position:center center;
-  display:block;
-}
-/* Gradient mask: text side solid, image side fades in */
+.fhb-img img{width:100%;height:100%;object-fit:cover;object-position:center center;display:block;}
+/* Strong gradient mask so text always visible */
 .fhb-img::before{
   content:'';position:absolute;inset:0;z-index:2;
-  background:linear-gradient(to right, var(--fhb-grad-start,#061810) 0%, transparent 60%);
+  background:linear-gradient(to right,var(--fhb-grad-start,#061810) 0%,var(--fhb-grad-start,#061810)dd 30%,var(--fhb-grad-start,#061810)88 55%,transparent 75%),
+             linear-gradient(to top,var(--fhb-grad-start,#061810)bb 0%,transparent 45%);
 }
-/* Text content — always above image */
-.fhb-content{position:relative;z-index:3;max-width:65%;}
+
+/* Text content */
+.fhb-content{position:relative;z-index:4;max-width:68%;}
+.fhb-content{animation:fhSlideUp .5s ease both;}
+
 /* Pill tag */
-@keyframes fhbPulse{0%,100%{box-shadow:0 0 0 0 var(--fhb-pulse,rgba(45,211,111,.35));}60%{box-shadow:0 0 0 7px transparent;}}
 .fhb-tag{
   display:inline-flex;align-items:center;gap:5px;
-  border-radius:20px;padding:4px 11px;
-  font-size:.6rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
-  margin-bottom:10px;animation:fhbPulse 2.8s ease-in-out infinite;
+  border-radius:20px;padding:5px 13px;
+  font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:12px;animation:fhTagPulse 2.8s ease-in-out infinite;
 }
+
 /* Title */
-.fhb-title{font-size:1.65rem;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.12;text-shadow:0 2px 14px rgba(0,0,0,.8);overflow:visible;}
+.fhb-title{
+  font-size:1.7rem;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;
+  text-shadow:0 2px 20px rgba(0,0,0,.95),0 0 50px rgba(0,0,0,.7);
+  overflow:visible;position:relative;z-index:4;
+}
 .fhb-title em{font-style:normal;}
+
 /* Subtitle */
-.fhb-sub{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:7px;line-height:1.6;}
+.fhb-sub{
+  font-size:.68rem;color:rgba(255,255,255,.7);margin-top:8px;line-height:1.65;
+  text-shadow:0 1px 6px rgba(0,0,0,.85);
+}
+
 /* CTA */
 .fhb-cta{
   display:inline-flex;align-items:center;gap:6px;
-  border-radius:10px;padding:8px 18px;
-  font-size:.72rem;font-weight:900;color:#000;
-  margin-top:14px;
-  box-shadow:0 3px 14px rgba(0,0,0,.3);
+  border-radius:11px;padding:9px 20px;
+  font-size:.73rem;font-weight:900;color:#000;
+  margin-top:15px;
+  box-shadow:0 4px 16px rgba(0,0,0,.35);
+  position:relative;overflow:hidden;
 }
+.fhb-cta::after{content:'';position:absolute;top:0;left:-80%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:fhShine 2.5s ease-in-out infinite 1s;}
+
 /* Dot indicators */
-.fhb-dots{display:flex;gap:5px;margin-top:12px;}
+.fhb-dots{display:flex;gap:5px;margin-top:14px;}
 .fhb-dot{height:3px;border-radius:2px;}
-.fhb-dot.a{width:18px;}
-.fhb-dot.i{width:5px;opacity:.3;}
+.fhb-dot.a{width:20px;}
+.fhb-dot.i{width:5px;opacity:.28;}
+
 /* Flash badge */
 @keyframes fhbFlash{0%,100%{transform:scale(1) rotate(-2deg);}50%{transform:scale(1.1) rotate(-2deg);}}
 .fhb-flash{
-  position:absolute;top:12px;right:12px;z-index:5;
+  position:absolute;top:12px;right:12px;z-index:6;
   background:linear-gradient(135deg,#ff4500,#ff6935);color:#fff;
   font-size:.6rem;font-weight:900;padding:5px 10px;border-radius:20px;
   animation:fhbFlash 1s ease-in-out infinite;
   box-shadow:0 2px 10px rgba(255,69,0,.5);letter-spacing:.04em;text-transform:uppercase;
 }
 
-/* ── Divider line between banner and products ── */
-.fhb-divider{height:1px;margin:0 14px;opacity:.12;background:#fff;}
+/* Divider */
+.fhb-divider{height:1px;margin:0 14px;opacity:.1;background:#fff;}
 
-/* ── Product grid — 3 columns, transparent bg (inherits gradient) ── */
+/* Section header inside fresh hub */
+.fhg-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 14px 4px;position:relative;z-index:1;
+}
+.fhg-header-title{font-size:.85rem;font-weight:900;color:#fff;letter-spacing:.03em;text-transform:uppercase;}
+.fhg-header-count{font-size:.65rem;color:rgba(255,255,255,.45);font-weight:600;}
+
+/* Product grid — 3 cols */
 .fhg{
   display:grid;grid-template-columns:repeat(3,1fr);
-  gap:10px;padding:12px 14px 0;
+  gap:9px;padding:8px 12px 0;
   position:relative;z-index:1;
 }
-/* Product card sitting on the green gradient */
+
+/* Individual card — matches standard pcard style */
 .fhg-card{
   border-radius:14px;overflow:hidden;cursor:pointer;
-  background:rgba(0,0,0,.32);
-  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
   display:flex;flex-direction:column;
-  transition:transform .15s;
-  backdrop-filter:blur(4px);
-  -webkit-backdrop-filter:blur(4px);
+  transition:transform .15s,box-shadow .15s;
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  position:relative;
 }
 .fhg-card:active{transform:scale(.93);}
+
 .fhg-img{
   position:relative;overflow:hidden;
-  background:rgba(0,0,0,.2);
+  background:rgba(255,255,255,.05);
   aspect-ratio:1;
   display:flex;align-items:center;justify-content:center;
 }
-.fhg-img img{width:100%;height:100%;object-fit:cover;display:block;}
+.fhg-img img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s;}
+.fhg-card:active .fhg-img img{transform:scale(1.05);}
 .fhg-emoji{font-size:2rem;line-height:1;}
-/* Item count chip */
+
+/* Discount badge */
 .fhg-count{
-  position:absolute;bottom:5px;right:5px;
-  font-size:.48rem;font-weight:800;
-  background:rgba(0,0,0,.65);color:rgba(255,255,255,.8);
+  position:absolute;top:5px;left:5px;
+  font-size:.5rem;font-weight:900;
   border-radius:5px;padding:2px 6px;
-  backdrop-filter:blur(6px);
-}
-/* product name bar */
-.fhg-name{
-  font-size:11px;font-weight:700;
-  padding:6px 6px 8px;text-align:center;
-  line-height:1.25;color:#fff;
+  z-index:2;
 }
 
-/* ── "See all" row ── */
+/* Low stock */
+.fhg-lowstock{
+  position:absolute;bottom:4px;left:4px;right:4px;
+  font-size:.42rem;font-weight:800;
+  background:rgba(255,68,68,.85);color:#fff;
+  border-radius:4px;padding:2px 4px;text-align:center;
+  backdrop-filter:blur(4px);
+}
+
+/* Qty / Add button inside fhg-card — same look as main pcard */
+.fhg-card .qty-ctrl{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--green);border-radius:8px;overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.35);
+}
+.fhg-card .qty-ctrl button{
+  background:transparent;border:none;color:#000;
+  font-size:1rem;font-weight:900;
+  padding:5px 8px;cursor:pointer;line-height:1;
+}
+.fhg-card .qty-ctrl span{
+  font-size:.72rem;font-weight:900;color:#000;flex:1;text-align:center;
+}
+.fhg-card .add-btn{
+  background:var(--green);color:#000;border:none;border-radius:8px;
+  padding:6px 0;width:100%;font-size:.65rem;font-weight:900;
+  letter-spacing:.06em;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);
+  transition:filter .12s;
+}
+.fhg-card .add-btn:active{filter:brightness(1.2);}
+
+/* See-all row */
 .fhg-seeall{
   position:relative;z-index:1;
-  margin:10px 14px 0;
-  display:flex;align-items:center;justify-content:center;
-  gap:8px;
-  background:rgba(0,0,0,.28);
-  border:1px solid rgba(255,255,255,.1);
-  border-radius:14px;
-  padding:12px;
-  cursor:pointer;
-  backdrop-filter:blur(4px);
-  transition:background .15s;
+  margin:10px 12px 0;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:14px;padding:13px;cursor:pointer;
+  backdrop-filter:blur(4px);transition:background .15s;
 }
-.fhg-seeall:active{background:rgba(0,0,0,.45);}
+.fhg-seeall:active{background:rgba(255,255,255,.15);}
 .fhg-seeall-label{font-size:.78rem;font-weight:800;color:#fff;}
-.fhg-seeall-arrow{font-size:.75rem;color:rgba(255,255,255,.55);}
-/* Bottom gradient fade-out padding */
+.fhg-seeall-arrow{font-size:1.1rem;color:rgba(255,255,255,.6);animation:fhBounce 1.4s ease-in-out infinite;}
+
+/* Bottom padding */
 .fhg-bottom{height:18px;position:relative;z-index:1;}
 
 /* ══════════════════════ PRODUCT STRIP ══════════════════════ */
@@ -3351,9 +3422,9 @@ function renderHome() {
     personalised: () => '',
     fresh_hub: () => {
 
-      // ── Theme definitions ──
+      // ── Theme definitions (always forest/green — this is fruits & veg only) ──
       const themes = {
-        forest:{ grad:'#061810,#0d2e16,#082010',  gradStart:'#061810', glow1:'rgba(45,211,111,.35)',  glow2:'rgba(45,211,111,.18)', accent:'#2dd36f', pulse:'rgba(45,211,111,.35)', tagBg:'rgba(45,211,111,.15)', tagBdr:'rgba(45,211,111,.3)',  tagClr:'#2dd36f' },
+        forest:{ grad:'#051a0d,#0a2e12,#061a0a',  gradStart:'#051a0d', glow1:'rgba(45,211,111,.4)',  glow2:'rgba(80,230,100,.2)', accent:'#2dd36f', pulse:'rgba(45,211,111,.4)', tagBg:'rgba(45,211,111,.18)', tagBdr:'rgba(45,211,111,.35)', tagClr:'#2dd36f' },
         ocean: { grad:'#041520,#073550,#031828',  gradStart:'#041520', glow1:'rgba(34,211,238,.3)',   glow2:'rgba(34,211,238,.15)', accent:'#22d3ee', pulse:'rgba(34,211,238,.3)',  tagBg:'rgba(34,211,238,.12)', tagBdr:'rgba(34,211,238,.28)', tagClr:'#22d3ee' },
         amber: { grad:'#180e04,#301e08,#1a1005',  gradStart:'#180e04', glow1:'rgba(251,191,36,.3)',   glow2:'rgba(251,191,36,.15)', accent:'#fbbf24', pulse:'rgba(251,191,36,.3)',  tagBg:'rgba(251,191,36,.12)', tagBdr:'rgba(251,191,36,.28)', tagClr:'#fbbf24' },
         berry: { grad:'#100820,#1e1038,#120a24',  gradStart:'#100820', glow1:'rgba(167,139,250,.3)',  glow2:'rgba(167,139,250,.15)',accent:'#a78bfa', pulse:'rgba(167,139,250,.3)', tagBg:'rgba(167,139,250,.12)',tagBdr:'rgba(167,139,250,.28)',tagClr:'#a78bfa' },
@@ -3361,9 +3432,10 @@ function renderHome() {
       const fh  = settings.freshHub || {};
       const th  = themes[fh.theme] || themes.forest;
 
-      const title     = fh.title    || 'Daily Fresh Need';
-      const subtitle  = fh.subtitle || 'Farm fresh groceries, delivered to your door.';
-      const tag       = fh.tag      || '🌱 Fresh & Daily';
+      // ── Section config — fruit & veg focused ──
+      const title     = fh.title    || 'Farm Fresh';
+      const subtitle  = fh.subtitle || 'Straight from the farm to your door. Crisp, natural & chemical-free.';
+      const tag       = fh.tag      || '🥬 Fruits & Vegetables';
       const flashOn   = !!fh.flashSale;
       const flashLbl  = fh.flashLabel || '⚡ Flash Sale';
       const bannerImg = fh.bannerImage || '/uploads/unnamed.jpg';
@@ -3373,69 +3445,110 @@ function renderHome() {
       const tlast = tw.pop();
       const tmain = tw.join(' ');
 
-      // ── Pick fresh products (veggies/fruits first, fill rest) ──
-      const freshKws = ['vegetable','veggie','fruit','tomato','potato','onion','carrot','leafy','spinach','cabbage','gourd','brinjal','capsicum','paneer','banana','apple','mango','orange','lemon','cucumber','pumpkin','garlic','ginger','mushroom'];
+      // ── Find the fruits & vegetables category IDs ──
+      const vegCatIds = cats
+        .filter(c => /vegetable|fruit|fresh|sabzi|produce|sabji|हरी|तरकारी/i.test(c.name))
+        .map(c => c.id);
+
       const allActive = prods.filter(p => !p.disabled && defaultVariant(p)?.inStock !== false);
-      let freshProds = allActive.filter(p => freshKws.some(k => p.name.toLowerCase().includes(k) || (cats.find(c=>c.id===p.catId)?.name||'').toLowerCase().includes(k)));
+
+      // Strategy 1: products in matching category IDs
+      let freshProds = vegCatIds.length
+        ? allActive.filter(p => vegCatIds.includes(p.catId))
+        : [];
+
+      // Strategy 2: keyword match on product name (no dairy!)
+      if (freshProds.length < 3) {
+        const vegKws = ['vegetable','veggie','sabzi','sabji','fruit','tomato','potato','onion','carrot','leafy','spinach','cabbage','gourd','brinjal','capsicum','banana','apple','mango','orange','lemon','cucumber','pumpkin','garlic','ginger','mushroom','broccoli','cauliflower','peas','beans','okra','bhindi','radish','beetroot','turnip','yam','taro','corn','papaya','guava','pomegranate','watermelon','pineapple','kiwi','grape','strawberry','berry','peach','plum','pear','fig','dates'];
+        freshProds = allActive.filter(p =>
+          vegKws.some(k => p.name.toLowerCase().includes(k)) &&
+          !/paneer|butter|ghee|milk|cheese|curd|yogurt|cream|sweet|biscuit|chip|snack|drink|juice|cola|chocolate|candy|ice cream/i.test(p.name)
+        );
+      }
+
+      // Strategy 3: fallback if store has very few products
       if (freshProds.length < 3) freshProds = allActive;
-      const display6 = freshProds.slice(0, 6);
+
+      // ── Pick category to open on "View all" ──
+      const freshCatId = vegCatIds.length ? vegCatIds[0] : null;
+      const openFreshAll = freshCatId
+        ? `openFP(${freshCatId})`
+        : `openCatsPage()`;
+
+      const display6   = freshProds.slice(0, 6);
       const totalFresh = freshProds.length;
 
-      // ── Build 6-product cards ──
+      // ── Floating fruit/veg emojis for animation ──
+      const fruitEmojis = ['🍅','🥦','🥕','🍎','🌽','🍇','🥬','🍊'];
+
+      // ── Build product cards (matching the standard pcard style) ──
       const prodCards = display6.map(p => {
         const selVid = window._selVariant?.[p.id] || defaultVariant(p)?.id;
         const v = getVariant(p, selVid);
         if (!v) return '';
-        const qty      = cart[cartKey(p.id, selVid)] || 0;
-        const price    = getPrice(v.priceTiers, qty || 1);
-        const mrp      = v.mrp && v.mrp > price ? v.mrp : null;
-        const off      = offPct(price, mrp);
-        const imgUrl   = v.imageUrl || p.imageUrl || '';
-        const isLowSt  = typeof p.stockQuantity === 'number' && p.stockQuantity > 0 && p.stockQuantity <= 5;
-        // Bulk hint — show next tier price
+        const qty    = cart[cartKey(p.id, selVid)] || 0;
+        const price  = getPrice(v.priceTiers, qty || 1);
+        const mrp    = v.mrp && v.mrp > price ? v.mrp : null;
+        const off    = offPct(price, mrp);
+        const imgUrl = v.imageUrl || p.imageUrl || '';
+        const isLowSt = typeof p.stockQuantity === 'number' && p.stockQuantity > 0 && p.stockQuantity <= 5;
+        const isOOS   = !v?.inStock || (typeof p.stockQuantity === 'number' && p.stockQuantity === 0);
+
+        // Bulk discount hint
         const bulkHint = (() => {
           const tiers = v.priceTiers;
           if (!tiers || tiers.length <= 1) return '';
           const sorted = [...tiers].sort((a,b) => a.minQty - b.minQty);
           for (const t of sorted) {
             if (t.minQty > (qty||1) && t.price < price)
-              return `<div style="font-size:9px;font-weight:800;color:#000;background:${th.accent};border-radius:4px;padding:2px 5px;margin-bottom:2px;display:inline-block">📦 Buy ${t.minQty}+ @ ₹${t.price}</div>`;
+              return `<div style="font-size:8.5px;font-weight:800;color:#000;background:${th.accent};border-radius:5px;padding:2px 6px;margin-bottom:3px;display:inline-block;letter-spacing:.02em">📦 ${t.minQty}+ @ ₹${t.price}</div>`;
           }
-          if (qty >= sorted[sorted.length-1].minQty && sorted[sorted.length-1].minQty > 1)
-            return `<div style="font-size:9px;font-weight:800;color:#000;background:${th.accent};border-radius:4px;padding:2px 5px;margin-bottom:2px;display:inline-block">🏆 Best price!</div>`;
+          if (qty > 0 && sorted.length > 1 && qty >= sorted[sorted.length-1].minQty)
+            return `<div style="font-size:8.5px;font-weight:800;color:#000;background:${th.accent};border-radius:5px;padding:2px 6px;margin-bottom:3px;display:inline-block">🏆 Best price!</div>`;
           return '';
         })();
-        const addCtrl = qty > 0
-          ? `<div class="qty-ctrl" style="border-radius:8px"><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button><span>${qty}</span><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button></div>`
-          : `<button class="add-btn" style="border-radius:8px;padding:6px 0;width:100%;font-size:11px" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
-        return `<div class="fhg-card" data-pid="${p.id}" onclick="openProductDetail(${p.id})">
+
+        const addCtrl = isOOS
+          ? `<button class="add-btn" style="opacity:.4;cursor:default;font-size:.6rem" disabled>OUT</button>`
+          : qty > 0
+          ? `<div class="qty-ctrl"><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button><span>${qty}</span><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button></div>`
+          : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
+
+        return `<div class="fhg-card" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
           <div class="fhg-img">
-            ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : `<span class="fhg-emoji">🥦</span>`}
-            ${off > 0 ? `<span class="fhg-count" style="background:${th.accent};color:#000">${off}% OFF</span>` : ''}
-            ${isLowSt ? `<span class="fhg-lowstock">Only ${p.stockQuantity} left!</span>` : ''}
+            ${imgUrl ? `<img src="${imgUrl}" loading="lazy" alt="${p.name}">` : `<span class="fhg-emoji">🥦</span>`}
+            ${off > 0 && !isOOS ? `<span class="fhg-count" style="background:${th.accent};color:#000">${off}% OFF</span>` : ''}
+            ${isLowSt && !isOOS ? `<span class="fhg-lowstock">Only ${p.stockQuantity} left!</span>` : ''}
           </div>
-          <div style="padding:6px 7px 8px;display:flex;flex-direction:column;gap:3px;flex:1">
-            <div style="font-size:11px;font-weight:700;color:#fff;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.name}</div>
-            <div style="font-size:11px;font-weight:900;color:${th.accent}">₹${price}${mrp?`<span style="font-size:9px;color:rgba(255,255,255,.4);text-decoration:line-through;margin-left:3px">₹${mrp}</span>`:''}</div>
+          <div style="padding:6px 7px 8px;display:flex;flex-direction:column;gap:3px;flex:1;min-height:0">
+            <div style="font-size:10.5px;font-weight:700;color:#fff;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.name}</div>
+            <div style="font-size:11px;font-weight:900;color:${th.accent};margin-top:1px">₹${price}${mrp?`<span style="font-size:8.5px;color:rgba(255,255,255,.38);text-decoration:line-through;margin-left:3px">₹${mrp}</span>`:''}</div>
             ${bulkHint}
-            <div style="margin-top:auto">${addCtrl}</div>
+            <div style="margin-top:auto;padding-top:4px">${addCtrl}</div>
           </div>
         </div>`;
       }).join('');
 
-      return `<div class="fresh-hub" style="background:linear-gradient(170deg,${th.grad})">
+      return `<div class="fresh-hub" style="background:linear-gradient(155deg,${th.grad});--fhb-grad-start:${th.gradStart}">
         <div class="fhb-lines"></div>
         <div class="fhb-orb1" style="background:radial-gradient(circle,${th.glow1} 0%,transparent 70%)"></div>
         <div class="fhb-orb2" style="background:radial-gradient(circle,${th.glow2} 0%,transparent 70%)"></div>
         ${flashOn ? `<div class="fhb-flash">${flashLbl}</div>` : ''}
-        <div class="fhb" onclick="openCatsPage()">
+
+        ${/* Floating animated fruit emojis */''}
+        <span class="fhb-fruit" aria-hidden="true">${fruitEmojis[0]}</span>
+        <span class="fhb-fruit" aria-hidden="true">${fruitEmojis[1]}</span>
+        <span class="fhb-fruit" aria-hidden="true">${fruitEmojis[2]}</span>
+        <span class="fhb-fruit" aria-hidden="true">${fruitEmojis[3]}</span>
+        <span class="fhb-fruit" aria-hidden="true">${fruitEmojis[4]}</span>
+
+        <div class="fhb" onclick="${openFreshAll}">
           <div class="fhb-img">
             <img src="${bannerImg}" alt="fresh produce">
-            <div class="fhb-img-mask" style="position:absolute;inset:0;background:linear-gradient(to right,${th.gradStart} 0%,${th.gradStart}cc 18%,transparent 58%),linear-gradient(to top,${th.gradStart}99 0%,transparent 40%);z-index:2;"></div>
           </div>
           <div class="fhb-content">
             <div class="fhb-tag" style="background:${th.tagBg};border:1px solid ${th.tagBdr};color:${th.tagClr};--fhb-pulse:${th.pulse}">${tag}</div>
-            <div class="fhb-title">${tmain ? tmain + ' ' : ''}<em style="color:${th.accent}">${tlast}</em></div>
+            <div class="fhb-title">${tmain ? tmain + '&nbsp;' : ''}<em style="color:${th.accent}">${tlast}</em></div>
             <div class="fhb-sub">${subtitle}</div>
             <div class="fhb-cta" style="background:${th.accent}">Shop Now →</div>
             <div class="fhb-dots">
@@ -3445,13 +3558,21 @@ function renderHome() {
             </div>
           </div>
         </div>
-        <div class="fhb-divider" style="background:${th.accent}"></div>
-        <div class="fhg">${prodCards}</div>
-        ${totalFresh > 6 ? `
-        <div class="fhg-seeall" onclick="openCatsPage()">
-          <span class="fhg-seeall-label">See all ${totalFresh > 99 ? '99+' : totalFresh} fresh items</span>
+
+        <div class="fhb-divider"></div>
+
+        <div class="fhg-header">
+          <span class="fhg-header-title">🥬 Fresh Picks</span>
+          <span class="fhg-header-count">${totalFresh} items</span>
+        </div>
+
+        <div class="fhg" id="fhg-grid">${prodCards}</div>
+
+        <div class="fhg-seeall" onclick="${openFreshAll}">
+          <span class="fhg-seeall-label">View all ${totalFresh > 99 ? '99+' : totalFresh} Fruits & Vegetables</span>
           <span class="fhg-seeall-arrow">›</span>
-        </div>` : ''}
+        </div>
+
         <div class="fhg-bottom"></div>
       </div>`;
     },
@@ -3813,6 +3934,30 @@ function updateCardInPlace(card, p, vid) {
   if (img && imgUrl) img.src = imgUrl;
 }
 
+// Update fresh-hub card in-place when cart changes
+function updateFhgCardInPlace(card, p, vid) {
+  const qty   = cart[cartKey(p.id, vid)] || 0;
+  const v     = getVariant(p, vid);
+  if (!v) return;
+  const price = getPrice(v.priceTiers, qty || 1);
+  const mrp   = v.mrp && v.mrp > price ? v.mrp : null;
+  const off   = offPct(price, mrp);
+  const isOOS = !v?.inStock || (typeof p.stockQuantity === "number" && p.stockQuantity === 0);
+  const accent = "#2dd36f";
+  const bulkHintHtml = (() => {
+    const tiers = v.priceTiers;
+    if (!tiers || tiers.length <= 1) return "";
+    const sorted = [...tiers].sort((a,b) => a.minQty - b.minQty);
+    for (const t of sorted) {
+      if (t.minQty > (qty||1) && t.price < price)
+        return `<div style="font-size:8.5px;font-weight:800;color:#000;background:${accent};border-radius:5px;padding:2px 6px;margin-bottom:3px;display:inline-block">📦 ${t.minQty}+ @ ₹${t.price}</div>`;
+    }
+    return "";
+  })();
+  const inner = card.querySelector("div:not(.fhg-img)");
+  if (!inner) return;
+  inner.innerHTML = `<div style="font-size:10.5px;font-weight:700;color:#fff;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.name}</div><div style="font-size:11px;font-weight:900;color:${accent};margin-top:1px">₹${price}${mrp?"<span style=font-size:8.5px;color:rgba(255,255,255,.38);text-decoration:line-through;margin-left:3px>₹"+mrp+"</span>":""}</div>${bulkHintHtml}<div style="margin-top:auto;padding-top:4px">${isOOS?"<button class=add-btn style=opacity:.4;cursor:default disabled>OUT</button>":qty>0?"<div class=qty-ctrl><button onclick=event.stopPropagation();chQty("+p.id+",+vid+,-1)>−</button><span>"+qty+"</span><button onclick=event.stopPropagation();chQty("+p.id+",+vid+,1)>+</button></div>":"<button class=add-btn onclick=event.stopPropagation();chQty("+p.id+",+vid+,1)>ADD</button>"}</div>`;
+}
 function reRenderCurrentPage() {
   const fpOpen = document.getElementById('fpage')?.classList.contains('open');
   const splitVisible = document.getElementById('fpSplitBody')?.style.display !== 'none';
@@ -4285,6 +4430,8 @@ function chQty(pid, vid, delta) {
       if (card.innerHTML.includes("chQty("+pid+",'"+vid+"'")) updateCardInPlace(card, p, vid);
     });
   }
+    // Update fresh-hub fhg-cards in-place
+    document.querySelectorAll(`.fhg-card[data-pid="${pid}"][data-vid="${vid}"]`).forEach(card => { updateFhgCardInPlace(card, p, vid); });
 
   // Bounce pill + fly-to-cart animation
   const fc = document.getElementById('fcart');
@@ -4494,6 +4641,7 @@ function chQtyCart(key, delta) {
   if (fpOpen && window._openCatId && splitVisible) {
     const p = prods.find(x=>x.id===pid);
     if (p) document.querySelectorAll(`.pcard[data-pid="${pid}"][data-vid="${vid}"]`).forEach(card => updateCardInPlace(card, p, vid));
+    const p2 = prods.find(x=>x.id===pid); if (p2) document.querySelectorAll(`.fhg-card[data-pid="${pid}"][data-vid="${vid}"]`).forEach(c => updateFhgCardInPlace(c, p2, vid));
   } else {
     renderHome();
   }
