@@ -213,23 +213,25 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .fhb-orb2{position:absolute;bottom:-30px;right:30%;width:160px;height:160px;border-radius:50%;pointer-events:none;z-index:0;animation:fhbGlowPulse 5s ease-in-out infinite 1.5s;}
 
 /* ── Banner area ── */
-.fhb{position:relative;padding:22px 18px 18px;min-height:148px;cursor:pointer;overflow:hidden;}
-/* Real image — right half, fades into the gradient via a gradient mask */
+.fhb{position:relative;padding:22px 18px 18px;min-height:160px;cursor:pointer;overflow:hidden;}
+/* Real image — FULL bleed background of the banner */
 .fhb-img{
-  position:absolute;right:0;top:0;bottom:0;width:52%;
+  position:absolute;inset:0;
   pointer-events:none;z-index:1;
 }
 .fhb-img img{
-  width:100%;height:100%;object-fit:cover;object-position:center center;
+  width:100%;height:100%;object-fit:cover;object-position:center 35%;
   display:block;
 }
-/* Gradient mask: text side solid, image side fades in */
-.fhb-img::before{
+/* Dark gradient overlay — strong on left for text, fades to transparent right */
+.fhb-img::after{
   content:'';position:absolute;inset:0;z-index:2;
-  background:linear-gradient(to right, var(--fhb-grad-start,#061810) 0%, transparent 60%);
+  background:
+    linear-gradient(to right, rgba(6,24,16,.97) 0%, rgba(6,24,16,.88) 30%, rgba(6,24,16,.55) 60%, rgba(6,24,16,.15) 100%),
+    linear-gradient(to bottom, rgba(6,24,16,.3) 0%, transparent 30%, transparent 70%, rgba(6,24,16,.6) 100%);
 }
-/* Text content — always above image */
-.fhb-content{position:relative;z-index:3;max-width:58%;}
+/* Text content — always above everything */
+.fhb-content{position:relative;z-index:3;max-width:60%;}
 /* Pill tag */
 @keyframes fhbPulse{0%,100%{box-shadow:0 0 0 0 var(--fhb-pulse,rgba(45,211,111,.35));}60%{box-shadow:0 0 0 7px transparent;}}
 .fhb-tag{
@@ -239,10 +241,10 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
   margin-bottom:10px;animation:fhbPulse 2.8s ease-in-out infinite;
 }
 /* Title */
-.fhb-title{font-size:1.7rem;font-weight:900;color:#fff;letter-spacing:-.6px;line-height:1.1;}
+.fhb-title{font-size:1.75rem;font-weight:900;color:#fff;letter-spacing:-.6px;line-height:1.1;text-shadow:0 2px 12px rgba(0,0,0,.7);}
 .fhb-title em{font-style:normal;}
 /* Subtitle */
-.fhb-sub{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:7px;line-height:1.6;}
+.fhb-sub{font-size:.71rem;color:rgba(255,255,255,.75);margin-top:7px;line-height:1.6;text-shadow:0 1px 6px rgba(0,0,0,.6);}
 /* CTA */
 .fhb-cta{
   display:inline-flex;align-items:center;gap:6px;
@@ -3300,12 +3302,58 @@ function renderHome() {
       const tlast = tw.pop();
       const tmain = tw.join(' ');
 
-      // ── Pick fresh products (veggies/fruits first, fill rest) ──
-      const freshKws = ['vegetable','veggie','fruit','tomato','potato','onion','carrot','leafy','spinach','cabbage','gourd','brinjal','capsicum','paneer','banana','apple','mango','orange','lemon','cucumber','pumpkin','garlic','ginger','mushroom'];
-      const allActive = prods.filter(p => !p.disabled && defaultVariant(p)?.inStock !== false);
-      let freshProds = allActive.filter(p => freshKws.some(k => p.name.toLowerCase().includes(k) || (cats.find(c=>c.id===p.catId)?.name||'').toLowerCase().includes(k)));
+      // ── STRICT fruit & vegetable filter ──
+      // Two-pass: first try product name keywords (actual produce names)
+      // then try category name keywords (e.g. "Vegetables & Fruits", "Leafy Veg")
+      // NEVER includes: paneer, dairy, egg, meat, snack, biscuit, drink, oil, masala, etc.
+      const PRODUCE_NAMES = [
+        // Vegetables
+        'tomato','potato','onion','carrot','spinach','cabbage','cauliflower','broccoli',
+        'capsicum','chilli','brinjal','eggplant','cucumber','zucchini','pumpkin','gourd',
+        'bitter gourd','bottle gourd','ridge gourd','drumstick','ladyfinger','okra','bhindi',
+        'peas','beans','corn','methi','fenugreek','coriander','mint','curry leaf',
+        'ginger','garlic','radish','beetroot','sweet potato','yam','taro','arbi',
+        'mushroom','lettuce','celery','asparagus','leek','turnip','parsnip','kohlrabi',
+        // Fruits
+        'apple','mango','banana','orange','lemon','lime','grape','strawberry','blueberry',
+        'watermelon','melon','papaya','guava','pomegranate','pineapple','kiwi','cherry',
+        'pear','plum','peach','apricot','fig','date','coconut','jackfruit','litchi',
+        'avocado','dragonfruit','passion fruit','mulberry','raspberry','blackberry',
+        // Generic
+        'sabzi','tarkari','hara','hari','saag','palak','bhaji','sabzian'
+      ];
+      const PRODUCE_CAT_KWS = [
+        'vegetable','veggie','fruit','leafy','salad','greens','produce','fresh veg',
+        'indian veg','imported f','sabzi','tarkari','sabzian'
+      ];
+      // Keywords that DISQUALIFY a product (never fruit/veg even if category matches)
+      const EXCLUDE_NAMES = [
+        'paneer','cheese','butter','ghee','milk','curd','yogurt','cream','khoa','khoya',
+        'ice cream','kulfi','lassi','egg','chicken','meat','fish','mutton','prawn',
+        'chips','biscuit','namkeen','snack','chocolate','candy','noodle','pasta',
+        'juice','drink','soda','cola','water','oil','masala','spice','pickle',
+        'bread','roti','flour','atta','rice','dal','lentil','rajma','chana'
+      ];
+      const isExcluded = p => EXCLUDE_NAMES.some(k => p.name.toLowerCase().includes(k));
+      const catName    = p => (cats.find(c => c.id === p.catId)?.name || '').toLowerCase();
+      const allActive  = prods.filter(p => !p.disabled && defaultVariant(p)?.inStock !== false);
+
+      let freshProds = allActive.filter(p => {
+        if (isExcluded(p)) return false;
+        const nm = p.name.toLowerCase();
+        const cn = catName(p);
+        // Pass if product name contains a produce keyword OR category is a produce category
+        return PRODUCE_NAMES.some(k => nm.includes(k)) || PRODUCE_CAT_KWS.some(k => cn.includes(k));
+      });
+
+      // Fallback: if store has no tagged produce, show all non-excluded active products
+      if (freshProds.length < 3) {
+        freshProds = allActive.filter(p => !isExcluded(p));
+      }
+      // Last resort
       if (freshProds.length < 3) freshProds = allActive;
-      const display6 = freshProds.slice(0, 6);
+
+      const display6   = freshProds.slice(0, 6);
       const totalFresh = freshProds.length;
 
       // ── Build 6-product cards ──
@@ -3342,10 +3390,9 @@ function renderHome() {
         <div class="fhb" onclick="openCatsPage()">
           <div class="fhb-img">
             <img src="${bannerImg}" alt="fresh produce">
-            <div class="fhb-img-mask" style="position:absolute;inset:0;background:linear-gradient(to right,${th.gradStart} 0%,${th.gradStart}cc 18%,transparent 58%),linear-gradient(to top,${th.gradStart}99 0%,transparent 40%);z-index:2;"></div>
           </div>
           <div class="fhb-content">
-            <div class="fhb-tag" style="background:${th.tagBg};border:1px solid ${th.tagBdr};color:${th.tagClr};--fhb-pulse:${th.pulse}">${tag}</div>
+            <div class="fhb-tag" style="background:${th.tagBg};border:1px solid ${th.tagBdr};color:${th.tagClr}">${tag}</div>
             <div class="fhb-title">${tmain ? tmain + ' ' : ''}<em style="color:${th.accent}">${tlast}</em></div>
             <div class="fhb-sub">${subtitle}</div>
             <div class="fhb-cta" style="background:${th.accent}">Shop Now →</div>
