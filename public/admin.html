@@ -3264,7 +3264,7 @@ async function renderSettings() {
           <div class="form-group">
             <label>Banner Title</label>
             <input type="text" id="fhTitle" placeholder="Daily Fresh Need" value="${(s.freshHub&&s.freshHub.title)||'Daily Fresh Need'}">
-            <div class="form-hint">Last word gets the accent colour automatically</div>
+            <div class="form-hint">Last word automatically gets the accent colour</div>
           </div>
           <div class="form-group">
             <label>Subtitle</label>
@@ -3275,8 +3275,14 @@ async function renderSettings() {
             <input type="text" id="fhTag" placeholder="🌱 Fresh &amp; Daily" value="${(s.freshHub&&s.freshHub.tag)||'🌱 Fresh & Daily'}">
           </div>
           <div class="form-group">
-            <label>Decoration Emoji (right side of banner)</label>
-            <input type="text" id="fhDeco" placeholder="🥦" value="${(s.freshHub&&s.freshHub.decoEmoji)||'🥦'}" style="font-size:1.4rem;width:70px">
+            <label>Banner Background Image</label>
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="flex:1">
+                <input type="text" id="fhBannerImg" placeholder="/uploads/unnamed.jpg" value="${(s.freshHub&&s.freshHub.bannerImage)||'/uploads/unnamed.jpg'}">
+                <div class="form-hint">URL of image shown on right side of banner. Upload via Products → any product image uploader, then paste URL here.</div>
+              </div>
+              ${(s.freshHub&&s.freshHub.bannerImage) ? `<img src="${s.freshHub.bannerImage}" style="width:64px;height:48px;border-radius:8px;object-fit:cover;border:1.5px solid var(--border);flex-shrink:0">` : ''}
+            </div>
           </div>
           <div class="form-group">
             <label>Colour Theme</label>
@@ -3389,13 +3395,13 @@ async function saveHomeLayout() {
 async function saveFreshHub() {
   const theme = document.querySelector('input[name="fhTheme"]:checked')?.value || 'forest';
   const freshHub = {
-    title:      (document.getElementById('fhTitle')?.value||'').trim() || 'Daily Fresh Need',
-    subtitle:   (document.getElementById('fhSub')?.value||'').trim()   || 'Farm fresh groceries, delivered to your door.',
-    tag:        (document.getElementById('fhTag')?.value||'').trim()   || '🌱 Fresh & Daily',
-    decoEmoji:  (document.getElementById('fhDeco')?.value||'').trim()  || '🥦',
+    title:       (document.getElementById('fhTitle')?.value||'').trim()      || 'Daily Fresh Need',
+    subtitle:    (document.getElementById('fhSub')?.value||'').trim()        || 'Farm fresh groceries, delivered to your door.',
+    tag:         (document.getElementById('fhTag')?.value||'').trim()        || '🌱 Fresh & Daily',
+    bannerImage: (document.getElementById('fhBannerImg')?.value||'').trim()  || '/uploads/unnamed.jpg',
     theme,
-    flashSale:  document.getElementById('fhFlash')?.checked || false,
-    flashLabel: (document.getElementById('fhFlashLabel')?.value||'').trim() || '⚡ Flash Sale',
+    flashSale:   document.getElementById('fhFlash')?.checked || false,
+    flashLabel:  (document.getElementById('fhFlashLabel')?.value||'').trim() || '⚡ Flash Sale',
   };
   const r = await fetch('/api/admin/settings',{method:'PUT',headers:ah(),body:JSON.stringify({freshHub})});
   if (r.ok) toast('✅ Fresh Hub saved!'); else toast('❌ Failed to save');
