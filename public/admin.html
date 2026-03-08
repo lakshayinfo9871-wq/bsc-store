@@ -3258,9 +3258,55 @@ async function renderSettings() {
           <button class="btn btn-green" style="width:100%;justify-content:center;margin-top:16px" onclick="saveHomeLayout()">💾 Save Layout</button>
         </div>
       </div>
+      <div class="card" style="align-self:start;margin-top:1.2rem">
+        <div class="card-header"><h2>🥦 Fresh Hub Banner</h2><span style="font-size:.75rem;color:var(--text3)">Customers see this on home screen</span></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>Banner Title</label>
+            <input type="text" id="fhTitle" placeholder="Daily Fresh Need" value="${(s.freshHub&&s.freshHub.title)||'Daily Fresh Need'}">
+            <div class="form-hint">Last word gets the accent colour automatically</div>
+          </div>
+          <div class="form-group">
+            <label>Subtitle</label>
+            <input type="text" id="fhSub" placeholder="Farm fresh groceries, delivered to your door." value="${(s.freshHub&&s.freshHub.subtitle)||'Farm fresh groceries, delivered to your door.'}">
+          </div>
+          <div class="form-group">
+            <label>Pill Tag Label</label>
+            <input type="text" id="fhTag" placeholder="🌱 Fresh &amp; Daily" value="${(s.freshHub&&s.freshHub.tag)||'🌱 Fresh & Daily'}">
+          </div>
+          <div class="form-group">
+            <label>Decoration Emoji (right side of banner)</label>
+            <input type="text" id="fhDeco" placeholder="🥦" value="${(s.freshHub&&s.freshHub.decoEmoji)||'🥦'}" style="font-size:1.4rem;width:70px">
+          </div>
+          <div class="form-group">
+            <label>Colour Theme</label>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px">
+              ${[
+                {id:'forest',label:'🌿 Forest',bg:'#0c2d14',accent:'#2dd36f'},
+                {id:'ocean', label:'🌊 Ocean', bg:'#073048',accent:'#22d3ee'},
+                {id:'amber', label:'🍊 Amber', bg:'#2e1c08',accent:'#fbbf24'},
+                {id:'berry', label:'🫐 Berry', bg:'#1e1038',accent:'#a78bfa'},
+              ].map(t=>`<label style="cursor:pointer;display:block">
+                <input type="radio" name="fhTheme" value="${t.id}" ${(s.freshHub?.theme||'forest')===t.id?'checked':''} style="display:none" onchange="document.querySelectorAll('.fh-swatch').forEach(x=>x.style.outline='none');this.nextElementSibling.style.outline='3px solid ${t.accent}'">
+                <div class="fh-swatch" style="background:${t.bg};border-radius:10px;padding:10px 6px;text-align:center;font-size:.72rem;font-weight:700;color:#fff;border:1.5px solid #e0e0e0;transition:outline .15s;${(s.freshHub?.theme||'forest')===t.id?'outline:3px solid '+t.accent:''}">${t.label}</div>
+              </label>`).join('')}
+            </div>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;margin-bottom:10px">
+            <input type="checkbox" id="fhFlash" ${s.freshHub?.flashSale?'checked':''} style="width:16px;height:16px;accent-color:var(--green)">
+            <span style="font-size:.85rem;font-weight:700">⚡ Show Flash Sale Badge on Banner</span>
+          </label>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Flash Sale Badge Text</label>
+            <input type="text" id="fhFlashLabel" placeholder="⚡ Flash Sale" value="${(s.freshHub&&s.freshHub.flashLabel)||'⚡ Flash Sale'}">
+          </div>
+          <button class="btn btn-green" style="width:100%;justify-content:center" onclick="saveFreshHub()">💾 Save Fresh Hub</button>
+        </div>
+      </div>
     </div>`;
   // Init drag-and-drop for home layout
-  _initHomeLayoutDnd(s.homeLayout || ['personalised','banners','featured','new','categories','cat_strips'], s.homeLayoutHidden || []);
+  _initHomeLayoutDnd(s.homeLayout || ['personalised','banners','featured','new','fresh_hub','categories','cat_strips'], s.homeLayoutHidden || []);
   // Init category order dnd
   const cats2 = await (await fetch('/api/admin/categories',{headers:ah()})).json();
   _initCatOrderDnd(cats2, s.catOrder || []);
@@ -3272,6 +3318,7 @@ const _HL_LABELS = {
   banners:       { icon:'🖼', label:'Image Banners', sub:'Your uploaded promo banners' },
   featured:      { icon:'⭐', label:'Featured Products', sub:'Products marked as featured' },
   new:           { icon:'✨', label:'New Arrivals', sub:'Products marked as new' },
+  fresh_hub:     { icon:'🥦', label:'Fresh Hub Section', sub:'Category grid with animated banner' },
   categories:    { icon:'🏷', label:'Category Grid', sub:'"Shop by Category" tile grid' },
   cat_strips:    { icon:'📦', label:'Category Product Rows', sub:'Horizontal product strips per category' },
 };
@@ -3337,6 +3384,21 @@ async function saveHomeLayout() {
   const catOrder = [...catEl.querySelectorAll('[data-id]')].map(r=>parseInt(r.dataset.id));
   const r = await fetch('/api/admin/settings',{method:'PUT',headers:ah(),body:JSON.stringify({homeLayout,homeLayoutHidden,catOrder})});
   if (r.ok) toast('✅ Home layout saved!'); else toast('❌ Failed to save');
+}
+
+async function saveFreshHub() {
+  const theme = document.querySelector('input[name="fhTheme"]:checked')?.value || 'forest';
+  const freshHub = {
+    title:      (document.getElementById('fhTitle')?.value||'').trim() || 'Daily Fresh Need',
+    subtitle:   (document.getElementById('fhSub')?.value||'').trim()   || 'Farm fresh groceries, delivered to your door.',
+    tag:        (document.getElementById('fhTag')?.value||'').trim()   || '🌱 Fresh & Daily',
+    decoEmoji:  (document.getElementById('fhDeco')?.value||'').trim()  || '🥦',
+    theme,
+    flashSale:  document.getElementById('fhFlash')?.checked || false,
+    flashLabel: (document.getElementById('fhFlashLabel')?.value||'').trim() || '⚡ Flash Sale',
+  };
+  const r = await fetch('/api/admin/settings',{method:'PUT',headers:ah(),body:JSON.stringify({freshHub})});
+  if (r.ok) toast('✅ Fresh Hub saved!'); else toast('❌ Failed to save');
 }
 
 async function saveSettings() {

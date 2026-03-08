@@ -198,80 +198,63 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 
 /* ══════════════════════ FRESH HUB SECTION ══════════════════════ */
 .fresh-hub{margin:18px 14px 0;}
-.fresh-hub-banner{
-  border-radius:20px;overflow:hidden;position:relative;
-  background:linear-gradient(135deg,#082a12 0%,#0f3d1c 40%,#0b2e15 100%);
-  padding:20px 18px 18px;cursor:pointer;
-  border:1px solid rgba(45,211,111,.15);
-}
-.fresh-hub-banner::before{
-  content:'';position:absolute;top:-40px;right:-30px;
-  width:180px;height:180px;
-  background:radial-gradient(circle,rgba(45,211,111,.22) 0%,transparent 70%);
-  pointer-events:none;
-}
-.fresh-hub-deco{
-  position:absolute;right:14px;top:50%;transform:translateY(-50%);
-  font-size:4.5rem;opacity:.18;line-height:1;pointer-events:none;
-  filter:drop-shadow(0 0 12px rgba(45,211,111,.4));
-}
-.fresh-hub-tag{
-  display:inline-flex;align-items:center;gap:4px;
-  background:rgba(45,211,111,.18);border:1px solid rgba(45,211,111,.3);
-  border-radius:20px;padding:3px 10px;
-  font-size:.58rem;font-weight:800;color:var(--green);
-  letter-spacing:.06em;text-transform:uppercase;margin-bottom:9px;
-}
-.fresh-hub-title{font-size:1.55rem;font-weight:900;color:#fff;letter-spacing:-.6px;line-height:1.15;}
-.fresh-hub-title em{font-style:normal;color:var(--green);}
-.fresh-hub-sub{font-size:.72rem;color:rgba(255,255,255,.5);margin-top:6px;line-height:1.5;}
-.fresh-hub-sub strong{color:rgba(255,255,255,.8);font-weight:700;}
-.fresh-hub-cta{
-  display:inline-flex;align-items:center;gap:6px;
-  margin-top:13px;background:var(--green);color:#000;
-  border-radius:10px;padding:7px 16px;
-  font-size:.72rem;font-weight:900;letter-spacing:.03em;
-}
-/* Sliding dots on banner (decorative) */
-.fresh-hub-dots{display:flex;gap:4px;margin-top:10px;}
-.fresh-hub-dot{width:16px;height:4px;border-radius:2px;background:var(--green);}
-.fresh-hub-dot.sm{width:5px;background:rgba(255,255,255,.25);}
 
-/* Category grid */
-.fresh-hub-grid{
-  display:grid;grid-template-columns:repeat(4,1fr);
-  gap:9px;margin-top:10px;
-}
-.fresh-cat{
-  border-radius:14px;overflow:hidden;cursor:pointer;
-  background:var(--bg2);border:1px solid var(--border);
-  transition:transform .15s;
-  display:flex;flex-direction:column;
-}
-.fresh-cat:active{transform:scale(.93);}
-.fresh-cat-img{
-  aspect-ratio:1;overflow:hidden;
-  background:var(--bg3);
-  display:flex;align-items:center;justify-content:center;
-  position:relative;
-}
-.fresh-cat-img img{width:100%;height:100%;object-fit:cover;}
-.fresh-cat-img .fci-emoji{font-size:1.75rem;line-height:1;}
-/* Colored tint overlays per index */
-.fci-tint-0{background:linear-gradient(145deg,#0d2a1a,#071a10);}
-.fci-tint-1{background:linear-gradient(145deg,#1a2a0d,#101a07);}
-.fci-tint-2{background:linear-gradient(145deg,#2a1a0d,#1a0d07);}
-.fci-tint-3{background:linear-gradient(145deg,#0d1a2a,#071017);}
-.fci-tint-4{background:linear-gradient(145deg,#2a0d1a,#1a0710);}
-.fci-tint-5{background:linear-gradient(145deg,#1a2a1a,#0d170d);}
-.fci-tint-6{background:linear-gradient(145deg,#1a1a2a,#0d0d1a);}
-.fci-tint-7{background:linear-gradient(145deg,#2a2a0d,#1a1a07);}
-.fresh-cat-name{
-  font-size:10px;font-weight:700;
-  padding:5px 4px 7px;text-align:center;
-  line-height:1.25;color:var(--text);
-  background:var(--bg2);
-}
+/* ── Banner ── */
+.fhb{border-radius:20px;overflow:hidden;position:relative;padding:22px 18px 20px;cursor:pointer;min-height:136px;border:1px solid rgba(45,211,111,.18);}
+/* Moving diagonal lines */
+@keyframes fhbLines{from{transform:translateX(0)}to{transform:translateX(72px)}}
+.fhb-lines{position:absolute;inset:-10px;background:repeating-linear-gradient(72deg,transparent 0,transparent 26px,rgba(255,255,255,.03) 26px,rgba(255,255,255,.03) 27px);animation:fhbLines 7s linear infinite;pointer-events:none;will-change:transform;}
+/* Glow orb on right */
+@keyframes fhbGlow{0%,100%{opacity:.55;transform:translateY(-50%) scale(1);}50%{opacity:1;transform:translateY(-50%) scale(1.18);}}
+.fhb-glow{position:absolute;right:-20px;top:50%;width:170px;height:170px;border-radius:50%;animation:fhbGlow 3.2s ease-in-out infinite;pointer-events:none;will-change:opacity,transform;}
+/* Second smaller glow pulse */
+@keyframes fhbGlow2{0%,100%{opacity:.25;transform:translate(-50%,-50%) scale(1);}50%{opacity:.5;transform:translate(-50%,-50%) scale(1.3);}}
+.fhb-glow2{position:absolute;left:50%;top:30%;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(45,211,111,.15) 0%,transparent 70%);animation:fhbGlow2 5s ease-in-out infinite 1.2s;pointer-events:none;}
+/* Pill tag */
+@keyframes fhbPulse{0%,100%{box-shadow:0 0 0 0 rgba(45,211,111,.3);}60%{box-shadow:0 0 0 6px rgba(45,211,111,0);}}
+.fhb-tag{display:inline-flex;align-items:center;gap:4px;background:rgba(45,211,111,.15);border:1px solid rgba(45,211,111,.28);border-radius:20px;padding:3px 10px;font-size:.58rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin-bottom:9px;animation:fhbPulse 2.5s ease-in-out infinite;}
+/* Title */
+.fhb-title{font-size:1.65rem;font-weight:900;color:#fff;letter-spacing:-.7px;line-height:1.1;position:relative;z-index:1;}
+.fhb-title em{font-style:normal;}
+/* Subtitle */
+.fhb-sub{font-size:.71rem;color:rgba(255,255,255,.5);margin-top:7px;line-height:1.55;max-width:62%;}
+/* CTA row */
+.fhb-cta-row{display:flex;align-items:center;gap:9px;margin-top:13px;}
+.fhb-cta{display:inline-flex;align-items:center;gap:5px;background:var(--green);color:#000;border-radius:9px;padding:6px 15px;font-size:.7rem;font-weight:900;letter-spacing:.03em;box-shadow:0 2px 12px rgba(45,211,111,.35);}
+/* Dot row */
+.fhb-dots{display:flex;gap:4px;margin-top:10px;}
+.fhb-dot{height:3px;border-radius:2px;}
+.fhb-dot.lg{width:18px;}
+.fhb-dot.sm{width:5px;opacity:.25;}
+/* Decoration cluster - right side */
+.fhb-deco{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:0;pointer-events:none;z-index:2;}
+.fhb-deco-inner{font-size:3.8rem;line-height:1;filter:drop-shadow(0 4px 18px rgba(45,211,111,.5));animation:fhbGlow2 4s ease-in-out infinite;}
+.fhb-deco-inner2{font-size:1.4rem;display:flex;gap:4px;margin-top:-4px;opacity:.7;}
+/* Flash sale badge */
+@keyframes fhbFlash{0%,100%{transform:scale(1)rotate(-2deg);}50%{transform:scale(1.08)rotate(-2deg);}}
+.fhb-flash{position:absolute;top:10px;right:10px;background:linear-gradient(135deg,#ff4500,#ff6b35);color:#fff;font-size:.58rem;font-weight:900;padding:4px 9px;border-radius:20px;animation:fhbFlash .9s ease-in-out infinite;box-shadow:0 2px 10px rgba(255,69,0,.45);letter-spacing:.05em;text-transform:uppercase;z-index:5;}
+
+/* ── Category Grid ── */
+.fhg{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:10px;}
+.fhg-card{border-radius:14px;overflow:hidden;cursor:pointer;background:var(--bg2);border:1px solid var(--border);display:flex;flex-direction:column;position:relative;transition:transform .15s;}
+.fhg-card:active{transform:scale(.93);}
+.fhg-img{aspect-ratio:1;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;}
+.fhg-img img{width:100%;height:100%;object-fit:cover;}
+.fhg-emoji{font-size:1.85rem;line-height:1;}
+.fhg-count{position:absolute;bottom:4px;right:4px;font-size:.48rem;font-weight:800;background:rgba(0,0,0,.6);color:rgba(255,255,255,.75);border-radius:4px;padding:1px 5px;backdrop-filter:blur(4px);}
+.fhg-name{font-size:10.5px;font-weight:700;padding:5px 4px 7px;text-align:center;line-height:1.25;color:var(--text);}
+/* 8 tinted bg variants */
+.fhg-t0{background:linear-gradient(145deg,#0a2218,#051410);}
+.fhg-t1{background:linear-gradient(145deg,#1a2a0d,#101a07);}
+.fhg-t2{background:linear-gradient(145deg,#2a1a0d,#1a0d07);}
+.fhg-t3{background:linear-gradient(145deg,#0d1a2a,#071017);}
+.fhg-t4{background:linear-gradient(145deg,#2a0d1a,#1a0710);}
+.fhg-t5{background:linear-gradient(145deg,#1a2a1a,#0d170d);}
+.fhg-t6{background:linear-gradient(145deg,#1a1a2a,#0d0d1a);}
+.fhg-t7{background:linear-gradient(145deg,#2a2a0d,#1a1a07);}
+
+/* Theme colour tokens — set inline on .fhb via JS */
+/* forest: green | ocean: cyan | amber: orange | berry: purple */
 
 /* ══════════════════════ PRODUCT STRIP ══════════════════════ */
 .pstrip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;align-items:stretch;}
@@ -3221,51 +3204,71 @@ function renderHome() {
     personalised: () => '',
     fresh_hub: () => {
       if (!orderedCats.length) return '';
-      // Prioritise fresh/produce categories by keyword match
-      const freshKws = ['vegetable','fruit','paneer','dairy','egg','fresh','leafy','potato','onion','tomato','frozen','produce','salad','herbs','mushroom','noodle','chaap','pickle'];
+
+      // Theme definitions
+      const themes = {
+        forest: { grad:'linear-gradient(135deg,#061810,#0c2d14,#071a0c)', glow:'rgba(45,211,111,.45)', tag:'color:#2dd36f', title:'color:#ffffff', titleEm:'color:#2dd36f', dot:'background:#2dd36f', tagBg:'background:rgba(45,211,111,.15);border-color:rgba(45,211,111,.28)', deco:'🥦' },
+        ocean:  { grad:'linear-gradient(135deg,#041520,#073048,#041828)', glow:'rgba(34,211,238,.4)',  tag:'color:#22d3ee', title:'color:#ffffff', titleEm:'color:#22d3ee', dot:'background:#22d3ee', tagBg:'background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.25)', deco:'🥬' },
+        amber:  { grad:'linear-gradient(135deg,#180e04,#2e1c08,#1a1005)', glow:'rgba(251,191,36,.4)',  tag:'color:#fbbf24', title:'color:#ffffff', titleEm:'color:#fbbf24', dot:'background:#fbbf24', tagBg:'background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.25)', deco:'🌽' },
+        berry:  { grad:'linear-gradient(135deg,#100820,#1e1038,#120a24)', glow:'rgba(167,139,250,.4)', tag:'color:#a78bfa', title:'color:#ffffff', titleEm:'color:#a78bfa', dot:'background:#a78bfa', tagBg:'background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.25)', deco:'🫐' },
+      };
+      const fh = settings.freshHub || {};
+      const th = themes[fh.theme] || themes.forest;
+      const title = fh.title || 'Daily Fresh Need';
+      const subtitle = fh.subtitle || 'Farm fresh groceries, delivered to your door.';
+      const tag = fh.tag || '🌱 Fresh & Daily';
+      const flashOn = !!fh.flashSale;
+      const flashLabel = fh.flashLabel || '⚡ Flash Sale';
+
+      // Split title: last word gets accent colour
+      const titleWords = title.trim().split(' ');
+      const titleLast = titleWords.pop();
+      const titleMain = titleWords.join(' ');
+
+      // Pick categories: favour "fresh" keywords, fill to 8
+      const freshKws = ['vegetable','fruit','paneer','dairy','egg','fresh','leafy','potato','onion','tomato','frozen','produce','mushroom','noodle','chaap','greens','herbs','salad'];
       let freshCats = orderedCats.filter(c => freshKws.some(k => c.name.toLowerCase().includes(k)));
-      // Fill up to 8 slots with remaining cats if needed
-      if (freshCats.length < 4) {
-        const extra = orderedCats.filter(c => !freshCats.includes(c));
-        freshCats = [...freshCats, ...extra];
-      }
+      if (freshCats.length < 4) freshCats = [...freshCats, ...orderedCats.filter(c => !freshCats.includes(c))];
       const displayCats = freshCats.slice(0, 8);
 
-      const catEmojiMap = [
-        ['frozen','❄️'],['leafy','🥬'],['vegetable','🥦'],['fruit','🍎'],
-        ['import','🥑'],['potato','🥔'],['onion','🧅'],['paneer','🧀'],
-        ['dairy','🥛'],['egg','🥚'],['noodle','🍜'],['chaap','🍖'],
-        ['snack','🍿'],['drink','🥤'],['bakery','🍞'],['chicken','🍗'],['meat','🥩'],
-      ];
-      const getEmoji = name => {
-        const n = name.toLowerCase();
-        return (catEmojiMap.find(([k]) => n.includes(k)) || ['','🌿'])[1];
-      };
+      // Emoji fallbacks per category name
+      const emojiMap=[['frozen','❄️'],['leafy','🥬'],['vegetable','🥦'],['fruit','🍎'],['import','🥑'],['potato','🥔'],['onion','🧅'],['paneer','🧀'],['dairy','🥛'],['egg','🥚'],['noodle','🍜'],['chaap','🍖'],['snack','🍿'],['drink','🥤'],['bakery','🍞'],['chicken','🍗'],['meat','🥩'],['rice','🌾'],['oil','🫙'],['masala','🌶️']];
+      const getEmoji = n => (emojiMap.find(([k]) => n.toLowerCase().includes(k)) || ['','🌿'])[1];
 
-      const gridItems = displayCats.map((c, i) => `
-        <div class="fresh-cat" onclick="openFP(${c.id})">
-          <div class="fresh-cat-img fci-tint-${i % 8}">
-            ${c.imageUrl
-              ? `<img src="${c.imageUrl}" loading="lazy">`
-              : `<span class="fci-emoji">${getEmoji(c.name)}</span>`
-            }
+      const grid = displayCats.map((c, i) => {
+        const cnt = prods.filter(p => p.catId === c.id && !p.disabled).length;
+        return `<div class="fhg-card" onclick="openFP(${c.id})">
+          <div class="fhg-img fhg-t${i % 8}">
+            ${c.imageUrl ? `<img src="${c.imageUrl}" loading="lazy">` : `<span class="fhg-emoji">${getEmoji(c.name)}</span>`}
+            ${cnt > 0 ? `<span class="fhg-count">${cnt > 99 ? '99+' : cnt} items</span>` : ''}
           </div>
-          <div class="fresh-cat-name">${c.name}</div>
-        </div>`).join('');
+          <div class="fhg-name">${c.name}</div>
+        </div>`;
+      }).join('');
 
       return `<div class="fresh-hub">
-        <div class="fresh-hub-banner" onclick="openCatsPage()">
-          <div class="fresh-hub-deco">🥦</div>
-          <div class="fresh-hub-tag">🌱 Daily Essentials</div>
-          <div class="fresh-hub-title">Daily <em>Fresh</em> Need</div>
-          <div class="fresh-hub-sub"><strong>Wholesale rates. Better margins.</strong><br>Fresh daily.</div>
-          <div class="fresh-hub-dots">
-            <div class="fresh-hub-dot"></div>
-            <div class="fresh-hub-dot sm"></div>
-            <div class="fresh-hub-dot sm"></div>
+        <div class="fhb" style="background:${th.grad};border-color:rgba(255,255,255,.06)" onclick="openCatsPage()">
+          <div class="fhb-lines"></div>
+          <div class="fhb-glow" style="background:radial-gradient(circle,${th.glow} 0%,transparent 70%)"></div>
+          <div class="fhb-glow2"></div>
+          ${flashOn ? `<div class="fhb-flash">${flashLabel}</div>` : ''}
+          <div class="fhb-tag" style="${th.tagBg};${th.tag}">${tag}</div>
+          <div class="fhb-title" style="${th.title}">${titleMain ? titleMain + ' ' : ''}<em style="${th.titleEm}">${titleLast}</em></div>
+          <div class="fhb-sub">${subtitle}</div>
+          <div class="fhb-cta-row">
+            <div class="fhb-cta" style="background:${th.dot.replace('background:','')};box-shadow:0 2px 12px ${th.glow}">Shop Now →</div>
+          </div>
+          <div class="fhb-dots">
+            <div class="fhb-dot lg" style="${th.dot}"></div>
+            <div class="fhb-dot sm" style="${th.dot}"></div>
+            <div class="fhb-dot sm" style="${th.dot}"></div>
+          </div>
+          <div class="fhb-deco">
+            <div class="fhb-deco-inner">${fh.decoEmoji || th.deco}</div>
+            <div class="fhb-deco-inner2">🍎 🥕 🍋</div>
           </div>
         </div>
-        <div class="fresh-hub-grid">${gridItems}</div>
+        <div class="fhg">${grid}</div>
       </div>`;
     },
   };
