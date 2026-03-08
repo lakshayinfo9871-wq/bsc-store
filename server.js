@@ -895,7 +895,16 @@ app.get('/api/store', async (req, res) => {
           closeTime: settings.shopStatus?.closeTime || '22:00',
           closedMessage: settings.shopStatus?.closedMessage || "We're closed right now. Orders open at",
         },
-        homeLayout: settings.homeLayout || ['personalised','banners','featured','new','categories','cat_strips'],
+        homeLayout: (() => {
+          const base = settings.homeLayout || ['personalised','banners','featured','new','categories','cat_strips'];
+          // Inject fresh_hub after 'new' (or before 'categories') if not already present
+          if (!base.includes('fresh_hub')) {
+            const idx = base.indexOf('new');
+            if (idx !== -1) base.splice(idx + 1, 0, 'fresh_hub');
+            else { const ci = base.indexOf('categories'); base.splice(ci !== -1 ? ci : base.length, 0, 'fresh_hub'); }
+          }
+          return base;
+        })(),
         homeLayoutHidden: settings.homeLayoutHidden || [],
         catOrder: settings.catOrder || [],
       }
