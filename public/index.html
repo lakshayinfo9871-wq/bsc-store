@@ -3370,25 +3370,13 @@ function renderHome() {
 
       // ── Split last word for accent colour ──
       const tw    = title.trim().split(' ');
-      const tlast = tw.pop() || '';
+      const tlast = tw.pop();
       const tmain = tw.join(' ');
 
-      // ── Pick ONLY Fruits & Vegetables category products ──
-      const freshKws = ['vegetable','veggie','fruit','tomato','potato','onion','carrot','leafy','spinach','cabbage','gourd','brinjal','capsicum','banana','apple','mango','orange','lemon','cucumber','pumpkin','garlic','ginger','mushroom','greens','sabzi'];
+      // ── Pick fresh products (veggies/fruits first, fill rest) ──
+      const freshKws = ['vegetable','veggie','fruit','tomato','potato','onion','carrot','leafy','spinach','cabbage','gourd','brinjal','capsicum','paneer','banana','apple','mango','orange','lemon','cucumber','pumpkin','garlic','ginger','mushroom'];
       const allActive = prods.filter(p => !p.disabled && defaultVariant(p)?.inStock !== false);
-      // First try: match by category name containing 'vegetable', 'fruit', 'fresh', or 'sabzi'
-      const freshCatIds = cats
-        .filter(c => /vegetable|fruit|fresh|sabzi|produce/i.test(c.name))
-        .map(c => c.id);
-      let freshProds = allActive.filter(p =>
-        freshCatIds.includes(p.catId) ||
-        freshKws.some(k => (cats.find(c=>c.id===p.catId)?.name||'').toLowerCase().includes(k))
-      );
-      // Fallback: match by product name keywords if no category match
-      if (freshProds.length < 3) {
-        freshProds = allActive.filter(p => freshKws.some(k => p.name.toLowerCase().includes(k)));
-      }
-      // Final fallback: show all active products
+      let freshProds = allActive.filter(p => freshKws.some(k => p.name.toLowerCase().includes(k) || (cats.find(c=>c.id===p.catId)?.name||'').toLowerCase().includes(k)));
       if (freshProds.length < 3) freshProds = allActive;
       const display6 = freshProds.slice(0, 6);
       const totalFresh = freshProds.length;
@@ -3443,12 +3431,12 @@ function renderHome() {
         <div class="fhb" onclick="openCatsPage()">
           <div class="fhb-img">
             <img src="${bannerImg}" alt="fresh produce">
-            <div class="fhb-img-mask" style="position:absolute;inset:0;background:linear-gradient(to right,${th.gradStart} 0%,${th.gradStart}ee 35%,${th.gradStart}aa 55%,transparent 80%),linear-gradient(to top,${th.gradStart}cc 0%,transparent 45%);z-index:2;"></div>
+            <div class="fhb-img-mask" style="position:absolute;inset:0;background:linear-gradient(to right,${th.gradStart} 0%,${th.gradStart}cc 18%,transparent 58%),linear-gradient(to top,${th.gradStart}99 0%,transparent 40%);z-index:2;"></div>
           </div>
-          <div class="fhb-content" style="position:relative;z-index:4;">
+          <div class="fhb-content">
             <div class="fhb-tag" style="background:${th.tagBg};border:1px solid ${th.tagBdr};color:${th.tagClr};--fhb-pulse:${th.pulse}">${tag}</div>
-            <div class="fhb-title" style="text-shadow:0 2px 16px rgba(0,0,0,.95),0 0 40px rgba(0,0,0,.8)">${tmain ? tmain + ' ' : ''}<em style="color:${th.accent}">${tlast}</em></div>
-            <div class="fhb-sub" style="text-shadow:0 1px 8px rgba(0,0,0,.9)">${subtitle}</div>
+            <div class="fhb-title">${tmain ? tmain + ' ' : ''}<em style="color:${th.accent}">${tlast}</em></div>
+            <div class="fhb-sub">${subtitle}</div>
             <div class="fhb-cta" style="background:${th.accent}">Shop Now →</div>
             <div class="fhb-dots">
               <div class="fhb-dot a" style="background:${th.accent}"></div>
