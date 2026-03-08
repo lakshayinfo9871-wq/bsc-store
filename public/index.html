@@ -107,6 +107,53 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .search-bar input{flex:1;background:none;border:none;outline:none;font-size:13.5px;color:var(--text);}
 .search-bar input::placeholder{color:var(--text3);}
 .search-icon{color:var(--text3);font-size:.95rem;}
+
+/* ── SEARCH SUGGESTIONS DROPDOWN ── */
+.search-sugg{
+  position:absolute;left:0;right:0;top:100%;margin-top:5px;
+  background:var(--bg2);border:1.5px solid var(--border);
+  border-radius:12px;z-index:600;overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+  max-height:0;opacity:0;
+  transition:max-height .22s cubic-bezier(.4,0,.2,1),opacity .18s ease;
+  pointer-events:none;
+}
+.search-sugg.open{max-height:340px;opacity:1;pointer-events:auto;overflow-y:auto;}
+.ss-item{display:flex;align-items:center;gap:10px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
+.ss-item:last-child{border:none;}
+.ss-item:active{background:var(--bg3);}
+.ss-img{width:36px;height:36px;border-radius:8px;background:var(--bg3);object-fit:contain;padding:3px;flex-shrink:0;}
+.ss-img-ph{width:36px;height:36px;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.ss-name{font-size:.83rem;font-weight:600;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ss-price{font-size:.78rem;font-weight:900;color:var(--green);flex-shrink:0;}
+.ss-more{padding:9px 13px;font-size:.78rem;color:var(--green);font-weight:700;text-align:center;cursor:pointer;border-top:1px solid var(--border);}
+.ss-more:active{background:var(--bg3);}
+
+/* ── LOW STOCK BADGE ── */
+.pc-lowstock-badge{position:absolute;bottom:8px;left:8px;background:rgba(255,71,87,.9);color:#fff;font-size:.55rem;font-weight:900;padding:2px 7px;border-radius:5px;letter-spacing:.03em;z-index:3;backdrop-filter:blur(4px);}
+.fhg-lowstock{position:absolute;bottom:5px;left:5px;background:rgba(255,71,87,.9);color:#fff;font-size:.52rem;font-weight:900;padding:2px 6px;border-radius:4px;letter-spacing:.02em;z-index:3;}
+
+/* ── RECENTLY VIEWED STRIP ── */
+.rv-strip{margin:16px 0 0;padding:0;}
+.rv-hd{display:flex;justify-content:space-between;align-items:center;padding:0 14px;margin-bottom:8px;}
+.rv-title{font-size:.78rem;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;}
+.rv-clear{font-size:.72rem;color:var(--text3);cursor:pointer;padding:2px 6px;border-radius:6px;}
+.rv-clear:active{background:var(--bg3);}
+.rv-scroll{display:flex;gap:8px;overflow-x:auto;padding:0 14px 4px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}
+.rv-card{flex-shrink:0;width:82px;scroll-snap-align:start;background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform .15s;}
+.rv-card:active{transform:scale(.92);}
+.rv-card-img{width:82px;height:72px;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.rv-card-img img{width:100%;height:100%;object-fit:contain;padding:5px;}
+.rv-card-info{padding:4px 6px 6px;}
+.rv-card-name{font-size:9px;font-weight:700;color:var(--text);line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.rv-card-price{font-size:9px;font-weight:900;color:var(--green);margin-top:2px;}
+
+/* ── IMAGE ZOOM OVERLAY ── */
+#imgZoom{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.95);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s ease;}
+#imgZoom.open{opacity:1;pointer-events:auto;}
+#imgZoomImg{max-width:92vw;max-height:84vh;object-fit:contain;border-radius:10px;touch-action:none;user-select:none;-webkit-user-select:none;will-change:transform;}
+.iz-close{position:absolute;top:20px;right:20px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.13);display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#fff;cursor:pointer;border:1px solid rgba(255,255,255,.2);z-index:2;}
+.iz-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:.68rem;color:rgba(255,255,255,.35);white-space:nowrap;pointer-events:none;letter-spacing:.03em;}
 /* Animated placeholder shimmer */
 @keyframes phFade{0%,100%{opacity:0;transform:translateY(4px)}10%,85%{opacity:1;transform:translateY(0)}}
 .ph-anim{animation:phFade 3s ease forwards;}
@@ -229,7 +276,7 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
   background:linear-gradient(to right, var(--fhb-grad-start,#061810) 0%, transparent 60%);
 }
 /* Text content — always above image */
-.fhb-content{position:relative;z-index:3;max-width:58%;}
+.fhb-content{position:relative;z-index:3;max-width:65%;}
 /* Pill tag */
 @keyframes fhbPulse{0%,100%{box-shadow:0 0 0 0 var(--fhb-pulse,rgba(45,211,111,.35));}60%{box-shadow:0 0 0 7px transparent;}}
 .fhb-tag{
@@ -239,7 +286,7 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
   margin-bottom:10px;animation:fhbPulse 2.8s ease-in-out infinite;
 }
 /* Title */
-.fhb-title{font-size:1.7rem;font-weight:900;color:#fff;letter-spacing:-.6px;line-height:1.1;}
+.fhb-title{font-size:1.65rem;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.12;text-shadow:0 2px 14px rgba(0,0,0,.8);overflow:visible;}
 .fhb-title em{font-style:normal;}
 /* Subtitle */
 .fhb-sub{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:7px;line-height:1.6;}
@@ -921,12 +968,13 @@ select.ck-inp option{background:var(--bg2);}
       <div class="logo">🛒 <span>BSC</span></div>
       <div class="icon-btn" onclick="openCart()">🛒<div class="cart-badge" id="cartBadge">0</div></div>
     </div>
-    <div class="search-wrap">
+    <div class="search-wrap" style="position:relative;">
       <div class="search-bar">
         <span class="search-icon">🔍</span>
-        <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value)" onfocus="clearAnimatedPH();expandHeader()" onblur="startAnimatedPH()">
+        <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value);showSearchSugg(this.value)" onfocus="clearAnimatedPH();expandHeader();showSearchSugg(this.value)" onblur="startAnimatedPH();setTimeout(hideSearchSugg,180)">
         <span id="searchClear" style="color:var(--text3);cursor:pointer;font-size:.8rem;display:none" onclick="clearSearch()">✕</span>
       </div>
+      <div class="search-sugg" id="searchSugg"></div>
     </div>
   </div>
   <!-- ALWAYS-VISIBLE SECTION: category tabs stick below the collapse -->
@@ -2955,154 +3003,6 @@ function _canvasDefault(ctx, W, H, c1, c2, glow, id) {
   draw();
 }
 
-// ── SCENE: FRESH HUB — flowing light beams + shimmer rings + rising sparkles ──
-function _canvasFreshHub(canvas, accentHex, id) {
-  if (!canvas) return;
-  _stopBannerRAF(id);
-  const dpr = Math.min(window.devicePixelRatio||1,2);
-  function resize() {
-    canvas.width  = canvas.offsetWidth  * dpr;
-    canvas.height = canvas.offsetHeight * dpr;
-  }
-  resize();
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr,dpr);
-
-  // Parse accent colour into r,g,b
-  function hexToRgb(h) {
-    const r=parseInt(h.slice(1,3),16), g=parseInt(h.slice(3,5),16), b=parseInt(h.slice(5,7),16);
-    return [r,g,b];
-  }
-  const [ar,ag,ab] = hexToRgb(accentHex||'#2dd36f');
-
-  // ── Light beams (slow diagonal rays) ──
-  const beams = Array.from({length:5}, (_,i) => ({
-    x: (i/5)*1.4 - 0.1,   // 0..1 across width
-    width: 0.04 + Math.random()*0.06,
-    alpha: 0.03 + Math.random()*0.04,
-    speed: 0.00015 + Math.random()*0.0001,
-    phase: Math.random()*Math.PI*2,
-  }));
-
-  // ── Shimmer rings (concentric pulses) ──
-  const rings = Array.from({length:3}, (_,i) => ({
-    x: 0.72 + i*0.08, y: 0.42 + i*0.06,
-    r: 0, maxR: 60 + i*25,
-    alpha: 0, speed: 0.007 + i*0.002,
-    delay: i * 55,
-    t: i * 55,
-  }));
-
-  // ── Sparkle particles (tiny rising dots) ──
-  const sparks = Array.from({length:28}, () => ({
-    x: Math.random(), y: 1 + Math.random()*0.3,
-    vy: -(0.0008 + Math.random()*0.0012),
-    vx: (Math.random()-0.5)*0.0004,
-    r: 0.8 + Math.random()*1.8,
-    alpha: 0,
-    maxAlpha: 0.3 + Math.random()*0.45,
-    fadeIn: true,
-    life: Math.random(),
-  }));
-
-  // ── Horizontal shimmer wave lines ──
-  const waves = Array.from({length:3}, (_,i) => ({
-    y: 0.3 + i*0.22,
-    phase: i*1.4,
-    speed: 0.008 + i*0.003,
-    alpha: 0.04 + i*0.02,
-  }));
-
-  let t = 0;
-  function draw() {
-    const W = canvas.width/dpr, H = canvas.height/dpr;
-    ctx.clearRect(0,0,W,H);
-
-    // ── 1. Light beams ──
-    beams.forEach(b => {
-      b.phase += b.speed;
-      const cx = (b.x + Math.sin(b.phase)*0.04) * W;
-      const grad = ctx.createLinearGradient(cx - W*b.width, 0, cx + W*b.width, H);
-      grad.addColorStop(0,'transparent');
-      grad.addColorStop(0.5, `rgba(${ar},${ag},${ab},${b.alpha + 0.02*Math.sin(b.phase*3)})`);
-      grad.addColorStop(1,'transparent');
-      ctx.save();
-      ctx.transform(1, 0, -0.35, 1, W*0.18, 0); // skew diagonal
-      ctx.fillStyle = grad;
-      ctx.fillRect(cx - W*b.width, 0, W*b.width*2, H);
-      ctx.restore();
-    });
-
-    // ── 2. Shimmer rings ──
-    rings.forEach(rg => {
-      rg.t++;
-      if (rg.t < rg.delay) return;
-      rg.r += rg.speed * Math.min(rg.t - rg.delay, 60)/60 * 1.5;
-      if (rg.r < rg.maxR * 0.3) rg.alpha = (rg.r / (rg.maxR*0.3)) * 0.18;
-      else rg.alpha = 0.18 * (1 - (rg.r - rg.maxR*0.3)/(rg.maxR*0.7));
-      if (rg.r > rg.maxR) { rg.r = 0; rg.alpha = 0; rg.t = rg.delay; }
-      if (rg.alpha <= 0) return;
-      ctx.beginPath();
-      ctx.arc(rg.x*W, rg.y*H, rg.r, 0, Math.PI*2);
-      ctx.strokeStyle = `rgba(${ar},${ag},${ab},${rg.alpha})`;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    });
-
-    // ── 3. Wave lines ──
-    waves.forEach(w => {
-      w.phase += w.speed;
-      ctx.beginPath();
-      ctx.moveTo(0, w.y*H);
-      for (let x = 0; x <= W; x += 4) {
-        const y = w.y*H + Math.sin(x/W*Math.PI*4 + w.phase)*4;
-        ctx.lineTo(x, y);
-      }
-      ctx.strokeStyle = `rgba(${ar},${ag},${ab},${w.alpha})`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    });
-
-    // ── 4. Rising sparkles ──
-    sparks.forEach(s => {
-      s.y += s.vy;
-      s.x += s.vx;
-      s.life += 0.008;
-      if (s.fadeIn) {
-        s.alpha = Math.min(s.alpha + 0.015, s.maxAlpha);
-        if (s.alpha >= s.maxAlpha) s.fadeIn = false;
-      } else {
-        s.alpha -= 0.006;
-      }
-      if (s.y < -0.05 || s.alpha <= 0) {
-        s.x = Math.random(); s.y = 1.05 + Math.random()*0.1;
-        s.alpha = 0; s.fadeIn = true;
-        s.maxAlpha = 0.3 + Math.random()*0.45;
-        s.vy = -(0.0008 + Math.random()*0.0012);
-        s.vx = (Math.random()-0.5)*0.0004;
-      }
-      // diamond shape (4-pointed star)
-      const px = s.x*W, py = s.y*H, r = s.r;
-      ctx.save();
-      ctx.globalAlpha = s.alpha;
-      ctx.fillStyle = `rgba(${ar},${ag},${ab},1)`;
-      ctx.beginPath();
-      ctx.moveTo(px, py-r*2); ctx.lineTo(px+r, py); ctx.lineTo(px, py+r*2); ctx.lineTo(px-r, py); ctx.closePath();
-      ctx.fill();
-      // centre dot glow
-      const sg = ctx.createRadialGradient(px,py,0,px,py,r*3);
-      sg.addColorStop(0,`rgba(${ar},${ag},${ab},0.25)`);
-      sg.addColorStop(1,'transparent');
-      ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(px,py,r*3,0,Math.PI*2); ctx.fill();
-      ctx.restore();
-    });
-
-    t += 0.016;
-    window._bannerRAFs[id] = requestAnimationFrame(draw);
-  }
-  draw();
-}
-
 // ── Banner HTML wrapper (replaces _sceneBannerHtml) ───────────────────────────
 function _sceneBannerHtml(sec, small) {
   const uid = 'b_' + sec.id + '_' + Date.now();
@@ -3380,7 +3280,7 @@ function _renderCtxGrid(list) {
 
 
 function renderHome() {
-  const layout = settings.homeLayout || ['personalised','banners','featured','new','fresh_hub','categories','cat_strips'];
+  const layout = settings.homeLayout || ['personalised','banners','recently_viewed','featured','new','fresh_hub','categories','cat_strips'];
   const hidden = new Set(settings.homeLayoutHidden || []);
   const catOrder = settings.catOrder || [];
 
@@ -3422,58 +3322,89 @@ function renderHome() {
       return `<div class="sec"><div class="sec-hd"><span class="sec-title">${c.name}</span><span class="see-all" onclick="openFP(${c.id})">See all →</span></div>
         <div class="pstrip">${ps.slice(0,8).map(pCard).join('')}</div></div>`;
     }).join(''),
+    recently_viewed: () => {
+      const ids = _getRV();
+      if (!ids.length) return '';
+      const rvProds = ids.map(id => prods.find(p => p.id === id)).filter(Boolean);
+      if (!rvProds.length) return '';
+      const cards = rvProds.map(p => {
+        const v = getVariant(p, defaultVariant(p)?.id);
+        if (!v) return '';
+        const price = getPrice(v.priceTiers, 1);
+        const imgUrl = v.imageUrl || p.imageUrl || '';
+        return `<div class="rv-card" onclick="openProductDetail(${p.id})">
+          <div class="rv-card-img">${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : '<span style="font-size:1.4rem">📦</span>'}</div>
+          <div class="rv-card-info">
+            <div class="rv-card-name">${p.name}</div>
+            <div class="rv-card-price">₹${price}</div>
+          </div>
+        </div>`;
+      }).join('');
+      return `<div class="rv-strip">
+        <div class="rv-hd">
+          <span class="rv-title">Recently Viewed</span>
+          <span class="rv-clear" onclick="clearRV()">Clear</span>
+        </div>
+        <div class="rv-scroll">${cards}</div>
+      </div>`;
+    },
     personalised: () => '',
     fresh_hub: () => {
-      // ── Find the Fruits & Vegetables category by name ──
-      const FV_KWS = ['fruit','vegetable','veggie','fresh produce','sabzi','tarkari'];
-      const fvCat  = cats.find(c => FV_KWS.some(k => c.name.toLowerCase().includes(k)));
-      if (!fvCat) return ''; // section only shows if this category exists
 
-      const fvCatId = fvCat.id;
-
-      // ── All active products in that specific category ──
-      const catProds   = prods.filter(p => p.catId === fvCatId && !p.disabled);
-      if (!catProds.length) return '';
-      const display6   = catProds.slice(0, 6);
-      const totalCount = catProds.length;
-
-      // ── Themes ──
+      // ── Theme definitions ──
       const themes = {
-        forest:{ grad:'#061810,#0d2e16,#082010', gradStart:'#061810', glow1:'rgba(45,211,111,.35)',  glow2:'rgba(45,211,111,.18)', accent:'#2dd36f', tagBg:'rgba(45,211,111,.15)', tagBdr:'rgba(45,211,111,.3)',  tagClr:'#2dd36f' },
-        ocean: { grad:'#041520,#073550,#031828', gradStart:'#041520', glow1:'rgba(34,211,238,.3)',   glow2:'rgba(34,211,238,.15)', accent:'#22d3ee', tagBg:'rgba(34,211,238,.12)', tagBdr:'rgba(34,211,238,.28)', tagClr:'#22d3ee' },
-        amber: { grad:'#180e04,#301e08,#1a1005', gradStart:'#180e04', glow1:'rgba(251,191,36,.3)',   glow2:'rgba(251,191,36,.15)', accent:'#fbbf24', tagBg:'rgba(251,191,36,.12)', tagBdr:'rgba(251,191,36,.28)', tagClr:'#fbbf24' },
-        berry: { grad:'#100820,#1e1038,#120a24', gradStart:'#100820', glow1:'rgba(167,139,250,.3)',  glow2:'rgba(167,139,250,.15)',accent:'#a78bfa', tagBg:'rgba(167,139,250,.12)',tagBdr:'rgba(167,139,250,.28)',tagClr:'#a78bfa' },
+        forest:{ grad:'#061810,#0d2e16,#082010',  gradStart:'#061810', glow1:'rgba(45,211,111,.35)',  glow2:'rgba(45,211,111,.18)', accent:'#2dd36f', pulse:'rgba(45,211,111,.35)', tagBg:'rgba(45,211,111,.15)', tagBdr:'rgba(45,211,111,.3)',  tagClr:'#2dd36f' },
+        ocean: { grad:'#041520,#073550,#031828',  gradStart:'#041520', glow1:'rgba(34,211,238,.3)',   glow2:'rgba(34,211,238,.15)', accent:'#22d3ee', pulse:'rgba(34,211,238,.3)',  tagBg:'rgba(34,211,238,.12)', tagBdr:'rgba(34,211,238,.28)', tagClr:'#22d3ee' },
+        amber: { grad:'#180e04,#301e08,#1a1005',  gradStart:'#180e04', glow1:'rgba(251,191,36,.3)',   glow2:'rgba(251,191,36,.15)', accent:'#fbbf24', pulse:'rgba(251,191,36,.3)',  tagBg:'rgba(251,191,36,.12)', tagBdr:'rgba(251,191,36,.28)', tagClr:'#fbbf24' },
+        berry: { grad:'#100820,#1e1038,#120a24',  gradStart:'#100820', glow1:'rgba(167,139,250,.3)',  glow2:'rgba(167,139,250,.15)',accent:'#a78bfa', pulse:'rgba(167,139,250,.3)', tagBg:'rgba(167,139,250,.12)',tagBdr:'rgba(167,139,250,.28)',tagClr:'#a78bfa' },
       };
       const fh  = settings.freshHub || {};
       const th  = themes[fh.theme] || themes.forest;
 
-      const title     = fh.title     || 'Daily Fresh Need';
-      const subtitle  = fh.subtitle  || 'Farm fresh groceries, delivered to your door.';
-      const tag       = fh.tag       || '🌱 Fresh & Daily';
+      const title     = fh.title    || 'Daily Fresh Need';
+      const subtitle  = fh.subtitle || 'Farm fresh groceries, delivered to your door.';
+      const tag       = fh.tag      || '🌱 Fresh & Daily';
       const flashOn   = !!fh.flashSale;
       const flashLbl  = fh.flashLabel || '⚡ Flash Sale';
       const bannerImg = fh.bannerImage || '/uploads/unnamed.jpg';
 
-      // Last word in accent colour
-      const tw = title.trim().split(' '), tlast = tw.pop(), tmain = tw.join(' ');
+      // ── Split last word for accent colour ──
+      const tw    = title.trim().split(' ');
+      const tlast = tw.pop();
+      const tmain = tw.join(' ');
 
-      // Canvas ID — unique per category so RAF can be tracked
-      const canvasId = 'fhcanvas_' + fvCatId;
-      setTimeout(() => {
-        _stopBannerRAF(canvasId);
-        _canvasFreshHub(document.getElementById(canvasId), th.accent, canvasId);
-      }, 80);
+      // ── Pick fresh products (veggies/fruits first, fill rest) ──
+      const freshKws = ['vegetable','veggie','fruit','tomato','potato','onion','carrot','leafy','spinach','cabbage','gourd','brinjal','capsicum','paneer','banana','apple','mango','orange','lemon','cucumber','pumpkin','garlic','ginger','mushroom'];
+      const allActive = prods.filter(p => !p.disabled && defaultVariant(p)?.inStock !== false);
+      let freshProds = allActive.filter(p => freshKws.some(k => p.name.toLowerCase().includes(k) || (cats.find(c=>c.id===p.catId)?.name||'').toLowerCase().includes(k)));
+      if (freshProds.length < 3) freshProds = allActive;
+      const display6 = freshProds.slice(0, 6);
+      const totalFresh = freshProds.length;
 
-      // ── Product cards ──
+      // ── Build 6-product cards ──
       const prodCards = display6.map(p => {
         const selVid = window._selVariant?.[p.id] || defaultVariant(p)?.id;
         const v = getVariant(p, selVid);
         if (!v) return '';
-        const qty   = cart[cartKey(p.id, selVid)] || 0;
-        const price = getPrice(v.priceTiers, qty || 1);
-        const mrp   = v.mrp && v.mrp > price ? v.mrp : null;
-        const off   = offPct(price, mrp);
-        const imgUrl = v.imageUrl || p.imageUrl || '';
+        const qty      = cart[cartKey(p.id, selVid)] || 0;
+        const price    = getPrice(v.priceTiers, qty || 1);
+        const mrp      = v.mrp && v.mrp > price ? v.mrp : null;
+        const off      = offPct(price, mrp);
+        const imgUrl   = v.imageUrl || p.imageUrl || '';
+        const isLowSt  = typeof p.stockQuantity === 'number' && p.stockQuantity > 0 && p.stockQuantity <= 5;
+        // Bulk hint — show next tier price
+        const bulkHint = (() => {
+          const tiers = v.priceTiers;
+          if (!tiers || tiers.length <= 1) return '';
+          const sorted = [...tiers].sort((a,b) => a.minQty - b.minQty);
+          for (const t of sorted) {
+            if (t.minQty > (qty||1) && t.price < price)
+              return `<div style="font-size:9px;font-weight:800;color:#000;background:${th.accent};border-radius:4px;padding:2px 5px;margin-bottom:2px;display:inline-block">📦 Buy ${t.minQty}+ @ ₹${t.price}</div>`;
+          }
+          if (qty >= sorted[sorted.length-1].minQty && sorted[sorted.length-1].minQty > 1)
+            return `<div style="font-size:9px;font-weight:800;color:#000;background:${th.accent};border-radius:4px;padding:2px 5px;margin-bottom:2px;display:inline-block">🏆 Best price!</div>`;
+          return '';
+        })();
         const addCtrl = qty > 0
           ? `<div class="qty-ctrl" style="border-radius:8px"><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button><span>${qty}</span><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button></div>`
           : `<button class="add-btn" style="border-radius:8px;padding:6px 0;width:100%;font-size:11px" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
@@ -3481,10 +3412,12 @@ function renderHome() {
           <div class="fhg-img">
             ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : `<span class="fhg-emoji">🥦</span>`}
             ${off > 0 ? `<span class="fhg-count" style="background:${th.accent};color:#000">${off}% OFF</span>` : ''}
+            ${isLowSt ? `<span class="fhg-lowstock">Only ${p.stockQuantity} left!</span>` : ''}
           </div>
-          <div style="padding:6px 7px 8px;display:flex;flex-direction:column;gap:4px;flex:1">
+          <div style="padding:6px 7px 8px;display:flex;flex-direction:column;gap:3px;flex:1">
             <div style="font-size:11px;font-weight:700;color:#fff;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.name}</div>
             <div style="font-size:11px;font-weight:900;color:${th.accent}">₹${price}${mrp?`<span style="font-size:9px;color:rgba(255,255,255,.4);text-decoration:line-through;margin-left:3px">₹${mrp}</span>`:''}</div>
+            ${bulkHint}
             <div style="margin-top:auto">${addCtrl}</div>
           </div>
         </div>`;
@@ -3495,13 +3428,13 @@ function renderHome() {
         <div class="fhb-orb1" style="background:radial-gradient(circle,${th.glow1} 0%,transparent 70%)"></div>
         <div class="fhb-orb2" style="background:radial-gradient(circle,${th.glow2} 0%,transparent 70%)"></div>
         ${flashOn ? `<div class="fhb-flash">${flashLbl}</div>` : ''}
-        <div class="fhb" onclick="openFP(${fvCatId})">
+        <div class="fhb" onclick="openCatsPage()">
           <div class="fhb-img">
             <img src="${bannerImg}" alt="fresh produce">
+            <div class="fhb-img-mask" style="position:absolute;inset:0;background:linear-gradient(to right,${th.gradStart} 0%,${th.gradStart}cc 18%,transparent 58%),linear-gradient(to top,${th.gradStart}99 0%,transparent 40%);z-index:2;"></div>
           </div>
-          <canvas id="${canvasId}" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:2;"></canvas>
           <div class="fhb-content">
-            <div class="fhb-tag" style="background:${th.tagBg};border:1px solid ${th.tagBdr};color:${th.tagClr}">${tag}</div>
+            <div class="fhb-tag" style="background:${th.tagBg};border:1px solid ${th.tagBdr};color:${th.tagClr};--fhb-pulse:${th.pulse}">${tag}</div>
             <div class="fhb-title">${tmain ? tmain + ' ' : ''}<em style="color:${th.accent}">${tlast}</em></div>
             <div class="fhb-sub">${subtitle}</div>
             <div class="fhb-cta" style="background:${th.accent}">Shop Now →</div>
@@ -3514,10 +3447,10 @@ function renderHome() {
         </div>
         <div class="fhb-divider" style="background:${th.accent}"></div>
         <div class="fhg">${prodCards}</div>
-        ${totalCount > 6 ? `
-        <div class="fhg-seeall" onclick="openFP(${fvCatId})">
-          <span class="fhg-seeall-label">See all ${totalCount} items in ${fvCat.name}</span>
-          <span class="fhg-seeall-arrow" style="font-size:1.1rem;font-weight:900">›</span>
+        ${totalFresh > 6 ? `
+        <div class="fhg-seeall" onclick="openCatsPage()">
+          <span class="fhg-seeall-label">See all ${totalFresh > 99 ? '99+' : totalFresh} fresh items</span>
+          <span class="fhg-seeall-arrow">›</span>
         </div>` : ''}
         <div class="fhg-bottom"></div>
       </div>`;
@@ -3578,6 +3511,7 @@ function pCard(p) {
     : `<div class="pc-variant-label">${v.label}</div>`;
 
   const isOOS = !v?.inStock || (typeof p.stockQuantity === 'number' && p.stockQuantity === 0);
+  const isLowStock = !isOOS && typeof p.stockQuantity === 'number' && p.stockQuantity > 0 && p.stockQuantity <= 5;
 
   const addCtrl = qty > 0
     ? `<div class="qty-ctrl">
@@ -3595,6 +3529,7 @@ function pCard(p) {
       ${off > 0 && !isOOS ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
       ${p.isNew && off === 0 && !isOOS ? `<span class="pc-new-badge">NEW</span>` : ''}
       ${isOOS ? `<span class="pc-oos-badge">OUT OF STOCK</span>` : ''}
+      ${isLowStock ? `<span class="pc-lowstock-badge">Only ${p.stockQuantity} left!</span>` : ''}
       <div class="pc-add-overlay">${addCtrl}</div>
     </div>
     <div class="pc-body">
@@ -3629,6 +3564,145 @@ function bulkBadgeHtml(tiers, qty) {
   if (!hint) return '';
   if (hint === 'best') return `<div class="pc-bulk-hint best">🏆 Best price!</div>`;
   return `<div class="pc-bulk-hint">📦 ${hint}</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── RECENTLY VIEWED ───────────────────────────────────────────────────────────
+const _RV_KEY = 'bsc_rv_v1';
+const _RV_MAX = 12;
+
+function _getRV() {
+  try { return JSON.parse(localStorage.getItem(_RV_KEY) || '[]'); } catch { return []; }
+}
+function _trackRV(pid) {
+  try {
+    let ids = _getRV().filter(id => id !== pid);
+    ids.unshift(pid);
+    if (ids.length > _RV_MAX) ids = ids.slice(0, _RV_MAX);
+    localStorage.setItem(_RV_KEY, JSON.stringify(ids));
+  } catch {}
+}
+function clearRV() {
+  try { localStorage.removeItem(_RV_KEY); } catch {}
+  renderHome();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── IMAGE ZOOM ────────────────────────────────────────────────────────────────
+function openImgZoom(url, alt) {
+  if (!url) return;
+  const overlay = document.getElementById('imgZoom');
+  const img     = document.getElementById('imgZoomImg');
+  if (!overlay || !img) return;
+  img.src = url;
+  img.alt = alt || '';
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  _initZoomGestures(img, overlay);
+}
+function closeImgZoom() {
+  const overlay = document.getElementById('imgZoom');
+  if (overlay) overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  _zoomScale = 1; _zoomX = 0; _zoomY = 0;
+  const img = document.getElementById('imgZoomImg');
+  if (img) img.style.transform = '';
+}
+
+let _zoomScale = 1, _zoomX = 0, _zoomY = 0;
+let _lastTap = 0;
+
+function _initZoomGestures(img, overlay) {
+  _zoomScale = 1; _zoomX = 0; _zoomY = 0;
+  img.style.transform = '';
+  img.style.transition = 'transform .15s ease';
+
+  function applyTransform() {
+    img.style.transform = `translate(${_zoomX}px,${_zoomY}px) scale(${_zoomScale})`;
+  }
+
+  // ── Double-tap to zoom / reset ──
+  img.ontouchend = function(e) {
+    const now = Date.now();
+    if (now - _lastTap < 280) {
+      e.preventDefault();
+      if (_zoomScale > 1) { _zoomScale = 1; _zoomX = 0; _zoomY = 0; }
+      else { _zoomScale = 2.4; }
+      img.style.transition = 'transform .25s ease';
+      applyTransform();
+      setTimeout(() => img.style.transition = 'transform .1s ease', 280);
+    }
+    _lastTap = now;
+  };
+
+  // ── Pinch-to-zoom ──
+  let _initDist = 0, _initScale = 1;
+  let _panStartX = 0, _panStartY = 0, _panX = 0, _panY = 0, _isPanning = false;
+
+  img.ontouchstart = function(e) {
+    if (e.touches.length === 2) {
+      _initDist  = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+      _initScale = _zoomScale;
+      _isPanning = false;
+    } else if (e.touches.length === 1 && _zoomScale > 1) {
+      _panStartX = e.touches[0].clientX - _zoomX;
+      _panStartY = e.touches[0].clientY - _zoomY;
+      _isPanning = true;
+    }
+  };
+  img.ontouchmove = function(e) {
+    e.preventDefault();
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+      _zoomScale = Math.min(4, Math.max(1, _initScale * (dist / _initDist)));
+      img.style.transition = 'none';
+      applyTransform();
+    } else if (e.touches.length === 1 && _isPanning) {
+      _zoomX = e.touches[0].clientX - _panStartX;
+      _zoomY = e.touches[0].clientY - _panStartY;
+      img.style.transition = 'none';
+      applyTransform();
+    }
+  };
+  img.ontouchend = img.ontouchend; // keep double-tap
+
+  // ── Close on overlay background tap ──
+  overlay.onclick = function(e) { if (e.target === overlay) closeImgZoom(); };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── SEARCH SUGGESTIONS ────────────────────────────────────────────────────────
+let _suggTimer = null;
+
+function showSearchSugg(q) {
+  clearTimeout(_suggTimer);
+  const box = document.getElementById('searchSugg');
+  if (!box) return;
+  if (!q || q.trim().length < 2) { hideSearchSugg(); return; }
+  _suggTimer = setTimeout(() => {
+    const results = clientSmartSearch(q.toLowerCase()).slice(0, 6);
+    if (!results.length) { hideSearchSugg(); return; }
+    box.innerHTML = results.map(p => {
+      const v   = getVariant(p, defaultVariant(p)?.id);
+      const price = v ? getPrice(v.priceTiers, 1) : '';
+      const img  = v?.imageUrl || p.imageUrl || '';
+      const imgHtml = img
+        ? `<img class="ss-img" src="${img}" loading="lazy">`
+        : `<div class="ss-img-ph">📦</div>`;
+      return `<div class="ss-item" onmousedown="event.preventDefault();document.getElementById('searchInput').value='${p.name.replace(/'/g,"\\'")}';onSearch('${p.name.replace(/'/g,"\\'")}');hideSearchSugg()">
+        ${imgHtml}
+        <span class="ss-name">${p.name}</span>
+        ${price ? `<span class="ss-price">₹${price}</span>` : ''}
+      </div>`;
+    }).join('') +
+    `<div class="ss-more" onmousedown="event.preventDefault();hideSearchSugg()">See all results for "${q}" →</div>`;
+    box.classList.add('open');
+  }, 120);
+}
+
+function hideSearchSugg() {
+  const box = document.getElementById('searchSugg');
+  if (box) box.classList.remove('open');
 }
 
 // ── VARIANT CHANGE & DROPDOWN ─────────────────────────────────────────────────
@@ -4083,6 +4157,7 @@ function clearSearch() {
 function openProductDetail(pid) {
   const p = prods.find(x => x.id === pid);
   if (!p) return;
+  _trackRV(pid); // ── track recently viewed
   const selVid = window._selVariant?.[pid] || defaultVariant(p)?.id;
   const v = getVariant(p, selVid);
   if (!v) return;
@@ -4148,7 +4223,7 @@ function openProductDetail(pid) {
       <div style="width:40px;height:4px;background:var(--bg5);border-radius:2px;margin:10px auto 0"></div>
       <div style="padding:16px 16px 20px">
         <div style="display:flex;gap:14px;margin-bottom:14px">
-          <div style="width:100px;height:100px;border-radius:14px;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)">
+          <div style="width:100px;height:100px;border-radius:14px;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border);cursor:${imgUrl?'zoom-in':'default'}" ${imgUrl?`onclick="event.stopPropagation();openImgZoom('${imgUrl}','${p.name.replace(/'/g,"\\'")}')"`:''}>
             ${imgUrl ? `<img src="${imgUrl}" loading="lazy" style="width:100%;height:100%;object-fit:contain;padding:6px">` : '<span style="font-size:2.5rem">📦</span>'}
           </div>
           <div style="flex:1;min-width:0">
@@ -5714,5 +5789,11 @@ function togglePushNotifications() {
 // ── INIT ──────────────────────────────────────────────────────────────────────
 init();
 </script>
+<!-- IMAGE ZOOM OVERLAY -->
+<div id="imgZoom" onclick="closeImgZoom()">
+  <div class="iz-close" onclick="closeImgZoom()">✕</div>
+  <img id="imgZoomImg" src="" alt="">
+  <div class="iz-hint">Pinch to zoom · Double-tap to reset</div>
+</div>
 </body>
 </html>
