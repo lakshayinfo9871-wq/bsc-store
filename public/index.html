@@ -1435,32 +1435,62 @@ function _getFestivals() {
 
   // Key = "YYYY-name", value = { festDay: Date, endDay: Date }
   // festDay = actual festival day. Active window = festDay-7 to endDay.
+  // Only MAIN HINDU FESTIVALS are listed here.
   const festDates = {
-    // 2026 dates
-    'holi-2026':         { festDay: new Date(2026,2,4),  endDay: new Date(2026,2,4)  }, // Mar 4
-    'eid-2026':          { festDay: new Date(2026,2,20), endDay: new Date(2026,2,22) }, // Mar 20-22
-    'diwali-2026':       { festDay: new Date(2026,9,19), endDay: new Date(2026,9,23) }, // Oct 19-23
-    'christmas-2026':    { festDay: new Date(2026,11,25),endDay: new Date(2026,11,26)},
-    'newyear-2027':      { festDay: new Date(2027,0,1),  endDay: new Date(2027,0,1)  },
-    'rakshabandhan-2026':{ festDay: new Date(2026,7,9),  endDay: new Date(2026,7,9)  },
-    'ganesh-2026':       { festDay: new Date(2026,8,12), endDay: new Date(2026,8,22) },
-    'independence-2026': { festDay: new Date(2026,7,15), endDay: new Date(2026,7,15) },
-    // 2025 dates (for any still active)
-    'holi-2025':         { festDay: new Date(2025,2,14), endDay: new Date(2025,2,14) },
-    'diwali-2025':       { festDay: new Date(2025,9,20), endDay: new Date(2025,9,24) },
-    'christmas-2025':    { festDay: new Date(2025,11,25),endDay: new Date(2025,11,26)},
-    'newyear-2026':      { festDay: new Date(2026,0,1),  endDay: new Date(2026,0,1)  },
+    // ── 2026 ──
+    'makarsakranti-2026': { festDay: new Date(2026,0,14),  endDay: new Date(2026,0,14) }, // Jan 14
+    'vasantpanchami-2026':{ festDay: new Date(2026,1,2),   endDay: new Date(2026,1,2)  }, // Feb 2
+    'mahashivratri-2026': { festDay: new Date(2026,1,17),  endDay: new Date(2026,1,17) }, // Feb 17
+    'holi-2026':          { festDay: new Date(2026,2,4),   endDay: new Date(2026,2,5)  }, // Mar 4-5
+    'ramnavami-2026':     { festDay: new Date(2026,3,18),  endDay: new Date(2026,3,18) }, // Apr 18
+    'hanumanjayanti-2026':{ festDay: new Date(2026,3,26),  endDay: new Date(2026,3,26) }, // Apr 26
+    'akshayatritiya-2026':{ festDay: new Date(2026,4,19),  endDay: new Date(2026,4,19) }, // May 19
+    'rath-yatra-2026':    { festDay: new Date(2026,5,28),  endDay: new Date(2026,5,28) }, // Jun 28
+    'hariyali-teej-2026': { festDay: new Date(2026,7,13),  endDay: new Date(2026,7,13) }, // Aug 13
+    'rakshabandhan-2026': { festDay: new Date(2026,7,19),  endDay: new Date(2026,7,19) }, // Aug 19 (approx)
+    'janmashtami-2026':   { festDay: new Date(2026,7,26),  endDay: new Date(2026,7,27) }, // Aug 26-27 (approx)
+    'ganesh-2026':        { festDay: new Date(2026,8,12),  endDay: new Date(2026,8,22) }, // Sep 12-22
+    'navratri-2026':      { festDay: new Date(2026,8,28),  endDay: new Date(2026,9,7)  }, // Sep 28 – Oct 7 (approx)
+    'dussehra-2026':      { festDay: new Date(2026,9,8),   endDay: new Date(2026,9,8)  }, // Oct 8 (approx)
+    'karwachauth-2026':   { festDay: new Date(2026,9,14),  endDay: new Date(2026,9,14) }, // Oct 14 (approx)
+    'dhanteras-2026':     { festDay: new Date(2026,9,17),  endDay: new Date(2026,9,17) }, // Oct 17 (approx)
+    'diwali-2026':        { festDay: new Date(2026,9,19),  endDay: new Date(2026,9,23) }, // Oct 19-23
+    'govardhan-puja-2026':{ festDay: new Date(2026,9,20),  endDay: new Date(2026,9,20) }, // Oct 20 (approx)
+    'bhai-dooj-2026':     { festDay: new Date(2026,9,21),  endDay: new Date(2026,9,21) }, // Oct 21 (approx)
+    'chhat-puja-2026':    { festDay: new Date(2026,9,26),  endDay: new Date(2026,9,27) }, // Oct 26-27 (approx)
+    'tulsi-vivah-2026':   { festDay: new Date(2026,10,4),  endDay: new Date(2026,10,4) }, // Nov 4 (approx)
+    // ── 2025 (for any still active on rollover) ──
+    'holi-2025':          { festDay: new Date(2025,2,14),  endDay: new Date(2025,2,15) },
+    'diwali-2025':        { festDay: new Date(2025,9,20),  endDay: new Date(2025,9,24) },
+    'ganesh-2025':        { festDay: new Date(2025,7,27),  endDay: new Date(2025,8,7)  },
+    'navratri-2025':      { festDay: new Date(2025,9,2),   endDay: new Date(2025,9,11) },
+    'rakshabandhan-2025': { festDay: new Date(2025,7,9),   endDay: new Date(2025,7,9)  },
+    'janmashtami-2025':   { festDay: new Date(2025,7,16),  endDay: new Date(2025,7,16) },
   };
 
   const festMeta = {
-    holi:         { name:'Holi',             emoji:'🎨', kw:['drinks','juice','cold drink','milk','snacks','chips','sweets','thandai','colours'],    grad:'linear-gradient(135deg,#831843,#500724)', scene:'holi'    },
-    eid:          { name:'Eid',              emoji:'🌙', kw:['sweets','milk','bread','juice','drinks','snacks','biryani'],                            grad:'linear-gradient(135deg,#1e3a5f,#0c1a2e)', scene:'eid'     },
-    diwali:       { name:'Diwali',           emoji:'🪔', kw:['snacks','namkeen','chips','drinks','juice','sweets','dry fruit','farsan'],              grad:'linear-gradient(135deg,#78350f,#431407)', scene:'diwali'  },
-    christmas:    { name:'Christmas',        emoji:'🎄', kw:['juice','drinks','cake','bread','butter','chocolate','snacks','biscuit'],                grad:'linear-gradient(135deg,#14532d,#052e16)', scene:'christmas'},
-    newyear:      { name:'New Year',         emoji:'🎆', kw:['drinks','juice','snacks','chips','soda','cold drink','chocolate'],                     grad:'linear-gradient(135deg,#0f0a23,#07051a)', scene:'newyear' },
-    rakshabandhan:{ name:'Raksha Bandhan',   emoji:'🎀', kw:['sweets','chocolate','juice','snacks','biscuit','milk'],                                grad:'linear-gradient(135deg,#9d174d,#500724)', scene:'default' },
-    ganesh:       { name:'Ganesh Chaturthi', emoji:'🙏', kw:['milk','coconut','fruits','sweets','juice','snacks','modak'],                           grad:'linear-gradient(135deg,#78350f,#3b1d08)', scene:'default' },
-    independence: { name:'Independence Day', emoji:'🇮🇳', kw:['drinks','snacks','juice','chips','namkeen','biscuit'],                                 grad:'linear-gradient(135deg,#14532d,#052e16)', scene:'default' },
+    // ── Main Hindu festivals ──
+    makarsakranti: { name:'Makar Sankranti', emoji:'🪁', kw:['til','sesame','gur','jaggery','sweets','khichdi','rice','milk','snacks','peanut','revdi'], grad:'linear-gradient(135deg,#7c4a00,#3b2000)', scene:'default' },
+    vasantpanchami:{ name:'Vasant Panchami', emoji:'🌼', kw:['sweets','milk','curd','yellow','fruits','juice','snacks','kesar'],                         grad:'linear-gradient(135deg,#78350f,#3d1a08)', scene:'default' },
+    mahashivratri: { name:'Maha Shivratri',  emoji:'🔱', kw:['milk','curd','honey','fruits','dry fruit','bel patra','coconut','thandai','sweets'],       grad:'linear-gradient(135deg,#1e1b4b,#0f0d2e)', scene:'default' },
+    holi:          { name:'Holi',            emoji:'🎨', kw:['thandai','cold drink','milk','snacks','chips','sweets','gulab','gulal','namkeen'],          grad:'linear-gradient(135deg,#831843,#500724)', scene:'holi'    },
+    ramnavami:     { name:'Ram Navami',      emoji:'🙏', kw:['fruits','dry fruit','sweets','milk','coconut','panchAmrit','panchamrit','juice'],            grad:'linear-gradient(135deg,#7c2d12,#3b1407)', scene:'default' },
+    hanumanjayanti:{ name:'Hanuman Jayanti', emoji:'🚩', kw:['fruits','dry fruit','coconut','sweets','milk','juice','prasad'],                            grad:'linear-gradient(135deg,#7c3a00,#3d1c00)', scene:'default' },
+    akshayatritiya:{ name:'Akshaya Tritiya', emoji:'✨', kw:['dry fruit','sweets','milk','fruits','ghee','namkeen','snacks','juice'],                     grad:'linear-gradient(135deg,#713f12,#3b1d08)', scene:'default' },
+    'rath-yatra':  { name:'Rath Yatra',      emoji:'🏮', kw:['fruits','coconut','sweets','milk','modak','banana','prasad'],                              grad:'linear-gradient(135deg,#7c2d12,#3b1407)', scene:'default' },
+    'hariyali-teej':{ name:'Hariyali Teej', emoji:'🌿', kw:['sweets','ghewar','fruits','milk','juice','namkeen','snacks'],                               grad:'linear-gradient(135deg,#14532d,#052e16)', scene:'default' },
+    rakshabandhan: { name:'Raksha Bandhan',  emoji:'🎀', kw:['sweets','chocolate','milk','dry fruit','juice','namkeen','snacks','biscuit'],               grad:'linear-gradient(135deg,#9d174d,#500724)', scene:'default' },
+    janmashtami:   { name:'Janmashtami',     emoji:'🧈', kw:['milk','curd','butter','makhan','dahi','sweets','fruits','dry fruit','panjiri','coconut'],   grad:'linear-gradient(135deg,#1e1b4b,#0f0d2e)', scene:'default' },
+    ganesh:        { name:'Ganesh Chaturthi',emoji:'🐘', kw:['modak','coconut','milk','sweets','fruits','dry fruit','juice','snacks','prasad'],            grad:'linear-gradient(135deg,#78350f,#3b1d08)', scene:'default' },
+    navratri:      { name:'Navratri',        emoji:'🌺', kw:['sabudana','kuttu','singhara','vrat','fruits','dry fruit','milk','coconut','sweets','juice'], grad:'linear-gradient(135deg,#881337,#4c0519)', scene:'default' },
+    dussehra:      { name:'Dussehra',        emoji:'🏹', kw:['sweets','namkeen','snacks','fruits','dry fruit','juice','milk'],                            grad:'linear-gradient(135deg,#7c2d12,#3b1407)', scene:'default' },
+    karwachauth:   { name:'Karwa Chauth',    emoji:'🌙', kw:['dry fruit','sweets','fruits','milk','juice','coconut','namkeen','sargi'],                   grad:'linear-gradient(135deg,#9d174d,#500724)', scene:'default' },
+    dhanteras:     { name:'Dhanteras',       emoji:'🪔', kw:['dry fruit','sweets','namkeen','snacks','milk','juice','ghee'],                             grad:'linear-gradient(135deg,#78350f,#431407)', scene:'diwali'  },
+    diwali:        { name:'Diwali',          emoji:'🪔', kw:['namkeen','farsan','sweets','dry fruit','chips','juice','snacks','ghee','mithai'],           grad:'linear-gradient(135deg,#78350f,#431407)', scene:'diwali'  },
+    'govardhan-puja':{ name:'Govardhan Puja',emoji:'🙏', kw:['milk','curd','butter','sweets','fruits','dry fruit','coconut','juice'],                    grad:'linear-gradient(135deg,#713f12,#3b1d08)', scene:'default' },
+    'bhai-dooj':   { name:'Bhai Dooj',       emoji:'🎁', kw:['sweets','chocolate','dry fruit','milk','namkeen','snacks','juice'],                        grad:'linear-gradient(135deg,#9d174d,#500724)', scene:'default' },
+    'chhat-puja':  { name:'Chhath Puja',     emoji:'☀️', kw:['fruits','thekua','coconut','banana','sugarcane','sweets','milk','prasad'],                  grad:'linear-gradient(135deg,#7c4a00,#3b2000)', scene:'default' },
+    'tulsi-vivah': { name:'Tulsi Vivah',     emoji:'🌿', kw:['coconut','sweets','fruits','milk','dry fruit','prasad'],                                   grad:'linear-gradient(135deg,#14532d,#052e16)', scene:'default' },
   };
 
   let active = null, upcoming = null;
