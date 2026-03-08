@@ -213,25 +213,23 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .fhb-orb2{position:absolute;bottom:-30px;right:30%;width:160px;height:160px;border-radius:50%;pointer-events:none;z-index:0;animation:fhbGlowPulse 5s ease-in-out infinite 1.5s;}
 
 /* ── Banner area ── */
-.fhb{position:relative;padding:22px 18px 18px;min-height:160px;cursor:pointer;overflow:hidden;}
-/* Real image — FULL bleed background of the banner */
+.fhb{position:relative;padding:22px 18px 18px;min-height:148px;cursor:pointer;overflow:hidden;}
+/* Real image — right half, fades into the gradient via a gradient mask */
 .fhb-img{
-  position:absolute;inset:0;
+  position:absolute;right:0;top:0;bottom:0;width:52%;
   pointer-events:none;z-index:1;
 }
 .fhb-img img{
-  width:100%;height:100%;object-fit:cover;object-position:center 35%;
+  width:100%;height:100%;object-fit:cover;object-position:center center;
   display:block;
 }
-/* Dark gradient overlay — strong on left for text, fades to transparent right */
-.fhb-img::after{
+/* Gradient mask: text side solid, image side fades in */
+.fhb-img::before{
   content:'';position:absolute;inset:0;z-index:2;
-  background:
-    linear-gradient(to right, rgba(6,24,16,.97) 0%, rgba(6,24,16,.88) 30%, rgba(6,24,16,.55) 60%, rgba(6,24,16,.15) 100%),
-    linear-gradient(to bottom, rgba(6,24,16,.3) 0%, transparent 30%, transparent 70%, rgba(6,24,16,.6) 100%);
+  background:linear-gradient(to right, var(--fhb-grad-start,#061810) 0%, transparent 60%);
 }
-/* Text content — always above everything */
-.fhb-content{position:relative;z-index:3;max-width:60%;}
+/* Text content — always above image */
+.fhb-content{position:relative;z-index:3;max-width:58%;}
 /* Pill tag */
 @keyframes fhbPulse{0%,100%{box-shadow:0 0 0 0 var(--fhb-pulse,rgba(45,211,111,.35));}60%{box-shadow:0 0 0 7px transparent;}}
 .fhb-tag{
@@ -241,10 +239,10 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
   margin-bottom:10px;animation:fhbPulse 2.8s ease-in-out infinite;
 }
 /* Title */
-.fhb-title{font-size:1.75rem;font-weight:900;color:#fff;letter-spacing:-.6px;line-height:1.1;text-shadow:0 2px 12px rgba(0,0,0,.7);}
+.fhb-title{font-size:1.7rem;font-weight:900;color:#fff;letter-spacing:-.6px;line-height:1.1;}
 .fhb-title em{font-style:normal;}
 /* Subtitle */
-.fhb-sub{font-size:.71rem;color:rgba(255,255,255,.75);margin-top:7px;line-height:1.6;text-shadow:0 1px 6px rgba(0,0,0,.6);}
+.fhb-sub{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:7px;line-height:1.6;}
 /* CTA */
 .fhb-cta{
   display:inline-flex;align-items:center;gap:6px;
@@ -2957,6 +2955,154 @@ function _canvasDefault(ctx, W, H, c1, c2, glow, id) {
   draw();
 }
 
+// ── SCENE: FRESH HUB — flowing light beams + shimmer rings + rising sparkles ──
+function _canvasFreshHub(canvas, accentHex, id) {
+  if (!canvas) return;
+  _stopBannerRAF(id);
+  const dpr = Math.min(window.devicePixelRatio||1,2);
+  function resize() {
+    canvas.width  = canvas.offsetWidth  * dpr;
+    canvas.height = canvas.offsetHeight * dpr;
+  }
+  resize();
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+
+  // Parse accent colour into r,g,b
+  function hexToRgb(h) {
+    const r=parseInt(h.slice(1,3),16), g=parseInt(h.slice(3,5),16), b=parseInt(h.slice(5,7),16);
+    return [r,g,b];
+  }
+  const [ar,ag,ab] = hexToRgb(accentHex||'#2dd36f');
+
+  // ── Light beams (slow diagonal rays) ──
+  const beams = Array.from({length:5}, (_,i) => ({
+    x: (i/5)*1.4 - 0.1,   // 0..1 across width
+    width: 0.04 + Math.random()*0.06,
+    alpha: 0.03 + Math.random()*0.04,
+    speed: 0.00015 + Math.random()*0.0001,
+    phase: Math.random()*Math.PI*2,
+  }));
+
+  // ── Shimmer rings (concentric pulses) ──
+  const rings = Array.from({length:3}, (_,i) => ({
+    x: 0.72 + i*0.08, y: 0.42 + i*0.06,
+    r: 0, maxR: 60 + i*25,
+    alpha: 0, speed: 0.007 + i*0.002,
+    delay: i * 55,
+    t: i * 55,
+  }));
+
+  // ── Sparkle particles (tiny rising dots) ──
+  const sparks = Array.from({length:28}, () => ({
+    x: Math.random(), y: 1 + Math.random()*0.3,
+    vy: -(0.0008 + Math.random()*0.0012),
+    vx: (Math.random()-0.5)*0.0004,
+    r: 0.8 + Math.random()*1.8,
+    alpha: 0,
+    maxAlpha: 0.3 + Math.random()*0.45,
+    fadeIn: true,
+    life: Math.random(),
+  }));
+
+  // ── Horizontal shimmer wave lines ──
+  const waves = Array.from({length:3}, (_,i) => ({
+    y: 0.3 + i*0.22,
+    phase: i*1.4,
+    speed: 0.008 + i*0.003,
+    alpha: 0.04 + i*0.02,
+  }));
+
+  let t = 0;
+  function draw() {
+    const W = canvas.width/dpr, H = canvas.height/dpr;
+    ctx.clearRect(0,0,W,H);
+
+    // ── 1. Light beams ──
+    beams.forEach(b => {
+      b.phase += b.speed;
+      const cx = (b.x + Math.sin(b.phase)*0.04) * W;
+      const grad = ctx.createLinearGradient(cx - W*b.width, 0, cx + W*b.width, H);
+      grad.addColorStop(0,'transparent');
+      grad.addColorStop(0.5, `rgba(${ar},${ag},${ab},${b.alpha + 0.02*Math.sin(b.phase*3)})`);
+      grad.addColorStop(1,'transparent');
+      ctx.save();
+      ctx.transform(1, 0, -0.35, 1, W*0.18, 0); // skew diagonal
+      ctx.fillStyle = grad;
+      ctx.fillRect(cx - W*b.width, 0, W*b.width*2, H);
+      ctx.restore();
+    });
+
+    // ── 2. Shimmer rings ──
+    rings.forEach(rg => {
+      rg.t++;
+      if (rg.t < rg.delay) return;
+      rg.r += rg.speed * Math.min(rg.t - rg.delay, 60)/60 * 1.5;
+      if (rg.r < rg.maxR * 0.3) rg.alpha = (rg.r / (rg.maxR*0.3)) * 0.18;
+      else rg.alpha = 0.18 * (1 - (rg.r - rg.maxR*0.3)/(rg.maxR*0.7));
+      if (rg.r > rg.maxR) { rg.r = 0; rg.alpha = 0; rg.t = rg.delay; }
+      if (rg.alpha <= 0) return;
+      ctx.beginPath();
+      ctx.arc(rg.x*W, rg.y*H, rg.r, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(${ar},${ag},${ab},${rg.alpha})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+
+    // ── 3. Wave lines ──
+    waves.forEach(w => {
+      w.phase += w.speed;
+      ctx.beginPath();
+      ctx.moveTo(0, w.y*H);
+      for (let x = 0; x <= W; x += 4) {
+        const y = w.y*H + Math.sin(x/W*Math.PI*4 + w.phase)*4;
+        ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = `rgba(${ar},${ag},${ab},${w.alpha})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+
+    // ── 4. Rising sparkles ──
+    sparks.forEach(s => {
+      s.y += s.vy;
+      s.x += s.vx;
+      s.life += 0.008;
+      if (s.fadeIn) {
+        s.alpha = Math.min(s.alpha + 0.015, s.maxAlpha);
+        if (s.alpha >= s.maxAlpha) s.fadeIn = false;
+      } else {
+        s.alpha -= 0.006;
+      }
+      if (s.y < -0.05 || s.alpha <= 0) {
+        s.x = Math.random(); s.y = 1.05 + Math.random()*0.1;
+        s.alpha = 0; s.fadeIn = true;
+        s.maxAlpha = 0.3 + Math.random()*0.45;
+        s.vy = -(0.0008 + Math.random()*0.0012);
+        s.vx = (Math.random()-0.5)*0.0004;
+      }
+      // diamond shape (4-pointed star)
+      const px = s.x*W, py = s.y*H, r = s.r;
+      ctx.save();
+      ctx.globalAlpha = s.alpha;
+      ctx.fillStyle = `rgba(${ar},${ag},${ab},1)`;
+      ctx.beginPath();
+      ctx.moveTo(px, py-r*2); ctx.lineTo(px+r, py); ctx.lineTo(px, py+r*2); ctx.lineTo(px-r, py); ctx.closePath();
+      ctx.fill();
+      // centre dot glow
+      const sg = ctx.createRadialGradient(px,py,0,px,py,r*3);
+      sg.addColorStop(0,`rgba(${ar},${ag},${ab},0.25)`);
+      sg.addColorStop(1,'transparent');
+      ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(px,py,r*3,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+
+    t += 0.016;
+    window._bannerRAFs[id] = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
 // ── Banner HTML wrapper (replaces _sceneBannerHtml) ───────────────────────────
 function _sceneBannerHtml(sec, small) {
   const uid = 'b_' + sec.id + '_' + Date.now();
@@ -3278,85 +3424,47 @@ function renderHome() {
     }).join(''),
     personalised: () => '',
     fresh_hub: () => {
-      if (!prods.length && !orderedCats.length) return '';
+      // ── Find the Fruits & Vegetables category by name ──
+      const FV_KWS = ['fruit','vegetable','veggie','fresh produce','sabzi','tarkari'];
+      const fvCat  = cats.find(c => FV_KWS.some(k => c.name.toLowerCase().includes(k)));
+      if (!fvCat) return ''; // section only shows if this category exists
 
-      // ── Theme definitions ──
+      const fvCatId = fvCat.id;
+
+      // ── All active products in that specific category ──
+      const catProds   = prods.filter(p => p.catId === fvCatId && !p.disabled);
+      if (!catProds.length) return '';
+      const display6   = catProds.slice(0, 6);
+      const totalCount = catProds.length;
+
+      // ── Themes ──
       const themes = {
-        forest:{ grad:'#061810,#0d2e16,#082010',  gradStart:'#061810', glow1:'rgba(45,211,111,.35)',  glow2:'rgba(45,211,111,.18)', accent:'#2dd36f', pulse:'rgba(45,211,111,.35)', tagBg:'rgba(45,211,111,.15)', tagBdr:'rgba(45,211,111,.3)',  tagClr:'#2dd36f' },
-        ocean: { grad:'#041520,#073550,#031828',  gradStart:'#041520', glow1:'rgba(34,211,238,.3)',   glow2:'rgba(34,211,238,.15)', accent:'#22d3ee', pulse:'rgba(34,211,238,.3)',  tagBg:'rgba(34,211,238,.12)', tagBdr:'rgba(34,211,238,.28)', tagClr:'#22d3ee' },
-        amber: { grad:'#180e04,#301e08,#1a1005',  gradStart:'#180e04', glow1:'rgba(251,191,36,.3)',   glow2:'rgba(251,191,36,.15)', accent:'#fbbf24', pulse:'rgba(251,191,36,.3)',  tagBg:'rgba(251,191,36,.12)', tagBdr:'rgba(251,191,36,.28)', tagClr:'#fbbf24' },
-        berry: { grad:'#100820,#1e1038,#120a24',  gradStart:'#100820', glow1:'rgba(167,139,250,.3)',  glow2:'rgba(167,139,250,.15)',accent:'#a78bfa', pulse:'rgba(167,139,250,.3)', tagBg:'rgba(167,139,250,.12)',tagBdr:'rgba(167,139,250,.28)',tagClr:'#a78bfa' },
+        forest:{ grad:'#061810,#0d2e16,#082010', gradStart:'#061810', glow1:'rgba(45,211,111,.35)',  glow2:'rgba(45,211,111,.18)', accent:'#2dd36f', tagBg:'rgba(45,211,111,.15)', tagBdr:'rgba(45,211,111,.3)',  tagClr:'#2dd36f' },
+        ocean: { grad:'#041520,#073550,#031828', gradStart:'#041520', glow1:'rgba(34,211,238,.3)',   glow2:'rgba(34,211,238,.15)', accent:'#22d3ee', tagBg:'rgba(34,211,238,.12)', tagBdr:'rgba(34,211,238,.28)', tagClr:'#22d3ee' },
+        amber: { grad:'#180e04,#301e08,#1a1005', gradStart:'#180e04', glow1:'rgba(251,191,36,.3)',   glow2:'rgba(251,191,36,.15)', accent:'#fbbf24', tagBg:'rgba(251,191,36,.12)', tagBdr:'rgba(251,191,36,.28)', tagClr:'#fbbf24' },
+        berry: { grad:'#100820,#1e1038,#120a24', gradStart:'#100820', glow1:'rgba(167,139,250,.3)',  glow2:'rgba(167,139,250,.15)',accent:'#a78bfa', tagBg:'rgba(167,139,250,.12)',tagBdr:'rgba(167,139,250,.28)',tagClr:'#a78bfa' },
       };
       const fh  = settings.freshHub || {};
       const th  = themes[fh.theme] || themes.forest;
 
-      const title     = fh.title    || 'Daily Fresh Need';
-      const subtitle  = fh.subtitle || 'Farm fresh groceries, delivered to your door.';
-      const tag       = fh.tag      || '🌱 Fresh & Daily';
+      const title     = fh.title     || 'Daily Fresh Need';
+      const subtitle  = fh.subtitle  || 'Farm fresh groceries, delivered to your door.';
+      const tag       = fh.tag       || '🌱 Fresh & Daily';
       const flashOn   = !!fh.flashSale;
       const flashLbl  = fh.flashLabel || '⚡ Flash Sale';
       const bannerImg = fh.bannerImage || '/uploads/unnamed.jpg';
 
-      // ── Split last word for accent colour ──
-      const tw    = title.trim().split(' ');
-      const tlast = tw.pop();
-      const tmain = tw.join(' ');
+      // Last word in accent colour
+      const tw = title.trim().split(' '), tlast = tw.pop(), tmain = tw.join(' ');
 
-      // ── STRICT fruit & vegetable filter ──
-      // Two-pass: first try product name keywords (actual produce names)
-      // then try category name keywords (e.g. "Vegetables & Fruits", "Leafy Veg")
-      // NEVER includes: paneer, dairy, egg, meat, snack, biscuit, drink, oil, masala, etc.
-      const PRODUCE_NAMES = [
-        // Vegetables
-        'tomato','potato','onion','carrot','spinach','cabbage','cauliflower','broccoli',
-        'capsicum','chilli','brinjal','eggplant','cucumber','zucchini','pumpkin','gourd',
-        'bitter gourd','bottle gourd','ridge gourd','drumstick','ladyfinger','okra','bhindi',
-        'peas','beans','corn','methi','fenugreek','coriander','mint','curry leaf',
-        'ginger','garlic','radish','beetroot','sweet potato','yam','taro','arbi',
-        'mushroom','lettuce','celery','asparagus','leek','turnip','parsnip','kohlrabi',
-        // Fruits
-        'apple','mango','banana','orange','lemon','lime','grape','strawberry','blueberry',
-        'watermelon','melon','papaya','guava','pomegranate','pineapple','kiwi','cherry',
-        'pear','plum','peach','apricot','fig','date','coconut','jackfruit','litchi',
-        'avocado','dragonfruit','passion fruit','mulberry','raspberry','blackberry',
-        // Generic
-        'sabzi','tarkari','hara','hari','saag','palak','bhaji','sabzian'
-      ];
-      const PRODUCE_CAT_KWS = [
-        'vegetable','veggie','fruit','leafy','salad','greens','produce','fresh veg',
-        'indian veg','imported f','sabzi','tarkari','sabzian'
-      ];
-      // Keywords that DISQUALIFY a product (never fruit/veg even if category matches)
-      const EXCLUDE_NAMES = [
-        'paneer','cheese','butter','ghee','milk','curd','yogurt','cream','khoa','khoya',
-        'ice cream','kulfi','lassi','egg','chicken','meat','fish','mutton','prawn',
-        'chips','biscuit','namkeen','snack','chocolate','candy','noodle','pasta',
-        'juice','drink','soda','cola','water','oil','masala','spice','pickle',
-        'bread','roti','flour','atta','rice','dal','lentil','rajma','chana'
-      ];
-      const isExcluded = p => EXCLUDE_NAMES.some(k => p.name.toLowerCase().includes(k));
-      const catName    = p => (cats.find(c => c.id === p.catId)?.name || '').toLowerCase();
-      const allActive  = prods.filter(p => !p.disabled && defaultVariant(p)?.inStock !== false);
+      // Canvas ID — unique per category so RAF can be tracked
+      const canvasId = 'fhcanvas_' + fvCatId;
+      setTimeout(() => {
+        _stopBannerRAF(canvasId);
+        _canvasFreshHub(document.getElementById(canvasId), th.accent, canvasId);
+      }, 80);
 
-      let freshProds = allActive.filter(p => {
-        if (isExcluded(p)) return false;
-        const nm = p.name.toLowerCase();
-        const cn = catName(p);
-        // Pass if product name contains a produce keyword OR category is a produce category
-        return PRODUCE_NAMES.some(k => nm.includes(k)) || PRODUCE_CAT_KWS.some(k => cn.includes(k));
-      });
-
-      // Fallback: if store has no tagged produce, show all non-excluded active products
-      if (freshProds.length < 3) {
-        freshProds = allActive.filter(p => !isExcluded(p));
-      }
-      // Last resort
-      if (freshProds.length < 3) freshProds = allActive;
-
-      const display6   = freshProds.slice(0, 6);
-      const totalFresh = freshProds.length;
-
-      // ── Build 6-product cards ──
+      // ── Product cards ──
       const prodCards = display6.map(p => {
         const selVid = window._selVariant?.[p.id] || defaultVariant(p)?.id;
         const v = getVariant(p, selVid);
@@ -3387,10 +3495,11 @@ function renderHome() {
         <div class="fhb-orb1" style="background:radial-gradient(circle,${th.glow1} 0%,transparent 70%)"></div>
         <div class="fhb-orb2" style="background:radial-gradient(circle,${th.glow2} 0%,transparent 70%)"></div>
         ${flashOn ? `<div class="fhb-flash">${flashLbl}</div>` : ''}
-        <div class="fhb" onclick="openCatsPage()">
+        <div class="fhb" onclick="openFP(${fvCatId})">
           <div class="fhb-img">
             <img src="${bannerImg}" alt="fresh produce">
           </div>
+          <canvas id="${canvasId}" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:2;"></canvas>
           <div class="fhb-content">
             <div class="fhb-tag" style="background:${th.tagBg};border:1px solid ${th.tagBdr};color:${th.tagClr}">${tag}</div>
             <div class="fhb-title">${tmain ? tmain + ' ' : ''}<em style="color:${th.accent}">${tlast}</em></div>
@@ -3405,10 +3514,10 @@ function renderHome() {
         </div>
         <div class="fhb-divider" style="background:${th.accent}"></div>
         <div class="fhg">${prodCards}</div>
-        ${totalFresh > 6 ? `
-        <div class="fhg-seeall" onclick="openCatsPage()">
-          <span class="fhg-seeall-label">See all ${totalFresh > 99 ? '99+' : totalFresh} fresh items</span>
-          <span class="fhg-seeall-arrow">›</span>
+        ${totalCount > 6 ? `
+        <div class="fhg-seeall" onclick="openFP(${fvCatId})">
+          <span class="fhg-seeall-label">See all ${totalCount} items in ${fvCat.name}</span>
+          <span class="fhg-seeall-arrow" style="font-size:1.1rem;font-weight:900">›</span>
         </div>` : ''}
         <div class="fhg-bottom"></div>
       </div>`;
