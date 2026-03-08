@@ -243,104 +243,77 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .cc-bg-6{background:linear-gradient(145deg,#1a3a3a,#0d2424);}
 .cc-bg-7{background:linear-gradient(145deg,#3a3a1a,#242408);}
 
-/* ══════════════════════ FRESH HUB SECTION — FRUITS & VEG ══════════════════════ */
+/* ══════════════════════ FRESH HUB — FRUITS & VEGETABLES ══════════════════════ */
 .fresh-hub{margin:18px 14px 0;border-radius:22px;overflow:hidden;position:relative;}
 
-/* ── Floating fruit emoji animations ── */
-@keyframes fhFloat1{0%,100%{transform:translateY(0) rotate(-8deg) scale(1);}50%{transform:translateY(-10px) rotate(5deg) scale(1.08);}}
-@keyframes fhFloat2{0%,100%{transform:translateY(0) rotate(6deg) scale(1);}50%{transform:translateY(-14px) rotate(-4deg) scale(1.1);}}
-@keyframes fhFloat3{0%,100%{transform:translateY(0) rotate(-3deg) scale(1);}50%{transform:translateY(-8px) rotate(7deg) scale(1.06);}}
-@keyframes fhFloat4{0%,100%{transform:translateY(0) rotate(10deg) scale(1);}50%{transform:translateY(-12px) rotate(-6deg) scale(1.09);}}
-@keyframes fhOrbit{0%{transform:rotate(0deg) translateX(120px) rotate(0deg);}100%{transform:rotate(360deg) translateX(120px) rotate(-360deg);}}
-@keyframes fhPop{0%{opacity:0;transform:scale(0.5);}60%{transform:scale(1.15);}100%{opacity:1;transform:scale(1);}}
-@keyframes fhLeafSway{0%,100%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}}
-@keyframes fhShine{0%{left:-80%;}100%{left:120%;}}
-@keyframes fhGlowPulse{0%,100%{opacity:.4;transform:scale(1);}50%{opacity:.8;transform:scale(1.25);}}
-@keyframes fhSlideUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-@keyframes fhTagPulse{0%,100%{box-shadow:0 0 0 0 rgba(45,211,111,.45);}60%{box-shadow:0 0 0 8px transparent;}}
-@keyframes fhBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
-@keyframes fhLines{from{background-position:0 0}to{background-position:72px 0}}
+/* Animations */
+@keyframes fhbLines{from{background-position:0 0}to{background-position:72px 0}}
+@keyframes fhbGlowPulse{0%,100%{opacity:.4;transform:scale(1);}50%{opacity:.9;transform:scale(1.2);}}
+@keyframes fhbPulse{0%,100%{box-shadow:0 0 0 0 var(--fhb-pulse,rgba(45,211,111,.4));}60%{box-shadow:0 0 0 8px transparent;}}
+@keyframes fhbFlash{0%,100%{transform:scale(1) rotate(-2deg);}50%{transform:scale(1.1) rotate(-2deg);}}
+@keyframes fhFloat{0%,100%{transform:translateY(0) rotate(-5deg);}50%{transform:translateY(-12px) rotate(5deg);}}
+@keyframes fhFloat2{0%,100%{transform:translateY(0) rotate(8deg);}50%{transform:translateY(-9px) rotate(-6deg);}}
+@keyframes fhFloat3{0%,100%{transform:translateY(0) rotate(-3deg);}50%{transform:translateY(-14px) rotate(4deg);}}
+@keyframes fhShine{0%{left:-80%;}100%{left:130%;}}
+@keyframes fhBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+@keyframes fhSlideUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
 
-/* Animated subtle lines */
+/* Diagonal shimmer lines bg */
 .fhb-lines{
   position:absolute;inset:0;pointer-events:none;z-index:0;
-  background:repeating-linear-gradient(72deg,transparent 0,transparent 26px,rgba(255,255,255,.022) 26px,rgba(255,255,255,.022) 27px);
-  animation:fhLines 10s linear infinite;
+  background:repeating-linear-gradient(72deg,transparent 0,transparent 26px,rgba(255,255,255,.018) 26px,rgba(255,255,255,.018) 27px);
+  animation:fhbLines 10s linear infinite;
 }
-
 /* Glow orbs */
-.fhb-orb1{position:absolute;top:-50px;left:-50px;width:220px;height:220px;border-radius:50%;pointer-events:none;z-index:0;animation:fhGlowPulse 4s ease-in-out infinite;}
-.fhb-orb2{position:absolute;bottom:-40px;right:20%;width:180px;height:180px;border-radius:50%;pointer-events:none;z-index:0;animation:fhGlowPulse 5.5s ease-in-out infinite 1.5s;}
+.fhb-orb1{position:absolute;top:-50px;left:-50px;width:220px;height:220px;border-radius:50%;pointer-events:none;z-index:0;animation:fhbGlowPulse 4s ease-in-out infinite;}
+.fhb-orb2{position:absolute;bottom:-40px;right:25%;width:180px;height:180px;border-radius:50%;pointer-events:none;z-index:0;animation:fhbGlowPulse 5.5s ease-in-out infinite 1.5s;}
 
-/* Floating fruit emojis */
-.fhb-fruit{position:absolute;pointer-events:none;font-size:1.6rem;z-index:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4));user-select:none;}
-.fhb-fruit:nth-child(1){top:12px;right:8%;animation:fhFloat1 3.8s ease-in-out infinite;}
-.fhb-fruit:nth-child(2){top:28px;right:30%;animation:fhFloat2 4.5s ease-in-out infinite .8s;}
-.fhb-fruit:nth-child(3){top:55%;right:5%;animation:fhFloat3 3.2s ease-in-out infinite .3s;}
-.fhb-fruit:nth-child(4){bottom:22px;right:22%;animation:fhFloat4 4.1s ease-in-out infinite 1.2s;}
-.fhb-fruit:nth-child(5){top:18px;right:52%;animation:fhFloat1 5s ease-in-out infinite .6s;font-size:1.2rem;opacity:.6;}
+/* Floating emoji decorations */
+.fhb-fruit{position:absolute;pointer-events:none;z-index:2;filter:drop-shadow(0 3px 8px rgba(0,0,0,.5));user-select:none;line-height:1;}
+.fhb-fruit.f1{font-size:2.2rem;top:10px;right:12px;animation:fhFloat  3.8s ease-in-out infinite;}
+.fhb-fruit.f2{font-size:1.6rem;top:55px;right:50px;animation:fhFloat2 4.5s ease-in-out infinite .7s;}
+.fhb-fruit.f3{font-size:1.3rem;top:20px;right:60px;animation:fhFloat3 3.2s ease-in-out infinite .3s;opacity:.7;}
+.fhb-fruit.f4{font-size:1.8rem;bottom:20px;right:16px;animation:fhFloat  5s ease-in-out infinite 1s;}
+.fhb-fruit.f5{font-size:1.1rem;bottom:30px;right:55px;animation:fhFloat2 4.2s ease-in-out infinite .5s;opacity:.6;}
 
-/* Banner area */
-.fhb{position:relative;padding:26px 18px 22px;min-height:165px;cursor:pointer;overflow:hidden;}
-
-/* Background image — right half */
-.fhb-img{
-  position:absolute;right:0;top:0;bottom:0;width:55%;
-  pointer-events:none;z-index:1;
-}
-.fhb-img img{width:100%;height:100%;object-fit:cover;object-position:center center;display:block;}
-/* Strong gradient mask so text always visible */
-.fhb-img::before{
-  content:'';position:absolute;inset:0;z-index:2;
-  background:linear-gradient(to right,var(--fhb-grad-start,#061810) 0%,var(--fhb-grad-start,#061810)dd 30%,var(--fhb-grad-start,#061810)88 55%,transparent 75%),
-             linear-gradient(to top,var(--fhb-grad-start,#061810)bb 0%,transparent 45%);
-}
-
+/* Banner area — no background image, pure gradient */
+.fhb{position:relative;padding:26px 18px 22px;min-height:155px;cursor:pointer;overflow:hidden;}
 /* Text content */
-.fhb-content{position:relative;z-index:4;max-width:68%;}
-.fhb-content{animation:fhSlideUp .5s ease both;}
-
+.fhb-content{position:relative;z-index:3;max-width:68%;animation:fhSlideUp .5s ease both;}
 /* Pill tag */
 .fhb-tag{
   display:inline-flex;align-items:center;gap:5px;
   border-radius:20px;padding:5px 13px;
   font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
-  margin-bottom:12px;animation:fhTagPulse 2.8s ease-in-out infinite;
+  margin-bottom:12px;animation:fhbPulse 2.8s ease-in-out infinite;
 }
-
 /* Title */
 .fhb-title{
-  font-size:1.7rem;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;
-  text-shadow:0 2px 20px rgba(0,0,0,.95),0 0 50px rgba(0,0,0,.7);
-  overflow:visible;position:relative;z-index:4;
+  font-size:1.75rem;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;
+  text-shadow:0 2px 18px rgba(0,0,0,.6);overflow:visible;
 }
 .fhb-title em{font-style:normal;}
-
 /* Subtitle */
-.fhb-sub{
-  font-size:.68rem;color:rgba(255,255,255,.7);margin-top:8px;line-height:1.65;
-  text-shadow:0 1px 6px rgba(0,0,0,.85);
-}
-
-/* CTA */
+.fhb-sub{font-size:.7rem;color:rgba(255,255,255,.65);margin-top:8px;line-height:1.65;}
+/* CTA button with shine */
 .fhb-cta{
   display:inline-flex;align-items:center;gap:6px;
   border-radius:11px;padding:9px 20px;
   font-size:.73rem;font-weight:900;color:#000;
-  margin-top:15px;
-  box-shadow:0 4px 16px rgba(0,0,0,.35);
+  margin-top:15px;box-shadow:0 4px 16px rgba(0,0,0,.3);
   position:relative;overflow:hidden;
 }
-.fhb-cta::after{content:'';position:absolute;top:0;left:-80%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:fhShine 2.5s ease-in-out infinite 1s;}
-
-/* Dot indicators */
+.fhb-cta::after{
+  content:'';position:absolute;top:0;left:-80%;width:55%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.38),transparent);
+  animation:fhShine 2.8s ease-in-out infinite 1.2s;
+}
+/* Dots */
 .fhb-dots{display:flex;gap:5px;margin-top:14px;}
 .fhb-dot{height:3px;border-radius:2px;}
 .fhb-dot.a{width:20px;}
 .fhb-dot.i{width:5px;opacity:.28;}
-
 /* Flash badge */
-@keyframes fhbFlash{0%,100%{transform:scale(1) rotate(-2deg);}50%{transform:scale(1.1) rotate(-2deg);}}
 .fhb-flash{
   position:absolute;top:12px;right:12px;z-index:6;
   background:linear-gradient(135deg,#ff4500,#ff6935);color:#fff;
@@ -348,102 +321,83 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
   animation:fhbFlash 1s ease-in-out infinite;
   box-shadow:0 2px 10px rgba(255,69,0,.5);letter-spacing:.04em;text-transform:uppercase;
 }
-
 /* Divider */
 .fhb-divider{height:1px;margin:0 14px;opacity:.1;background:#fff;}
 
-/* Section header inside fresh hub */
+/* Section sub-header */
 .fhg-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px 14px 4px;position:relative;z-index:1;
+  padding:13px 14px 4px;position:relative;z-index:1;
 }
-.fhg-header-title{font-size:.85rem;font-weight:900;color:#fff;letter-spacing:.03em;text-transform:uppercase;}
-.fhg-header-count{font-size:.65rem;color:rgba(255,255,255,.45);font-weight:600;}
+.fhg-header-title{font-size:.82rem;font-weight:900;color:#fff;letter-spacing:.04em;text-transform:uppercase;}
+.fhg-header-count{font-size:.64rem;color:rgba(255,255,255,.45);font-weight:600;}
 
-/* Product grid — 3 cols */
+/* Product grid */
 .fhg{
   display:grid;grid-template-columns:repeat(3,1fr);
-  gap:9px;padding:8px 12px 0;
+  gap:9px;padding:6px 12px 0;
   position:relative;z-index:1;
 }
-
-/* Individual card — matches standard pcard style */
+/* Card */
 .fhg-card{
   border-radius:14px;overflow:hidden;cursor:pointer;
-  background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.11);
   display:flex;flex-direction:column;
-  transition:transform .15s,box-shadow .15s;
-  backdrop-filter:blur(6px);
-  -webkit-backdrop-filter:blur(6px);
-  position:relative;
+  transition:transform .15s;
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
 }
 .fhg-card:active{transform:scale(.93);}
-
 .fhg-img{
   position:relative;overflow:hidden;
-  background:rgba(255,255,255,.05);
-  aspect-ratio:1;
-  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.15);
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
 }
 .fhg-img img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s;}
-.fhg-card:active .fhg-img img{transform:scale(1.05);}
+.fhg-card:active .fhg-img img{transform:scale(1.06);}
 .fhg-emoji{font-size:2rem;line-height:1;}
-
 /* Discount badge */
 .fhg-count{
   position:absolute;top:5px;left:5px;
   font-size:.5rem;font-weight:900;
-  border-radius:5px;padding:2px 6px;
-  z-index:2;
+  border-radius:5px;padding:2px 6px;z-index:2;
 }
-
 /* Low stock */
 .fhg-lowstock{
-  position:absolute;bottom:4px;left:4px;right:4px;
-  font-size:.42rem;font-weight:800;
-  background:rgba(255,68,68,.85);color:#fff;
-  border-radius:4px;padding:2px 4px;text-align:center;
-  backdrop-filter:blur(4px);
+  position:absolute;bottom:4px;left:0;right:0;
+  font-size:.42rem;font-weight:800;background:rgba(220,50,50,.85);color:#fff;
+  padding:2px 4px;text-align:center;
 }
-
-/* Qty / Add button inside fhg-card — same look as main pcard */
+/* Qty controls inside fhg-card — styled like main cards */
 .fhg-card .qty-ctrl{
   display:flex;align-items:center;justify-content:space-between;
   background:var(--green);border-radius:8px;overflow:hidden;
-  box-shadow:0 2px 8px rgba(0,0,0,.35);
+  box-shadow:0 2px 8px rgba(0,0,0,.3);
 }
 .fhg-card .qty-ctrl button{
   background:transparent;border:none;color:#000;
-  font-size:1rem;font-weight:900;
-  padding:5px 8px;cursor:pointer;line-height:1;
+  font-size:1rem;font-weight:900;padding:5px 9px;cursor:pointer;line-height:1;
 }
-.fhg-card .qty-ctrl span{
-  font-size:.72rem;font-weight:900;color:#000;flex:1;text-align:center;
-}
+.fhg-card .qty-ctrl span{font-size:.72rem;font-weight:900;color:#000;flex:1;text-align:center;}
 .fhg-card .add-btn{
   background:var(--green);color:#000;border:none;border-radius:8px;
   padding:6px 0;width:100%;font-size:.65rem;font-weight:900;
-  letter-spacing:.06em;cursor:pointer;
-  box-shadow:0 2px 8px rgba(0,0,0,.3);
+  letter-spacing:.06em;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);
   transition:filter .12s;
 }
 .fhg-card .add-btn:active{filter:brightness(1.2);}
 
 /* See-all row */
 .fhg-seeall{
-  position:relative;z-index:1;
-  margin:10px 12px 0;
+  position:relative;z-index:1;margin:10px 12px 0;
   display:flex;align-items:center;justify-content:center;gap:8px;
-  background:rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.13);
+  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);
   border-radius:14px;padding:13px;cursor:pointer;
   backdrop-filter:blur(4px);transition:background .15s;
 }
-.fhg-seeall:active{background:rgba(255,255,255,.15);}
+.fhg-seeall:active{background:rgba(255,255,255,.16);}
 .fhg-seeall-label{font-size:.78rem;font-weight:800;color:#fff;}
 .fhg-seeall-arrow{font-size:1.1rem;color:rgba(255,255,255,.6);animation:fhBounce 1.4s ease-in-out infinite;}
-
 /* Bottom padding */
 .fhg-bottom{height:18px;position:relative;z-index:1;}
 
@@ -3422,66 +3376,64 @@ function renderHome() {
     personalised: () => '',
     fresh_hub: () => {
 
-      // ── Theme definitions (always forest/green — this is fruits & veg only) ──
+      // ── Theme ──
       const themes = {
-        forest:{ grad:'#051a0d,#0a2e12,#061a0a',  gradStart:'#051a0d', glow1:'rgba(45,211,111,.4)',  glow2:'rgba(80,230,100,.2)', accent:'#2dd36f', pulse:'rgba(45,211,111,.4)', tagBg:'rgba(45,211,111,.18)', tagBdr:'rgba(45,211,111,.35)', tagClr:'#2dd36f' },
-        ocean: { grad:'#041520,#073550,#031828',  gradStart:'#041520', glow1:'rgba(34,211,238,.3)',   glow2:'rgba(34,211,238,.15)', accent:'#22d3ee', pulse:'rgba(34,211,238,.3)',  tagBg:'rgba(34,211,238,.12)', tagBdr:'rgba(34,211,238,.28)', tagClr:'#22d3ee' },
-        amber: { grad:'#180e04,#301e08,#1a1005',  gradStart:'#180e04', glow1:'rgba(251,191,36,.3)',   glow2:'rgba(251,191,36,.15)', accent:'#fbbf24', pulse:'rgba(251,191,36,.3)',  tagBg:'rgba(251,191,36,.12)', tagBdr:'rgba(251,191,36,.28)', tagClr:'#fbbf24' },
-        berry: { grad:'#100820,#1e1038,#120a24',  gradStart:'#100820', glow1:'rgba(167,139,250,.3)',  glow2:'rgba(167,139,250,.15)',accent:'#a78bfa', pulse:'rgba(167,139,250,.3)', tagBg:'rgba(167,139,250,.12)',tagBdr:'rgba(167,139,250,.28)',tagClr:'#a78bfa' },
+        forest:{ grad:'#031209,#072212,#041a0c', glow1:'rgba(45,211,111,.45)', glow2:'rgba(45,211,111,.2)', accent:'#2dd36f', pulse:'rgba(45,211,111,.4)', tagBg:'rgba(45,211,111,.18)', tagBdr:'rgba(45,211,111,.38)', tagClr:'#2dd36f' },
+        ocean: { grad:'#041520,#073550,#031828', glow1:'rgba(34,211,238,.3)',  glow2:'rgba(34,211,238,.15)',accent:'#22d3ee', pulse:'rgba(34,211,238,.3)', tagBg:'rgba(34,211,238,.12)',tagBdr:'rgba(34,211,238,.28)',tagClr:'#22d3ee' },
+        amber: { grad:'#180e04,#301e08,#1a1005', glow1:'rgba(251,191,36,.3)',  glow2:'rgba(251,191,36,.15)',accent:'#fbbf24', pulse:'rgba(251,191,36,.3)', tagBg:'rgba(251,191,36,.12)',tagBdr:'rgba(251,191,36,.28)',tagClr:'#fbbf24' },
+        berry: { grad:'#100820,#1e1038,#120a24', glow1:'rgba(167,139,250,.3)', glow2:'rgba(167,139,250,.15)',accent:'#a78bfa',pulse:'rgba(167,139,250,.3)',tagBg:'rgba(167,139,250,.12)',tagBdr:'rgba(167,139,250,.28)',tagClr:'#a78bfa' },
       };
-      const fh  = settings.freshHub || {};
-      const th  = themes[fh.theme] || themes.forest;
+      const fh = settings.freshHub || {};
+      const th = themes[fh.theme] || themes.forest;
 
-      // ── Section config — fruit & veg focused ──
-      const title     = fh.title    || 'Farm Fresh';
-      const subtitle  = fh.subtitle || 'Straight from the farm to your door. Crisp, natural & chemical-free.';
-      const tag       = fh.tag      || '🥬 Fruits & Vegetables';
-      const flashOn   = !!fh.flashSale;
-      const flashLbl  = fh.flashLabel || '⚡ Flash Sale';
-      const bannerImg = fh.bannerImage || '/uploads/unnamed.jpg';
+      // ── Config ──
+      const title    = fh.title    || 'Farm Fresh';
+      const subtitle = fh.subtitle || 'Crisp, natural & chemical‑free. Straight from the farm.';
+      const tag      = fh.tag      || '🥬 Fruits & Vegetables';
+      const flashOn  = !!fh.flashSale;
+      const flashLbl = fh.flashLabel || '⚡ Flash Sale';
 
-      // ── Split last word for accent colour ──
       const tw    = title.trim().split(' ');
       const tlast = tw.pop();
       const tmain = tw.join(' ');
 
-      // ── Find the fruits & vegetables category IDs ──
+      // ── Find fruits & vegetables category IDs ──
+      // Primary: match any category whose name contains veg/fruit keywords
       const vegCatIds = cats
-        .filter(c => /vegetable|fruit|fresh|sabzi|produce|sabji|हरी|तरकारी/i.test(c.name))
+        .filter(c => /vegetable|vegetables|fruit|fruits|fresh produce|sabzi|sabji|greens|produce|फल|सब्ज/i.test(c.name))
         .map(c => c.id);
+
+      // Also grab subcategory IDs whose parent cat matches
+      const vegSubcatCatIds = subcats
+        .filter(sc => vegCatIds.includes(sc.catId))
+        .map(sc => sc.catId);
+
+      const allFreshCatIds = [...new Set([...vegCatIds, ...vegSubcatCatIds])];
 
       const allActive = prods.filter(p => !p.disabled && defaultVariant(p)?.inStock !== false);
 
-      // Strategy 1: products in matching category IDs
-      let freshProds = vegCatIds.length
-        ? allActive.filter(p => vegCatIds.includes(p.catId))
+      // Strategy A: products in matching category
+      let freshProds = allFreshCatIds.length
+        ? allActive.filter(p => allFreshCatIds.includes(p.catId))
         : [];
 
-      // Strategy 2: keyword match on product name (no dairy!)
+      // Strategy B: name keyword match — explicit veg/fruit words, EXCLUDE dairy/bakery/drinks
       if (freshProds.length < 3) {
-        const vegKws = ['vegetable','veggie','sabzi','sabji','fruit','tomato','potato','onion','carrot','leafy','spinach','cabbage','gourd','brinjal','capsicum','banana','apple','mango','orange','lemon','cucumber','pumpkin','garlic','ginger','mushroom','broccoli','cauliflower','peas','beans','okra','bhindi','radish','beetroot','turnip','yam','taro','corn','papaya','guava','pomegranate','watermelon','pineapple','kiwi','grape','strawberry','berry','peach','plum','pear','fig','dates'];
-        freshProds = allActive.filter(p =>
-          vegKws.some(k => p.name.toLowerCase().includes(k)) &&
-          !/paneer|butter|ghee|milk|cheese|curd|yogurt|cream|sweet|biscuit|chip|snack|drink|juice|cola|chocolate|candy|ice cream/i.test(p.name)
-        );
+        const vegKws = /tomato|potato|onion|carrot|spinach|palak|methi|cabbage|gourd|lauki|brinjal|baingan|capsicum|shimla|banana|kela|apple|seb|mango|aam|orange|santra|lemon|nimbu|cucumber|kheera|pumpkin|kaddu|garlic|lehsun|ginger|adrak|mushroom|broccoli|cauliflower|phool\s?gobi|peas|matar|beans|sem|okra|bhindi|ladyfinger|radish|mooli|beetroot|chukander|turnip|yam|taro|arbi|corn|maize|papaya|papita|guava|amrud|pomegranate|anar|watermelon|tarbooz|pineapple|ananas|kiwi|grape|angoor|peach|aadoo|plum|raw\s?mango|raw\s?banana|vegetable|sabzi|sabji|fruit|saag|greens|leafy/i;
+        const dairyKws = /milk|paneer|butter|ghee|curd|yogurt|cream|cheese|bread|biscuit|chip|snack|cola|soda|juice|chocolate|candy|sweet|mithai|dal|pulses|rice|atta|flour|oil|sugar/i;
+        freshProds = allActive.filter(p => vegKws.test(p.name) && !dairyKws.test(p.name));
       }
 
-      // Strategy 3: fallback if store has very few products
+      // Strategy C: absolute fallback
       if (freshProds.length < 3) freshProds = allActive;
 
-      // ── Pick category to open on "View all" ──
-      const freshCatId = vegCatIds.length ? vegCatIds[0] : null;
-      const openFreshAll = freshCatId
-        ? `openFP(${freshCatId})`
-        : `openCatsPage()`;
+      // The category to open when user taps View All / banner
+      const openAllFn = vegCatIds.length ? `openFP(${vegCatIds[0]})` : `openCatsPage()`;
 
       const display6   = freshProds.slice(0, 6);
       const totalFresh = freshProds.length;
 
-      // ── Floating fruit/veg emojis for animation ──
-      const fruitEmojis = ['🍅','🥦','🥕','🍎','🌽','🍇','🥬','🍊'];
-
-      // ── Build product cards (matching the standard pcard style) ──
+      // ── Build product cards ──
       const prodCards = display6.map(p => {
         const selVid = window._selVariant?.[p.id] || defaultVariant(p)?.id;
         const v = getVariant(p, selVid);
@@ -3494,22 +3446,19 @@ function renderHome() {
         const isLowSt = typeof p.stockQuantity === 'number' && p.stockQuantity > 0 && p.stockQuantity <= 5;
         const isOOS   = !v?.inStock || (typeof p.stockQuantity === 'number' && p.stockQuantity === 0);
 
-        // Bulk discount hint
         const bulkHint = (() => {
           const tiers = v.priceTiers;
           if (!tiers || tiers.length <= 1) return '';
           const sorted = [...tiers].sort((a,b) => a.minQty - b.minQty);
           for (const t of sorted) {
             if (t.minQty > (qty||1) && t.price < price)
-              return `<div style="font-size:8.5px;font-weight:800;color:#000;background:${th.accent};border-radius:5px;padding:2px 6px;margin-bottom:3px;display:inline-block;letter-spacing:.02em">📦 ${t.minQty}+ @ ₹${t.price}</div>`;
+              return `<div style="font-size:8.5px;font-weight:800;color:#000;background:${th.accent};border-radius:5px;padding:2px 6px;margin-bottom:3px;display:inline-block">📦 ${t.minQty}+ @ ₹${t.price}</div>`;
           }
-          if (qty > 0 && sorted.length > 1 && qty >= sorted[sorted.length-1].minQty)
-            return `<div style="font-size:8.5px;font-weight:800;color:#000;background:${th.accent};border-radius:5px;padding:2px 6px;margin-bottom:3px;display:inline-block">🏆 Best price!</div>`;
           return '';
         })();
 
         const addCtrl = isOOS
-          ? `<button class="add-btn" style="opacity:.4;cursor:default;font-size:.6rem" disabled>OUT</button>`
+          ? `<button class="add-btn" style="opacity:.4;cursor:default" disabled>OUT</button>`
           : qty > 0
           ? `<div class="qty-ctrl"><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button><span>${qty}</span><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button></div>`
           : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
@@ -3529,23 +3478,22 @@ function renderHome() {
         </div>`;
       }).join('');
 
-      return `<div class="fresh-hub" style="background:linear-gradient(155deg,${th.grad});--fhb-grad-start:${th.gradStart}">
+      // ── Floating fruit/veg emojis (purely decorative, animated) ──
+      const fe = ['🍅','🥦','🥕','🍎','🌽','🍇','🥬','🍊','🫑','🧅'];
+
+      return `<div class="fresh-hub" style="background:linear-gradient(155deg,${th.grad})">
         <div class="fhb-lines"></div>
         <div class="fhb-orb1" style="background:radial-gradient(circle,${th.glow1} 0%,transparent 70%)"></div>
         <div class="fhb-orb2" style="background:radial-gradient(circle,${th.glow2} 0%,transparent 70%)"></div>
         ${flashOn ? `<div class="fhb-flash">${flashLbl}</div>` : ''}
 
-        ${/* Floating animated fruit emojis */''}
-        <span class="fhb-fruit" aria-hidden="true">${fruitEmojis[0]}</span>
-        <span class="fhb-fruit" aria-hidden="true">${fruitEmojis[1]}</span>
-        <span class="fhb-fruit" aria-hidden="true">${fruitEmojis[2]}</span>
-        <span class="fhb-fruit" aria-hidden="true">${fruitEmojis[3]}</span>
-        <span class="fhb-fruit" aria-hidden="true">${fruitEmojis[4]}</span>
+        <span class="fhb-fruit f1" aria-hidden="true">${fe[0]}</span>
+        <span class="fhb-fruit f2" aria-hidden="true">${fe[1]}</span>
+        <span class="fhb-fruit f3" aria-hidden="true">${fe[2]}</span>
+        <span class="fhb-fruit f4" aria-hidden="true">${fe[3]}</span>
+        <span class="fhb-fruit f5" aria-hidden="true">${fe[4]}</span>
 
-        <div class="fhb" onclick="${openFreshAll}">
-          <div class="fhb-img">
-            <img src="${bannerImg}" alt="fresh produce">
-          </div>
+        <div class="fhb" onclick="${openAllFn}">
           <div class="fhb-content">
             <div class="fhb-tag" style="background:${th.tagBg};border:1px solid ${th.tagBdr};color:${th.tagClr};--fhb-pulse:${th.pulse}">${tag}</div>
             <div class="fhb-title">${tmain ? tmain + '&nbsp;' : ''}<em style="color:${th.accent}">${tlast}</em></div>
@@ -3566,10 +3514,10 @@ function renderHome() {
           <span class="fhg-header-count">${totalFresh} items</span>
         </div>
 
-        <div class="fhg" id="fhg-grid">${prodCards}</div>
+        <div class="fhg">${prodCards}</div>
 
-        <div class="fhg-seeall" onclick="${openFreshAll}">
-          <span class="fhg-seeall-label">View all ${totalFresh > 99 ? '99+' : totalFresh} Fruits & Vegetables</span>
+        <div class="fhg-seeall" onclick="${openAllFn}">
+          <span class="fhg-seeall-label">View all ${totalFresh > 99 ? '99+' : totalFresh} Fruits &amp; Vegetables</span>
           <span class="fhg-seeall-arrow">›</span>
         </div>
 
@@ -3934,30 +3882,46 @@ function updateCardInPlace(card, p, vid) {
   if (img && imgUrl) img.src = imgUrl;
 }
 
-// Update fresh-hub card in-place when cart changes
+// ── Update fresh-hub card in-place (mirrors updateCardInPlace for .pcard) ──
 function updateFhgCardInPlace(card, p, vid) {
   const qty   = cart[cartKey(p.id, vid)] || 0;
   const v     = getVariant(p, vid);
   if (!v) return;
-  const price = getPrice(v.priceTiers, qty || 1);
-  const mrp   = v.mrp && v.mrp > price ? v.mrp : null;
-  const off   = offPct(price, mrp);
-  const isOOS = !v?.inStock || (typeof p.stockQuantity === "number" && p.stockQuantity === 0);
-  const accent = "#2dd36f";
+  const price  = getPrice(v.priceTiers, qty || 1);
+  const mrp    = v.mrp && v.mrp > price ? v.mrp : null;
+  const off    = offPct(price, mrp);
+  const isOOS  = !v?.inStock || (typeof p.stockQuantity === 'number' && p.stockQuantity === 0);
+  const accent = '#2dd36f';
   const bulkHintHtml = (() => {
     const tiers = v.priceTiers;
-    if (!tiers || tiers.length <= 1) return "";
+    if (!tiers || tiers.length <= 1) return '';
     const sorted = [...tiers].sort((a,b) => a.minQty - b.minQty);
     for (const t of sorted) {
       if (t.minQty > (qty||1) && t.price < price)
-        return `<div style="font-size:8.5px;font-weight:800;color:#000;background:${accent};border-radius:5px;padding:2px 6px;margin-bottom:3px;display:inline-block">📦 ${t.minQty}+ @ ₹${t.price}</div>`;
+        return '<div style="font-size:8.5px;font-weight:800;color:#000;background:' + accent + ';border-radius:5px;padding:2px 6px;margin-bottom:3px;display:inline-block">\u{1F4E6} ' + t.minQty + '+ @ \u20B9' + t.price + '</div>';
     }
-    return "";
+    return '';
   })();
-  const inner = card.querySelector("div:not(.fhg-img)");
+  const inner = card.querySelector('div:not(.fhg-img)');
   if (!inner) return;
-  inner.innerHTML = `<div style="font-size:10.5px;font-weight:700;color:#fff;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.name}</div><div style="font-size:11px;font-weight:900;color:${accent};margin-top:1px">₹${price}${mrp?"<span style=font-size:8.5px;color:rgba(255,255,255,.38);text-decoration:line-through;margin-left:3px>₹"+mrp+"</span>":""}</div>${bulkHintHtml}<div style="margin-top:auto;padding-top:4px">${isOOS?"<button class=add-btn style=opacity:.4;cursor:default disabled>OUT</button>":qty>0?"<div class=qty-ctrl><button onclick=event.stopPropagation();chQty("+p.id+",+vid+,-1)>−</button><span>"+qty+"</span><button onclick=event.stopPropagation();chQty("+p.id+",+vid+,1)>+</button></div>":"<button class=add-btn onclick=event.stopPropagation();chQty("+p.id+",+vid+,1)>ADD</button>"}</div>`;
+  const priceHtml = mrp
+    ? '\u20B9' + price + '<span style="font-size:8.5px;color:rgba(255,255,255,.38);text-decoration:line-through;margin-left:3px">\u20B9' + mrp + '</span>'
+    : '\u20B9' + price;
+  const ctrlHtml = isOOS
+    ? '<button class="add-btn" style="opacity:.4;cursor:default" disabled>OUT</button>'
+    : qty > 0
+    ? '<div class="qty-ctrl"><button onclick="event.stopPropagation();chQty(' + p.id + ',\'' + vid + '\',-1)">\u2212</button><span>' + qty + '</span><button onclick="event.stopPropagation();chQty(' + p.id + ',\'' + vid + '\',1)">+</button></div>'
+    : '<button class="add-btn" onclick="event.stopPropagation();chQty(' + p.id + ',\'' + vid + '\',1)">ADD</button>';
+  inner.innerHTML =
+    '<div style="font-size:10.5px;font-weight:700;color:#fff;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">' + p.name + '</div>' +
+    '<div style="font-size:11px;font-weight:900;color:' + accent + ';margin-top:1px">' + priceHtml + '</div>' +
+    bulkHintHtml +
+    '<div style="margin-top:auto;padding-top:4px">' + ctrlHtml + '</div>';
+  // Discount badge
+  const badge = card.querySelector('.fhg-count');
+  if (badge) { if (off > 0 && !isOOS) { badge.textContent = off + '% OFF'; badge.style.display = ''; } else badge.style.display = 'none'; }
 }
+
 function reRenderCurrentPage() {
   const fpOpen = document.getElementById('fpage')?.classList.contains('open');
   const splitVisible = document.getElementById('fpSplitBody')?.style.display !== 'none';
@@ -4429,9 +4393,11 @@ function chQty(pid, vid, delta) {
     document.querySelectorAll('.pcard:not([data-pid])').forEach(card => {
       if (card.innerHTML.includes("chQty("+pid+",'"+vid+"'")) updateCardInPlace(card, p, vid);
     });
+    // Also update fresh-hub fhg-cards
+    document.querySelectorAll(`.fhg-card[data-pid="${pid}"][data-vid="${vid}"]`).forEach(card => {
+      updateFhgCardInPlace(card, p, vid);
+    });
   }
-    // Update fresh-hub fhg-cards in-place
-    document.querySelectorAll(`.fhg-card[data-pid="${pid}"][data-vid="${vid}"]`).forEach(card => { updateFhgCardInPlace(card, p, vid); });
 
   // Bounce pill + fly-to-cart animation
   const fc = document.getElementById('fcart');
@@ -4641,7 +4607,6 @@ function chQtyCart(key, delta) {
   if (fpOpen && window._openCatId && splitVisible) {
     const p = prods.find(x=>x.id===pid);
     if (p) document.querySelectorAll(`.pcard[data-pid="${pid}"][data-vid="${vid}"]`).forEach(card => updateCardInPlace(card, p, vid));
-    const p2 = prods.find(x=>x.id===pid); if (p2) document.querySelectorAll(`.fhg-card[data-pid="${pid}"][data-vid="${vid}"]`).forEach(c => updateFhgCardInPlace(c, p2, vid));
   } else {
     renderHome();
   }
