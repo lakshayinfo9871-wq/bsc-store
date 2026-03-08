@@ -196,6 +196,83 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .cc-bg-6{background:linear-gradient(145deg,#1a3a3a,#0d2424);}
 .cc-bg-7{background:linear-gradient(145deg,#3a3a1a,#242408);}
 
+/* ══════════════════════ FRESH HUB SECTION ══════════════════════ */
+.fresh-hub{margin:18px 14px 0;}
+.fresh-hub-banner{
+  border-radius:20px;overflow:hidden;position:relative;
+  background:linear-gradient(135deg,#082a12 0%,#0f3d1c 40%,#0b2e15 100%);
+  padding:20px 18px 18px;cursor:pointer;
+  border:1px solid rgba(45,211,111,.15);
+}
+.fresh-hub-banner::before{
+  content:'';position:absolute;top:-40px;right:-30px;
+  width:180px;height:180px;
+  background:radial-gradient(circle,rgba(45,211,111,.22) 0%,transparent 70%);
+  pointer-events:none;
+}
+.fresh-hub-deco{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  font-size:4.5rem;opacity:.18;line-height:1;pointer-events:none;
+  filter:drop-shadow(0 0 12px rgba(45,211,111,.4));
+}
+.fresh-hub-tag{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(45,211,111,.18);border:1px solid rgba(45,211,111,.3);
+  border-radius:20px;padding:3px 10px;
+  font-size:.58rem;font-weight:800;color:var(--green);
+  letter-spacing:.06em;text-transform:uppercase;margin-bottom:9px;
+}
+.fresh-hub-title{font-size:1.55rem;font-weight:900;color:#fff;letter-spacing:-.6px;line-height:1.15;}
+.fresh-hub-title em{font-style:normal;color:var(--green);}
+.fresh-hub-sub{font-size:.72rem;color:rgba(255,255,255,.5);margin-top:6px;line-height:1.5;}
+.fresh-hub-sub strong{color:rgba(255,255,255,.8);font-weight:700;}
+.fresh-hub-cta{
+  display:inline-flex;align-items:center;gap:6px;
+  margin-top:13px;background:var(--green);color:#000;
+  border-radius:10px;padding:7px 16px;
+  font-size:.72rem;font-weight:900;letter-spacing:.03em;
+}
+/* Sliding dots on banner (decorative) */
+.fresh-hub-dots{display:flex;gap:4px;margin-top:10px;}
+.fresh-hub-dot{width:16px;height:4px;border-radius:2px;background:var(--green);}
+.fresh-hub-dot.sm{width:5px;background:rgba(255,255,255,.25);}
+
+/* Category grid */
+.fresh-hub-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:9px;margin-top:10px;
+}
+.fresh-cat{
+  border-radius:14px;overflow:hidden;cursor:pointer;
+  background:var(--bg2);border:1px solid var(--border);
+  transition:transform .15s;
+  display:flex;flex-direction:column;
+}
+.fresh-cat:active{transform:scale(.93);}
+.fresh-cat-img{
+  aspect-ratio:1;overflow:hidden;
+  background:var(--bg3);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.fresh-cat-img img{width:100%;height:100%;object-fit:cover;}
+.fresh-cat-img .fci-emoji{font-size:1.75rem;line-height:1;}
+/* Colored tint overlays per index */
+.fci-tint-0{background:linear-gradient(145deg,#0d2a1a,#071a10);}
+.fci-tint-1{background:linear-gradient(145deg,#1a2a0d,#101a07);}
+.fci-tint-2{background:linear-gradient(145deg,#2a1a0d,#1a0d07);}
+.fci-tint-3{background:linear-gradient(145deg,#0d1a2a,#071017);}
+.fci-tint-4{background:linear-gradient(145deg,#2a0d1a,#1a0710);}
+.fci-tint-5{background:linear-gradient(145deg,#1a2a1a,#0d170d);}
+.fci-tint-6{background:linear-gradient(145deg,#1a1a2a,#0d0d1a);}
+.fci-tint-7{background:linear-gradient(145deg,#2a2a0d,#1a1a07);}
+.fresh-cat-name{
+  font-size:10px;font-weight:700;
+  padding:5px 4px 7px;text-align:center;
+  line-height:1.25;color:var(--text);
+  background:var(--bg2);
+}
+
 /* ══════════════════════ PRODUCT STRIP ══════════════════════ */
 .pstrip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;align-items:stretch;}
 
@@ -3099,7 +3176,7 @@ function _renderCtxGrid(list) {
 
 
 function renderHome() {
-  const layout = settings.homeLayout || ['personalised','banners','featured','new','categories','cat_strips'];
+  const layout = settings.homeLayout || ['personalised','banners','featured','new','fresh_hub','categories','cat_strips'];
   const hidden = new Set(settings.homeLayoutHidden || []);
   const catOrder = settings.catOrder || [];
 
@@ -3142,6 +3219,55 @@ function renderHome() {
         <div class="pstrip">${ps.slice(0,8).map(pCard).join('')}</div></div>`;
     }).join(''),
     personalised: () => '',
+    fresh_hub: () => {
+      if (!orderedCats.length) return '';
+      // Prioritise fresh/produce categories by keyword match
+      const freshKws = ['vegetable','fruit','paneer','dairy','egg','fresh','leafy','potato','onion','tomato','frozen','produce','salad','herbs','mushroom','noodle','chaap','pickle'];
+      let freshCats = orderedCats.filter(c => freshKws.some(k => c.name.toLowerCase().includes(k)));
+      // Fill up to 8 slots with remaining cats if needed
+      if (freshCats.length < 4) {
+        const extra = orderedCats.filter(c => !freshCats.includes(c));
+        freshCats = [...freshCats, ...extra];
+      }
+      const displayCats = freshCats.slice(0, 8);
+
+      const catEmojiMap = [
+        ['frozen','❄️'],['leafy','🥬'],['vegetable','🥦'],['fruit','🍎'],
+        ['import','🥑'],['potato','🥔'],['onion','🧅'],['paneer','🧀'],
+        ['dairy','🥛'],['egg','🥚'],['noodle','🍜'],['chaap','🍖'],
+        ['snack','🍿'],['drink','🥤'],['bakery','🍞'],['chicken','🍗'],['meat','🥩'],
+      ];
+      const getEmoji = name => {
+        const n = name.toLowerCase();
+        return (catEmojiMap.find(([k]) => n.includes(k)) || ['','🌿'])[1];
+      };
+
+      const gridItems = displayCats.map((c, i) => `
+        <div class="fresh-cat" onclick="openFP(${c.id})">
+          <div class="fresh-cat-img fci-tint-${i % 8}">
+            ${c.imageUrl
+              ? `<img src="${c.imageUrl}" loading="lazy">`
+              : `<span class="fci-emoji">${getEmoji(c.name)}</span>`
+            }
+          </div>
+          <div class="fresh-cat-name">${c.name}</div>
+        </div>`).join('');
+
+      return `<div class="fresh-hub">
+        <div class="fresh-hub-banner" onclick="openCatsPage()">
+          <div class="fresh-hub-deco">🥦</div>
+          <div class="fresh-hub-tag">🌱 Daily Essentials</div>
+          <div class="fresh-hub-title">Daily <em>Fresh</em> Need</div>
+          <div class="fresh-hub-sub"><strong>Wholesale rates. Better margins.</strong><br>Fresh daily.</div>
+          <div class="fresh-hub-dots">
+            <div class="fresh-hub-dot"></div>
+            <div class="fresh-hub-dot sm"></div>
+            <div class="fresh-hub-dot sm"></div>
+          </div>
+        </div>
+        <div class="fresh-hub-grid">${gridItems}</div>
+      </div>`;
+    },
   };
 
   let h = layout.filter(id => !hidden.has(id)).map(id => sections[id] ? sections[id]() : '').join('');
