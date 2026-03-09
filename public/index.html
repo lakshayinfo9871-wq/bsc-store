@@ -472,31 +472,26 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .deals-page-pct{font-size:1.05rem;font-weight:900;color:#fff;letter-spacing:-.3px;}
 .deals-page-pct em{color:#ff7028;font-style:normal;}
 .deals-page-sub{font-size:.67rem;color:rgba(255,255,255,.4);margin-top:2px;}
-
-/* ══════════════════════ CATEGORY RAIL (dual infinite scroll) ══════════════════ */
+/* ══ CATEGORY RAIL ══ */
 .cat-rail-wrap{padding:18px 0 6px;}
 .cat-rail-hd{display:flex;align-items:center;justify-content:space-between;padding:0 14px;margin-bottom:11px;}
-/* Each row */
 .cat-rail-outer{display:flex;flex-direction:column;gap:10px;}
 .cat-rail-row{overflow:hidden;position:relative;}
-/* Edge fades */
-.cat-rail-row::before,.cat-rail-row::after{content:'';position:absolute;top:0;bottom:0;width:24px;z-index:2;pointer-events:none;}
-.cat-rail-row::before{left:0;background:linear-gradient(to right,var(--bg) 0%,transparent 100%);}
-.cat-rail-row::after{right:0;background:linear-gradient(to left,var(--bg) 0%,transparent 100%);}
-/* Scrolling track */
+.cat-rail-row::before,.cat-rail-row::after{content:'';position:absolute;top:0;bottom:0;width:26px;z-index:2;pointer-events:none;}
+.cat-rail-row::before{left:0;background:linear-gradient(to right,var(--bg),transparent);}
+.cat-rail-row::after{right:0;background:linear-gradient(to left,var(--bg),transparent);}
 .cat-rail-track{display:flex;gap:9px;padding:2px 14px;width:max-content;will-change:transform;}
-.cat-rail-track.left {animation:catRailLeft  var(--rail-dur,28s) linear infinite;}
-.cat-rail-track.right{animation:catRailRight var(--rail-dur,28s) linear infinite;}
+.cat-rail-track.rl{animation:catRL var(--rail-dur,28s) linear infinite;}
+.cat-rail-track.rr{animation:catRR var(--rail-dur,28s) linear infinite;}
 .cat-rail-track.paused{animation-play-state:paused !important;}
-@keyframes catRailLeft { 0%{transform:translateX(0);} 100%{transform:translateX(var(--rail-shift,-50%));} }
-@keyframes catRailRight{ 0%{transform:translateX(var(--rail-shift,-50%));} 100%{transform:translateX(0);} }
-/* Individual card */
+@keyframes catRL{0%{transform:translateX(0);}100%{transform:translateX(var(--rail-shift,-50%));}}
+@keyframes catRR{0%{transform:translateX(var(--rail-shift,-50%));}100%{transform:translateX(0);}}
 .cat-rail-card{flex-shrink:0;width:82px;border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s;display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent;}
 .cat-rail-card:active{transform:scale(.93);}
-.cat-rail-img{width:82px;height:72px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg3);border-radius:14px 14px 0 0;position:relative;}
+.cat-rail-img{width:82px;height:70px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:14px 14px 0 0;}
 .cat-rail-img img{width:100%;height:100%;object-fit:cover;}
-.cat-rail-img span{font-size:1.9rem;line-height:1;}
-.cat-rail-name{font-size:10px;font-weight:700;color:#fff;text-align:center;padding:5px 4px 6px;line-height:1.25;background:inherit;}
+.cat-rail-img span{font-size:1.8rem;line-height:1;}
+.cat-rail-name{font-size:10px;font-weight:700;color:#fff;text-align:center;padding:5px 4px 6px;line-height:1.2;background:inherit;}
 
 /* Variant selector inside card */
 .pc-variant-btn{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 8px;font-size:11px;color:var(--text);font-weight:600;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left;transition:border-color .2s;}
@@ -3490,68 +3485,32 @@ function renderHome() {
     cat_rail: () => {
       if (!orderedCats.length) return '';
       const railCfg = settings.catRail || {};
-      const r1Ids = railCfg.row1 || [];
-      const r2Ids = railCfg.row2 || [];
-
-      // Build row1 / row2 from config, fallback to alternating split
-      let row1Cats, row2Cats;
+      const r1Ids = railCfg.row1 || [], r2Ids = railCfg.row2 || [];
+      let row1, row2;
       if (r1Ids.length || r2Ids.length) {
-        row1Cats = r1Ids.map(id => cats.find(c => c.id === id)).filter(Boolean);
-        row2Cats = r2Ids.map(id => cats.find(c => c.id === id)).filter(Boolean);
-        // Unassigned cats spill into row1
-        const assigned = new Set([...r1Ids, ...r2Ids]);
-        orderedCats.filter(c => !assigned.has(c.id)).forEach(c => row1Cats.push(c));
+        row1 = r1Ids.map(id => cats.find(c=>c.id===id)).filter(Boolean);
+        row2 = r2Ids.map(id => cats.find(c=>c.id===id)).filter(Boolean);
+        const used = new Set([...r1Ids,...r2Ids]);
+        orderedCats.filter(c=>!used.has(c.id)).forEach(c=>row1.push(c));
       } else {
-        row1Cats = orderedCats.filter((_, i) => i % 2 === 0);
-        row2Cats = orderedCats.filter((_, i) => i % 2 === 1);
+        row1 = orderedCats.filter((_,i)=>i%2===0);
+        row2 = orderedCats.filter((_,i)=>i%2!==0);
       }
-      if (!row1Cats.length) row1Cats = [...orderedCats];
-      if (!row2Cats.length) row2Cats = [...orderedCats].reverse();
-
-      // Speed: slow=40s/cat, medium=28s, fast=16s base per 8 cards
-      const speedMap = { slow: 5, medium: 3.5, fast: 2 };
-      const spd = speedMap[railCfg.speed || 'medium'];
-      const dur1 = Math.max(14, row1Cats.length * spd).toFixed(0) + 's';
-      const dur2 = Math.max(14, row2Cats.length * spd).toFixed(0) + 's';
-
-      // Duplicate for seamless loop — triple if very few cards
-      const loopify = (arr) => arr.length < 4 ? [...arr,...arr,...arr,...arr] : arr.length < 7 ? [...arr,...arr] : [...arr,...arr];
-      const r1Loop = loopify(row1Cats);
-      const r2Loop = loopify(row2Cats);
-
-      const shift1 = row1Cats.length < 4 ? '-25%' : '-50%';
-      const shift2 = row2Cats.length < 4 ? '-25%' : '-50%';
-
-      const makeCard = (c, globalIdx) => {
-        const emoji = catEmojis[c.name] || catEmojis['default'];
-        const bg = getCcBg(cats.findIndex(x => x.id === c.id));
-        return `<div class="cat-rail-card ${bg}" onclick="openFP(${c.id})">
-          <div class="cat-rail-img">${c.imageUrl ? `<img src="${c.imageUrl}" loading="lazy">` : `<span>${emoji}</span>`}</div>
-          <div class="cat-rail-name">${c.name}</div>
-        </div>`;
+      if (!row1.length) row1=[...orderedCats];
+      if (!row2.length) row2=[...orderedCats].reverse();
+      const loop = a => a.length<4?[...a,...a,...a,...a]:a.length<7?[...a,...a,...a]:[...a,...a];
+      const l1=loop(row1), l2=loop(row2);
+      const spd={slow:5,medium:3.2,fast:1.8}[railCfg.speed||'medium'];
+      const d1=Math.max(12,row1.length*spd).toFixed(0)+'s';
+      const d2=Math.max(12,row2.length*spd).toFixed(0)+'s';
+      const sh = n => n<4?'-25%':n<7?'-33%':'-50%';
+      const card = c => {
+        const em=catEmojis[c.name]||catEmojis['default'];
+        const bg=getCcBg(cats.findIndex(x=>x.id===c.id));
+        return `<div class="cat-rail-card ${bg}" onclick="openFP(${c.id})"><div class="cat-rail-img">${c.imageUrl?`<img src="${c.imageUrl}" loading="lazy">`:`<span>${em}</span>`}</div><div class="cat-rail-name">${c.name}</div></div>`;
       };
-
-      const pauseEvt = (trackId) =>
-        `ontouchstart="document.getElementById('${trackId}').classList.add('paused')" ontouchend="document.getElementById('${trackId}').classList.remove('paused')"`;
-
-      return `<div class="cat-rail-wrap">
-        <div class="cat-rail-hd">
-          <span class="sec-title">${railCfg.title || 'Shop by Category'}</span>
-          <span class="see-all" onclick="openCatsPage()">See all →</span>
-        </div>
-        <div class="cat-rail-outer">
-          <div class="cat-rail-row">
-            <div class="cat-rail-track left" id="catRail1" style="--rail-dur:${dur1};--rail-shift:${shift1};" ${pauseEvt('catRail1')}>
-              ${r1Loop.map((c,i) => makeCard(c,i)).join('')}
-            </div>
-          </div>
-          <div class="cat-rail-row">
-            <div class="cat-rail-track right" id="catRail2" style="--rail-dur:${dur2};--rail-shift:${shift2};" ${pauseEvt('catRail2')}>
-              ${r2Loop.map((c,i) => makeCard(c,i)).join('')}
-            </div>
-          </div>
-        </div>
-      </div>`;
+      const p=id=>`ontouchstart="document.getElementById('${id}').classList.add('paused')" ontouchend="document.getElementById('${id}').classList.remove('paused')"`;
+      return `<div class="cat-rail-wrap"><div class="cat-rail-hd"><span class="sec-title">${railCfg.title||'Shop by Category'}</span><span class="see-all" onclick="openCatsPage()">See all →</span></div><div class="cat-rail-outer"><div class="cat-rail-row"><div class="cat-rail-track rl" id="catRail1" style="--rail-dur:${d1};--rail-shift:${sh(row1.length)};" ${p('catRail1')}>${l1.map(card).join('')}</div></div><div class="cat-rail-row"><div class="cat-rail-track rr" id="catRail2" style="--rail-dur:${d2};--rail-shift:${sh(row2.length)};" ${p('catRail2')}>${l2.map(card).join('')}</div></div></div></div>`;
     },
     cat_strips: () => orderedCats.map(c => {
       const ps = prods.filter(p => p.catId===c.id);
