@@ -439,6 +439,40 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .pc-bulk-hint.best{background:var(--green);}
 .pc-bot{display:none;}/* legacy — no longer needed, ADD is overlaid */
 
+/* ══════════════════════ HOT DEALS SECTION ══════════════════════ */
+.deals-section{padding:18px 0 4px;}
+.deals-hd{display:flex;align-items:center;justify-content:space-between;padding:0 14px;margin-bottom:10px;}
+
+/* Deals banner */
+.deals-banner{margin:0 14px 12px;border-radius:18px;padding:16px 16px 14px;cursor:pointer;position:relative;overflow:hidden;background:linear-gradient(135deg,#1c0800 0%,#3a1200 50%,#1a0600 100%);border:1px solid rgba(255,100,30,.18);}
+.deals-banner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 80% 50%,rgba(255,120,40,.15) 0%,transparent 65%);pointer-events:none;}
+.deals-banner-tagline{font-size:.52rem;font-weight:900;color:rgba(255,140,60,.75);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;}
+.deals-banner-pct{font-size:1.45rem;font-weight:900;color:#fff;line-height:1.1;letter-spacing:-.5px;margin-bottom:4px;}
+.deals-banner-pct em{color:#ff7028;font-style:normal;}
+.deals-banner-sub{font-size:.68rem;color:rgba(255,255,255,.45);margin-bottom:13px;}
+.deals-banner-chips{display:flex;gap:7px;flex-wrap:wrap;}
+.deals-chip{padding:5px 13px;border-radius:20px;border:1.5px solid rgba(255,112,40,.4);background:rgba(255,112,40,.1);font-size:.72rem;font-weight:800;color:#ff9060;cursor:pointer;transition:all .15s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+.deals-chip:active{background:rgba(255,112,40,.3);transform:scale(.93);}
+.deals-chip.hl{border-color:#ff7028;background:#ff7028;color:#000;}
+.deals-fire{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:2.8rem;opacity:.22;pointer-events:none;user-select:none;animation:dealsFire 2.4s ease-in-out infinite;}
+@keyframes dealsFire{0%,100%{transform:translateY(-50%) scale(1) rotate(-4deg);}50%{transform:translateY(-58%) scale(1.08) rotate(4deg);}}
+
+/* Infinite carousel */
+.deals-carousel-outer{overflow:hidden;position:relative;padding:4px 0 8px;}
+.deals-carousel-outer::before,.deals-carousel-outer::after{content:'';position:absolute;top:0;bottom:0;width:28px;z-index:2;pointer-events:none;}
+.deals-carousel-outer::before{left:0;background:linear-gradient(to right,var(--bg),transparent);}
+.deals-carousel-outer::after{right:0;background:linear-gradient(to left,var(--bg),transparent);}
+.deals-carousel-track{display:flex;gap:10px;padding:0 14px;width:max-content;will-change:transform;animation:dealsScroll var(--deals-dur,32s) linear infinite;}
+.deals-carousel-track.paused{animation-play-state:paused;}
+@keyframes dealsScroll{0%{transform:translateX(0);}100%{transform:translateX(var(--deals-shift,-50%));}}
+
+/* Deals full page */
+.deals-page-banner{padding:14px 14px 12px;background:linear-gradient(135deg,#1c0800,#3a1200);position:relative;overflow:hidden;flex-shrink:0;}
+.deals-page-banner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 50%,rgba(255,120,40,.12),transparent 60%);pointer-events:none;}
+.deals-page-pct{font-size:1.05rem;font-weight:900;color:#fff;letter-spacing:-.3px;}
+.deals-page-pct em{color:#ff7028;font-style:normal;}
+.deals-page-sub{font-size:.67rem;color:rgba(255,255,255,.4);margin-top:2px;}
+
 /* Variant selector inside card */
 .pc-variant-btn{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 8px;font-size:11px;color:var(--text);font-weight:600;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left;transition:border-color .2s;}
 .pc-variant-btn:active{border-color:var(--green);background:rgba(45,211,111,.06);}
@@ -3335,7 +3369,7 @@ function _renderCtxGrid(list) {
 
 
 function renderHome() {
-  const layout = settings.homeLayout || ['personalised','banners','recently_viewed','featured','new','fresh_hub','categories','cat_strips'];
+  const layout = settings.homeLayout || ['personalised','banners','deals','recently_viewed','featured','new','fresh_hub','categories','cat_strips'];
   const hidden = new Set(settings.homeLayoutHidden || []);
   const catOrder = settings.catOrder || [];
 
@@ -3363,6 +3397,63 @@ function renderHome() {
     },
     featured: () => feat.length ? `<div class="sec"><div class="sec-hd"><span class="sec-title">⭐ Featured</span></div><div class="pstrip">${feat.map(pCard).join('')}</div></div>` : '',
     new:      () => newP.length  ? `<div class="sec"><div class="sec-hd"><span class="sec-title">✨ New Arrivals</span></div><div class="pstrip">${newP.map(pCard).join('')}</div></div>` : '',
+    deals: () => {
+      // Collect all products that have any discount, sorted best-first
+      const dealList = prods
+        .filter(p => {
+          if (p.disabled) return false;
+          const v = defaultVariant(p);
+          if (!v || v.inStock === false) return false;
+          const price = getPrice(v.priceTiers, 1);
+          return offPct(price, v.mrp) > 0;
+        })
+        .map(p => {
+          const v = defaultVariant(p);
+          const price = getPrice(v.priceTiers, 1);
+          return { p, pct: offPct(price, v.mrp) };
+        })
+        .sort((a, b) => b.pct - a.pct)
+        .map(x => x.p);
+      if (dealList.length < 2) return '';
+      const maxPct = (() => {
+        const v = defaultVariant(dealList[0]);
+        const price = getPrice(v.priceTiers, 1);
+        return offPct(price, v.mrp);
+      })();
+      // Carousel: take up to 14 products, duplicate for seamless loop
+      const carousel = dealList.slice(0, 14);
+      // Only duplicate if there are enough cards to fill the screen
+      const doubled = carousel.length >= 4 ? [...carousel, ...carousel] : carousel;
+      // Duration scales with number of cards (~2.8s per card), min 20s
+      const dur = Math.max(20, carousel.length * 2.8).toFixed(0) + 's';
+      // CSS variable for the translateX endpoint (–50% if doubled, else –100%)
+      const shift = carousel.length >= 4 ? '-50%' : '-100%';
+      return `<div class="deals-section">
+        <div class="deals-hd">
+          <span class="sec-title">🔥 Hot Deals</span>
+          <span class="see-all" onclick="openDealsPage(0)">View all →</span>
+        </div>
+        <div class="deals-banner" onclick="openDealsPage(0)">
+          <div class="deals-fire" aria-hidden="true">🔥</div>
+          <div class="deals-banner-tagline">Limited time · Best prices</div>
+          <div class="deals-banner-pct">Up to <em>${maxPct}% OFF</em></div>
+          <div class="deals-banner-sub">On selected items · Tap to explore all deals</div>
+          <div class="deals-banner-chips">
+            <span class="deals-chip" onclick="event.stopPropagation();openDealsPage(0)">All Deals</span>
+            <span class="deals-chip" onclick="event.stopPropagation();openDealsPage(10)">10%+ OFF</span>
+            <span class="deals-chip" onclick="event.stopPropagation();openDealsPage(20)">20%+ OFF</span>
+            ${maxPct >= 30 ? `<span class="deals-chip hl" onclick="event.stopPropagation();openDealsPage(30)">30%+ OFF 🔥</span>` : ''}
+          </div>
+        </div>
+        <div class="deals-carousel-outer">
+          <div class="deals-carousel-track" id="dealsTrack" style="--deals-dur:${dur};--deals-shift:${shift};"
+            ontouchstart="document.getElementById('dealsTrack').classList.add('paused')"
+            ontouchend="document.getElementById('dealsTrack').classList.remove('paused')">
+            ${doubled.map(p => dealCard(p)).join('')}
+          </div>
+        </div>
+      </div>`;
+    },
     categories: () => orderedCats.length ? `<div class="sec"><div class="sec-hd"><span class="sec-title">Shop by Category</span><span class="see-all" onclick="openCatsPage()">See all →</span></div>
       <div class="cat-grid">${orderedCats.map((c,i) => {
         const emoji = catEmojis[c.name] || catEmojis['default'];
@@ -3663,6 +3754,43 @@ function bulkBadgeHtml(tiers, qty) {
   if (!hint) return '';
   if (hint === 'best') return `<div class="pc-bulk-hint best">🏆 Best price!</div>`;
   return `<div class="pc-bulk-hint">📦 ${hint}</div>`;
+}
+
+// ── DEAL CARD — lightweight card for infinite-scroll carousel ─────────────────
+// Uses .pcard class so updateCardInPlace keeps qty in sync.
+// No variant dropdown (default variant only) to avoid duplicate-ID issues.
+function dealCard(p) {
+  const selVid = window._selVariant?.[p.id] || defaultVariant(p)?.id;
+  const v = getVariant(p, selVid);
+  if (!v) return '';
+  const qty   = cart[cartKey(p.id, selVid)] || 0;
+  const price = getPrice(v.priceTiers, qty || 1);
+  const mrp   = v.mrp && v.mrp > price ? v.mrp : null;
+  const off   = offPct(price, mrp);
+  const imgUrl = v.imageUrl || p.imageUrl || '';
+  const isOOS  = v.inStock === false || (typeof p.stockQuantity === 'number' && p.stockQuantity === 0);
+  const addCtrl = qty > 0
+    ? `<div class="qty-ctrl"><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',-1)">−</button><span>${qty}</span><button onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">+</button></div>`
+    : isOOS
+    ? `<button class="add-btn" style="opacity:.45;cursor:default" disabled>ADD</button>`
+    : `<button class="add-btn" onclick="event.stopPropagation();chQty(${p.id},'${selVid}',1)">ADD</button>`;
+  return `<div class="pcard" style="width:130px;flex-shrink:0;" data-pid="${p.id}" data-vid="${selVid}" onclick="openProductDetail(${p.id})">
+    <div class="pc-img-wrap" style="height:130px;">
+      ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : '<span style="font-size:2rem">📦</span>'}
+      ${off > 0 && !isOOS ? `<span class="pc-discount-badge">${off}% OFF</span>` : ''}
+      ${isOOS ? `<span class="pc-oos-badge">OUT OF STOCK</span>` : ''}
+      <div class="pc-add-overlay">${addCtrl}</div>
+    </div>
+    <div class="pc-body">
+      <div class="pc-variant-label">${v.label}</div>
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-price-row">
+        <span class="pc-price">₹${price}</span>
+        ${mrp ? `<span class="pc-mrp">₹${mrp}</span>` : ''}
+        ${off > 0 ? `<span class="pc-off">${off}% off</span>` : ''}
+      </div>
+    </div>
+  </div>`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -5581,6 +5709,61 @@ function goBanner(i) {
 function bannerClick(id) {
   const b=banners.find(x=>x.id===id); if(!b?.action) return;
   if (b.action.type==='category') openFP(b.action.catId);
+  else if (b.action.type==='deals') openDealsPage(b.action.minPct||0);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── DEALS PAGE ────────────────────────────────────────────────────────────────
+let _dealsMinPct = 0;
+
+function openDealsPage(minPct) {
+  _dealsMinPct = minPct || 0;
+  // Sync filter chips
+  document.querySelectorAll('#dealsFilterBar .filter-chip').forEach(c => {
+    c.classList.toggle('active', parseInt(c.dataset.pct || '0') === _dealsMinPct);
+  });
+  _renderDealsGrid();
+  document.getElementById('dealsPage').classList.add('open');
+  document.getElementById('fpage').classList.remove('open');
+  document.getElementById('searchPage').classList.remove('open');
+}
+
+function closeDealsPage() {
+  document.getElementById('dealsPage').classList.remove('open');
+}
+
+function setDealsFilter(minPct, el) {
+  _dealsMinPct = minPct;
+  document.querySelectorAll('#dealsFilterBar .filter-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  _renderDealsGrid();
+}
+
+function _renderDealsGrid() {
+  const grid = document.getElementById('dealsGrid');
+  if (!grid) return;
+  const list = prods
+    .filter(p => {
+      if (p.disabled) return false;
+      const v = defaultVariant(p);
+      if (!v) return false;
+      const price = getPrice(v.priceTiers, 1);
+      return offPct(price, v.mrp) >= _dealsMinPct && _dealsMinPct > 0
+        ? offPct(price, v.mrp) >= _dealsMinPct
+        : offPct(price, v.mrp) > 0;
+    })
+    .map(p => {
+      const v = defaultVariant(p);
+      const price = getPrice(v.priceTiers, 1);
+      return { p, pct: offPct(price, v.mrp) };
+    })
+    .sort((a, b) => b.pct - a.pct)
+    .map(x => x.p);
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;margin-top:3rem"><div class="ei">🏷️</div><p>No deals at ${_dealsMinPct}%+ off right now</p></div>`;
+    return;
+  }
+  grid.innerHTML = list.map(p => pCardBlinkit(p)).join('');
 }
 
 // ── CONFETTI & TOAST ─────────────────────────────────────────────────────────
@@ -5932,6 +6115,27 @@ function togglePushNotifications() {
 // ── INIT ──────────────────────────────────────────────────────────────────────
 init();
 </script>
+<!-- DEALS FULL PAGE -->
+<div class="fpage" id="dealsPage">
+  <div class="fp-head">
+    <button class="back-btn" onclick="closeDealsPage()">←</button>
+    <span class="fp-title">🔥 Hot Deals</span>
+  </div>
+  <div class="deals-page-banner">
+    <div class="deals-page-pct">Save big — up to <em>40% OFF</em> on top items</div>
+    <div class="deals-page-sub">Best discounts across all categories, sorted highest first</div>
+  </div>
+  <div class="fp-filter-bar" id="dealsFilterBar">
+    <div class="filter-chip active" data-pct="0" onclick="setDealsFilter(0,this)">🏷️ All Deals</div>
+    <div class="filter-chip" data-pct="10" onclick="setDealsFilter(10,this)">10%+ OFF</div>
+    <div class="filter-chip" data-pct="20" onclick="setDealsFilter(20,this)">20%+ OFF</div>
+    <div class="filter-chip" data-pct="30" onclick="setDealsFilter(30,this)">30%+ OFF</div>
+    <div class="filter-chip" data-pct="40" onclick="setDealsFilter(40,this)">40%+ OFF</div>
+  </div>
+  <div class="fp-body">
+    <div class="fp-grid" id="dealsGrid"></div>
+  </div>
+</div>
 <!-- IMAGE ZOOM OVERLAY -->
 <div id="imgZoom" onclick="closeImgZoom()">
   <div class="iz-close" onclick="closeImgZoom()">✕</div>
