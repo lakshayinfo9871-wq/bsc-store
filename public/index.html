@@ -3177,7 +3177,7 @@ async function _fetchLiveWeather() {
     const cacheKey = 'bsc_wx_v1';
     try {
       const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null');
-      if (cached && Date.now() - cached._ts < 30 * 60 * 1000) { _liveWeather = cached; return; }
+      if (cached && Date.now() - cached._ts < 10 * 60 * 1000) { _liveWeather = cached; return; }
     } catch {}
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weathercode&forecast_days=1`;
     const data = await fetch(url, { signal: AbortSignal.timeout(5000) }).then(r => r.json());
