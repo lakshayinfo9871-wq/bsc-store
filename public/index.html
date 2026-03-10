@@ -3378,7 +3378,8 @@ function _renderCtxGrid(list) {
 function renderHome() {
   // Always merge saved layout with full default so new sections (cat_rail etc) always appear
   const _def = ['banners','cat_rail','personalised','recently_viewed','featured','new','fresh_hub','cat_strips'];
-  const _saved = settings.homeLayout || [];
+  const _retired = new Set(['categories','deals']);
+  const _saved = (settings.homeLayout || []).filter(id => !_retired.has(id));
   const layout = _saved.length ? [..._saved, ..._def.filter(id => !_saved.includes(id))] : _def;
   const hidden = new Set(settings.homeLayoutHidden || []);
   const catOrder = settings.catOrder || [];
