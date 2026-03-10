@@ -3227,21 +3227,8 @@ async function buildPersonalisedHome() {
     const slot1Prods = _matchByKeywords(slot1.kw, 8);
     if (!slot1Prods.length) return '';
     h += _sceneBannerHtml(slot1);
-    window._persCtx = { hero: slot1, sections: [slot1, slot2].filter(Boolean) };
+    window._persCtx = { hero: slot1, sections: [slot1] };
     h += `<div class="sec">${_ctxSecHd(slot1.title, slot1.kw, slot1.id)}<div class="pstrip">${slot1Prods.slice(0,5).map(pCard).join('')}</div></div>`;
-
-
-    // SLOT 2 — Compact banner + product strip
-    // SLOT 2 — Compact banner + product strip
-    if (slot2) {
-      // Try to match slot2 keywords; allow overlap with slot1 if few products exist
-      let slot2Prods = _matchByKeywords(slot2.kw, 8).slice(0, 5);
-      // If no matches at all, fall back to all products (store has very few items)
-      if (!slot2Prods.length) slot2Prods = prods.filter(p => !p.disabled).slice(0, 5);
-
-      h += _sceneBannerHtml(slot2, true);
-      h += `<div class="sec">${_ctxSecHd(slot2.title, slot2.kw, slot2.id)}<div class="pstrip">${slot2Prods.map(pCard).join('')}</div></div>`;
-    }
 
     return h;
   } catch(e) {
@@ -3390,7 +3377,7 @@ function _renderCtxGrid(list) {
 
 function renderHome() {
   // Always merge saved layout with full default so new sections (cat_rail etc) always appear
-  const _def = ['personalised','cat_rail','banners','deals','recently_viewed','featured','new','fresh_hub','categories','cat_strips'];
+  const _def = ['banners','categories','personalised','cat_rail','recently_viewed','featured','new','fresh_hub','cat_strips'];
   const _saved = settings.homeLayout || [];
   const layout = _saved.length ? [..._saved, ..._def.filter(id => !_saved.includes(id))] : _def;
   const hidden = new Set(settings.homeLayoutHidden || []);
