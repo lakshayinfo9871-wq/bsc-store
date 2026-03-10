@@ -1279,7 +1279,8 @@ async function init() {
         seen[v.id] = true;
       });
     });
-    buildTabs(); renderHome(); updateCart(); // re-render with restored cart
+    buildTabs(); updateCart(); // re-render with restored cart
+    _fetchLiveWeather().then(() => renderHome()); // fetch weather then render home
     initMobileAnimations(); // start all mobile animations
   } catch(e) {
     document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
@@ -3139,6 +3140,40 @@ function _ctxSecHd(title, kw, sectionId) {
 }
 
 // ── MAIN: Build personalised HTML ─────────────────────────────────────────────
+
+// ── LIVE WEATHER (Open-Meteo, free, no API key) ───────────────────────────────
+// Fetches once per session, cached for 30 min in sessionStorage.
+// Uses store location from settings.storeLocation set in admin.
+// WMO weather codes: https://open-meteo.com/en/docs#weathervariables
+let _liveWeather = null;
+async function _fetchLiveWeather() {
+  try {
+    const loc = settings.storeLocation;
+    if (!loc || !loc.lat || !loc.lon) return; // no location set in admin
+    const cacheKey = 'bsc_wx_v1';
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      const obj = JSON.parse(cached);
+      if (Date.now() - obj._ts < 30 * 60 * 1000) { _liveWeather = obj; return; }
+    }
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weathercode&wind_speed_unit=ms&forecast_days=1`;
+    const data = await fetch(url, { signal: AbortSignal.timeout(5000) }).then(r => r.json());
+    const temp = data.current.temperature_2m;
+    const wmo  = data.current.weathercode;
+    // WMO codes: 51-67=drizzle/rain, 80-82=showers, 95-99=thunderstorm
+    const isRaining  = (wmo >= 51 && wmo <= 67) || (wmo >= 80 && wmo <= 82);
+    const isThunder  = wmo >= 95;
+    const isVeryHot  = temp >= 40;   // beat the heat only above 40°C
+    const isHot      = temp >= 35 && temp < 40;
+    const isChilly   = temp < 18;
+    const isCold     = temp < 12;
+    _liveWeather = { temp, wmo, isRaining, isThunder, isVeryHot, isHot, isChilly, isCold, _ts: Date.now() };
+    sessionStorage.setItem(cacheKey, JSON.stringify(_liveWeather));
+  } catch (e) {
+    // silently fail — app works fine without weather
+  }
+}
+
 async function buildPersonalisedHome() {
   try {
     const festivals = _getFestivals();
@@ -3169,14 +3204,16 @@ async function buildPersonalisedHome() {
       autumn:  { id:'autumn', title:'🍂 Autumn Picks',         tag:'autumn season',  greeting:'Pleasant weather!',  sub:'Fresh picks for a lovely day.',                grad:'linear-gradient(135deg,#3d1a00,#200e00)', glow:'#fb923c', scene:'sunset',kw:['chai','tea','snacks','biscuit','bread','juice','fruit'] },
     };
 
-    // Live weather overrides month-based season
-    let effectiveSeason = season;
+    // Live weather drives weather banner. Season is ignored for heat/rain —
+    // only real temperature/rain codes trigger those banners.
+    // For winter/autumn the season fallback is kept since cold is gradual.
+    let effectiveSeason = (season === 'monsoon' || season === 'summer') ? null : season;
     let liveTag = null;
     if (typeof _liveWeather !== 'undefined' && _liveWeather) {
       if (_liveWeather.isRaining || _liveWeather.isThunder) {
         effectiveSeason = 'monsoon';
         liveTag = _liveWeather.isThunder ? `⛈️ ${Math.round(_liveWeather.temp)}°C` : `🌧️ ${Math.round(_liveWeather.temp)}°C`;
-      } else if ((_liveWeather.isHot || _liveWeather.isVeryHot) && (new Date().getHours() >= 10 && new Date().getHours() < 17)) {
+      } else if (_liveWeather.isVeryHot) {
         effectiveSeason = 'summer';
         liveTag = `🌡️ ${Math.round(_liveWeather.temp)}°C`;
       } else if (_liveWeather.isCold || _liveWeather.isChilly) {
@@ -3380,23 +3417,7 @@ function renderHome() {
   const _def = ['banners','cat_rail','personalised','recently_viewed','featured','new','fresh_hub','cat_strips'];
   const _retired = new Set(['categories','deals']);
   const _saved = (settings.homeLayout || []).filter(id => !_retired.has(id));
-  // Insert any missing _def sections at their correct positional slot, not appended at end
-  let layout;
-  if (!_saved.length) {
-    layout = [..._def];
-  } else {
-    layout = [..._saved];
-    _def.forEach((id, defIdx) => {
-      if (!layout.includes(id)) {
-        let insertAfter = -1;
-        for (let i = defIdx - 1; i >= 0; i--) {
-          const pos = layout.indexOf(_def[i]);
-          if (pos !== -1) { insertAfter = pos; break; }
-        }
-        layout.splice(insertAfter + 1, 0, id);
-      }
-    });
-  }
+  const layout = _saved.length ? [..._saved, ..._def.filter(id => !_saved.includes(id))] : _def;
   const hidden = new Set(settings.homeLayoutHidden || []);
   const catOrder = settings.catOrder || [];
 
