@@ -3339,7 +3339,7 @@ async function renderSettings() {
       </div>
     </div>`;
   // Init drag-and-drop for home layout
-  _initHomeLayoutDnd(s.homeLayout || ['personalised','cat_rail','banners','deals','recently_viewed','featured','new','fresh_hub','categories','cat_strips'], s.homeLayoutHidden || []);
+  _initHomeLayoutDnd(s.homeLayout || ['banners','cat_rail','personalised','recently_viewed','featured','new','fresh_hub','cat_strips'], s.homeLayoutHidden || []);
   // Init category order dnd
   const cats2 = await (await fetch('/api/admin/categories',{headers:ah()})).json();
   _initCatOrderDnd(cats2, s.catOrder || []);
@@ -3351,7 +3351,7 @@ async function renderSettings() {
 const _HL_LABELS = {
   personalised:    { icon:'🌤', label:'Auto Banners',              sub:'Weather & time-based smart sections' },
   banners:         { icon:'🖼', label:'Image Banners',             sub:'Your uploaded promo banners' },
-  cat_rail:        { icon:'🎠', label:'Category Rail',             sub:'Two infinite-scroll rows ← →' },
+  cat_rail:        { icon:'🎠', label:'Shop by Category',          sub:'Animated infinite-scroll category rows' },
   featured:        { icon:'⭐', label:'Featured Products',         sub:'Products marked as featured' },
   new:             { icon:'✨', label:'New Arrivals',              sub:'Products marked as new' },
   deals:           { icon:'🔥', label:'Hot Deals',                 sub:'Discounted products carousel' },
