@@ -3339,7 +3339,9 @@ async function renderSettings() {
       </div>
     </div>`;
   // Init drag-and-drop for home layout
-  _initHomeLayoutDnd(s.homeLayout || ['banners','cat_rail','personalised','recently_viewed','featured','new','fresh_hub','cat_strips'], s.homeLayoutHidden || []);
+  const _adminRetired = new Set(['categories','deals']);
+  const _adminSavedLayout = (s.homeLayout || ['banners','cat_rail','personalised','recently_viewed','featured','new','fresh_hub','cat_strips']).filter(id => !_adminRetired.has(id));
+  _initHomeLayoutDnd(_adminSavedLayout, (s.homeLayoutHidden || []).filter(id => !_adminRetired.has(id)));
   // Init category order dnd
   const cats2 = await (await fetch('/api/admin/categories',{headers:ah()})).json();
   _initCatOrderDnd(cats2, s.catOrder || []);
