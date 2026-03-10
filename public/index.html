@@ -2439,7 +2439,7 @@ function _smartBannerHtml(id, sec, tall) {
   const h = tall ? 160 : 100;
   window._ctxKwMap = window._ctxKwMap || {};
   window._ctxKwMap['sab_'+id] = { title: sec.title, kw: sec.kw||[], id: sec.id||'' };
-  return `<div class="smart-ani-banner" id="sab_${id}" style="height:${h}px;border-radius:20px;overflow:hidden;position:relative;cursor:pointer;margin:14px 14px 0;flex-shrink:0;" onclick="openCtxPageByKey('sab_'+String(id))">
+  return `<div class="smart-ani-banner" id="sab_${id}" style="height:${h}px;border-radius:20px;overflow:hidden;position:relative;cursor:pointer;margin:14px 14px 0;flex-shrink:0;" onclick="openCtxPageByKey('sab_${id}')">
   <canvas id="sab_canvas_${id}" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;"></canvas>
   <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.72) 0%,rgba(0,0,0,.18) 60%,transparent 100%);pointer-events:none;"></div>
   <div style="position:absolute;top:${tall?13:9}px;left:14px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:3px 10px;font-size:.58rem;font-weight:800;letter-spacing:.05em;color:rgba(255,255,255,.92);pointer-events:none;" id="sab_tag_${id}">${sec.tag||''}</div>
@@ -3125,7 +3125,7 @@ function _sceneBannerHtml(sec, small) {
   window._ctxKwMap = window._ctxKwMap || {};
   window._ctxKwMap['sab_'+uid] = { title: sec.title, kw: sec.kw||[], id: sec.id||'' };
   setTimeout(() => _launchBannerCanvas(uid, sec.scene||'default', sec.grad||'#111', sec.glow||'#fff'), 60);
-  return `<div class="scene-banner${small?' scene-banner-sm':''}" id="sab_${uid}" style="background:${sec.grad||'#111'};height:${h}px;border-radius:20px;overflow:hidden;position:relative;cursor:pointer;margin:14px 14px 0;" onclick="openCtxPageByKey('sab_'+String(uid))">
+  return `<div class="scene-banner${small?' scene-banner-sm':''}" id="sab_${uid}" style="background:${sec.grad||'#111'};height:${h}px;border-radius:20px;overflow:hidden;position:relative;cursor:pointer;margin:14px 14px 0;" onclick="openCtxPageByKey('sab_${uid}')">
   <canvas id="sab_canvas_${uid}" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;"></canvas>
   <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.7) 0%,rgba(0,0,0,.15) 55%,transparent 100%);pointer-events:none;"></div>
   <div class="scene-tag" style="top:${small?9:13}px;left:14px;">${sec.tag||''}</div>
@@ -3156,8 +3156,24 @@ function _ctxSecHd(title, kw, sectionId) {
 let _liveWeather = null;
 async function _fetchLiveWeather() {
   try {
-    const loc = settings.storeLocation;
-    if (!loc || !loc.lat || !loc.lon) return;
+    // Use storeLocation from settings, fall back to browser geolocation, then India default
+    let loc = settings.storeLocation;
+    if (!loc || !loc.lat || !loc.lon) {
+      // Try browser geolocation (non-blocking, best-effort)
+      try {
+        loc = await new Promise((res, rej) => {
+          if (!navigator.geolocation) { rej(); return; }
+          navigator.geolocation.getCurrentPosition(
+            p => res({ lat: p.coords.latitude, lon: p.coords.longitude }),
+            () => rej(),
+            { timeout: 4000, maximumAge: 3600000 }
+          );
+        });
+      } catch {
+        // Final fallback: central India (Nagpur) as neutral default
+        loc = { lat: 21.15, lon: 79.09 };
+      }
+    }
     const cacheKey = 'bsc_wx_v1';
     try {
       const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null');
@@ -3173,7 +3189,7 @@ async function _fetchLiveWeather() {
     const isHot     = temp >= 35 && temp < 40;
     const isChilly  = temp < 18;
     const isCold    = temp < 12;
-    _liveWeather = { temp, wmo, isRaining, isThunder, isVeryHot, isHot, isChilly, isCold, _ts: Date.now() };
+    _liveWeather = { temp, wmo, isRaining, isThunder, isVeryHot, isHot, isChilly, isCold, _ts: Date.now(), _loc: loc };
     sessionStorage.setItem(cacheKey, JSON.stringify(_liveWeather));
     _updateLiveWeatherBadges(); // live-update any visible banner badges
   } catch { /* silently fail — app works fine without weather */ }
@@ -3199,8 +3215,12 @@ function _startWeatherPolling() {
   window._wxPollStarted = true;
   setInterval(async () => {
     try {
-      const loc = settings.storeLocation;
-      if (!loc || !loc.lat || !loc.lon) return;
+      let loc = settings.storeLocation;
+      if (!loc || !loc.lat || !loc.lon) {
+        // Use last known location from cached weather, or India default
+        const cached = _liveWeather;
+        loc = cached?._loc || { lat: 21.15, lon: 79.09 };
+      }
       const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weathercode&forecast_days=1`;
       const data = await fetch(url, { signal: AbortSignal.timeout(5000) }).then(r => r.json());
       const temp = data.current.temperature_2m;
