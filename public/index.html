@@ -94,14 +94,14 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 }
 .topbar-tabs.at-top{ border-top-color:transparent; }
 
-.top-row{display:flex;align-items:center;justify-content:space-between;overflow:hidden;padding:10px 0 0;}
-.logo{font-size:1.2rem;font-weight:900;letter-spacing:-.5px;}
+.top-row{display:flex;align-items:center;padding:8px 0;gap:0;}
+.search-wrap{padding:0;margin-bottom:0;}.logo{font-size:1.2rem;font-weight:900;letter-spacing:-.5px;}
 .logo span{color:var(--green);}
 .icon-btn{width:38px;height:38px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;position:relative;}
 .cart-badge{position:absolute;top:-5px;right:-5px;background:var(--green);color:#000;font-size:.55rem;font-weight:900;min-width:17px;height:17px;border-radius:50%;display:none;align-items:center;justify-content:center;border:2px solid var(--bg);}
 
 /* Search bar */
-.search-wrap{padding:8px 0 10px;margin-bottom:0;}
+.search-wrap{padding:0;margin-bottom:0;}
 .search-bar{background:var(--bg2);border-radius:12px;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);}
 .search-bar:focus-within{border-color:var(--green);}
 .search-bar input{flex:1;background:none;border:none;outline:none;font-size:13.5px;color:var(--text);}
@@ -1046,16 +1046,16 @@ select.ck-inp option{background:var(--bg2);}
   <!-- COLLAPSIBLE SECTION: hides on scroll down, shows on scroll up -->
   <div class="topbar-collapse" id="topbarCollapse">
     <div class="top-row">
-      <div class="logo">🛒 <span>BSC</span></div>
-      <div class="icon-btn" onclick="openCart()">🛒<div class="cart-badge" id="cartBadge">0</div></div>
-    </div>
-    <div class="search-wrap" style="position:relative;">
-      <div class="search-bar">
-        <span class="search-icon">🔍</span>
-        <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value);showSearchSugg(this.value)" onfocus="clearAnimatedPH();expandHeader();showSearchSugg(this.value)" onblur="startAnimatedPH();setTimeout(hideSearchSugg,180)">
-        <span id="searchClear" style="color:var(--text3);cursor:pointer;font-size:.8rem;display:none" onclick="clearSearch()">✕</span>
+      <div class="logo"><span>BSC</span></div>
+      <div class="search-wrap" style="position:relative;flex:1;margin:0 10px;">
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input id="searchInput" placeholder="Search products..." oninput="onSearch(this.value);showSearchSugg(this.value)" onfocus="clearAnimatedPH();expandHeader();showSearchSugg(this.value)" onblur="startAnimatedPH();setTimeout(hideSearchSugg,180)">
+          <span id="searchClear" style="color:var(--text3);cursor:pointer;font-size:.8rem;display:none" onclick="clearSearch()">✕</span>
+        </div>
+        <div class="search-sugg" id="searchSugg"></div>
       </div>
-      <div class="search-sugg" id="searchSugg"></div>
+      <div class="icon-btn" onclick="openCart()">🛒<div class="cart-badge" id="cartBadge">0</div></div>
     </div>
   </div>
   <!-- ALWAYS-VISIBLE SECTION: category tabs stick below the collapse -->
