@@ -3380,7 +3380,23 @@ function renderHome() {
   const _def = ['banners','cat_rail','personalised','recently_viewed','featured','new','fresh_hub','cat_strips'];
   const _retired = new Set(['categories','deals']);
   const _saved = (settings.homeLayout || []).filter(id => !_retired.has(id));
-  const layout = _saved.length ? [..._saved, ..._def.filter(id => !_saved.includes(id))] : _def;
+  // Insert any missing _def sections at their correct positional slot, not appended at end
+  let layout;
+  if (!_saved.length) {
+    layout = [..._def];
+  } else {
+    layout = [..._saved];
+    _def.forEach((id, defIdx) => {
+      if (!layout.includes(id)) {
+        let insertAfter = -1;
+        for (let i = defIdx - 1; i >= 0; i--) {
+          const pos = layout.indexOf(_def[i]);
+          if (pos !== -1) { insertAfter = pos; break; }
+        }
+        layout.splice(insertAfter + 1, 0, id);
+      }
+    });
+  }
   const hidden = new Set(settings.homeLayoutHidden || []);
   const catOrder = settings.catOrder || [];
 

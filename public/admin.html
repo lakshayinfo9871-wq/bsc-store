@@ -3339,8 +3339,26 @@ async function renderSettings() {
       </div>
     </div>`;
   // Init drag-and-drop for home layout
+  const _adminDef = ['banners','cat_rail','personalised','recently_viewed','featured','new','fresh_hub','cat_strips'];
   const _adminRetired = new Set(['categories','deals']);
-  const _adminSavedLayout = (s.homeLayout || ['banners','cat_rail','personalised','recently_viewed','featured','new','fresh_hub','cat_strips']).filter(id => !_adminRetired.has(id));
+  const _adminRaw = (s.homeLayout || []).filter(id => !_adminRetired.has(id));
+  // Insert any missing _def sections at their correct positional slot, not appended at end
+  let _adminSavedLayout;
+  if (!_adminRaw.length) {
+    _adminSavedLayout = [..._adminDef];
+  } else {
+    _adminSavedLayout = [..._adminRaw];
+    _adminDef.forEach((id, defIdx) => {
+      if (!_adminSavedLayout.includes(id)) {
+        let insertAfter = -1;
+        for (let i = defIdx - 1; i >= 0; i--) {
+          const pos = _adminSavedLayout.indexOf(_adminDef[i]);
+          if (pos !== -1) { insertAfter = pos; break; }
+        }
+        _adminSavedLayout.splice(insertAfter + 1, 0, id);
+      }
+    });
+  }
   _initHomeLayoutDnd(_adminSavedLayout, (s.homeLayoutHidden || []).filter(id => !_adminRetired.has(id)));
   // Init category order dnd
   const cats2 = await (await fetch('/api/admin/categories',{headers:ah()})).json();
