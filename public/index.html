@@ -205,6 +205,8 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .scene-sub{font-size:.72rem;color:rgba(255,255,255,.72);margin-top:3px;text-shadow:0 1px 4px rgba(0,0,0,.4);}
 /* Context tag */
 .scene-tag{position:absolute;top:13px;left:14px;display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:3px 10px;font-size:.58rem;font-weight:800;letter-spacing:.05em;color:rgba(255,255,255,.92);z-index:3;}
+.scene-temp{position:absolute;top:13px;right:14px;display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:3px 10px;font-size:.62rem;font-weight:900;letter-spacing:.02em;color:rgba(255,255,255,.95);z-index:3;}
+.scene-temp{position:absolute;top:13px;right:14px;display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:3px 10px;font-size:.62rem;font-weight:900;letter-spacing:.02em;color:rgba(255,255,255,.95);z-index:3;}
 /* Section header */
 .ctx-sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .ctx-sec-title{font-size:17px;font-weight:800;letter-spacing:-.3px;}
@@ -1279,8 +1281,7 @@ async function init() {
         seen[v.id] = true;
       });
     });
-    buildTabs(); updateCart(); // re-render with restored cart
-    _fetchLiveWeather().then(() => renderHome()); // fetch weather then render home
+    buildTabs(); renderHome(); updateCart(); // re-render with restored cart
     initMobileAnimations(); // start all mobile animations
   } catch(e) {
     document.getElementById('home').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Cannot reach server.</p></div>';
@@ -3123,6 +3124,7 @@ function _sceneBannerHtml(sec, small) {
   <canvas id="sab_canvas_${uid}" style="position:absolute;inset:0;width:100%;height:100%;display:block;"></canvas>
   <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.7) 0%,rgba(0,0,0,.15) 55%,transparent 100%);pointer-events:none;"></div>
   <div class="scene-tag" style="top:${small?9:13}px;left:14px;">${sec.tag||''}</div>
+  ${(typeof _liveWeather!=='undefined'&&_liveWeather&&typeof _liveWeather.temp==='number')?(()=>{const _wi=_liveWeather.isRaining||_liveWeather.isThunder?'🌧':_liveWeather.isVeryHot?'🌡️':_liveWeather.isCold||_liveWeather.isChilly?'❄️':'🌡️';return`<div class="scene-temp" style="top:${small?9:13}px">${_wi} ${Math.round(_liveWeather.temp)}°C</div>`;})():''}
   <div class="scene-text" style="padding:${small?'0 14px 12px':'0 16px 16px'};">
     <div class="scene-greeting" style="font-size:${small?'.9rem':'1.1rem'}">${sec.greeting}</div>
     <div class="scene-sub" style="font-size:${small?'.68rem':'.72rem'}">${sec.sub}</div>
@@ -3140,40 +3142,6 @@ function _ctxSecHd(title, kw, sectionId) {
 }
 
 // ── MAIN: Build personalised HTML ─────────────────────────────────────────────
-
-// ── LIVE WEATHER (Open-Meteo, free, no API key) ───────────────────────────────
-// Fetches once per session, cached for 30 min in sessionStorage.
-// Uses store location from settings.storeLocation set in admin.
-// WMO weather codes: https://open-meteo.com/en/docs#weathervariables
-let _liveWeather = null;
-async function _fetchLiveWeather() {
-  try {
-    const loc = settings.storeLocation;
-    if (!loc || !loc.lat || !loc.lon) return; // no location set in admin
-    const cacheKey = 'bsc_wx_v1';
-    const cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
-      const obj = JSON.parse(cached);
-      if (Date.now() - obj._ts < 30 * 60 * 1000) { _liveWeather = obj; return; }
-    }
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weathercode&wind_speed_unit=ms&forecast_days=1`;
-    const data = await fetch(url, { signal: AbortSignal.timeout(5000) }).then(r => r.json());
-    const temp = data.current.temperature_2m;
-    const wmo  = data.current.weathercode;
-    // WMO codes: 51-67=drizzle/rain, 80-82=showers, 95-99=thunderstorm
-    const isRaining  = (wmo >= 51 && wmo <= 67) || (wmo >= 80 && wmo <= 82);
-    const isThunder  = wmo >= 95;
-    const isVeryHot  = temp >= 40;   // beat the heat only above 40°C
-    const isHot      = temp >= 35 && temp < 40;
-    const isChilly   = temp < 18;
-    const isCold     = temp < 12;
-    _liveWeather = { temp, wmo, isRaining, isThunder, isVeryHot, isHot, isChilly, isCold, _ts: Date.now() };
-    sessionStorage.setItem(cacheKey, JSON.stringify(_liveWeather));
-  } catch (e) {
-    // silently fail — app works fine without weather
-  }
-}
-
 async function buildPersonalisedHome() {
   try {
     const festivals = _getFestivals();
@@ -3204,16 +3172,14 @@ async function buildPersonalisedHome() {
       autumn:  { id:'autumn', title:'🍂 Autumn Picks',         tag:'autumn season',  greeting:'Pleasant weather!',  sub:'Fresh picks for a lovely day.',                grad:'linear-gradient(135deg,#3d1a00,#200e00)', glow:'#fb923c', scene:'sunset',kw:['chai','tea','snacks','biscuit','bread','juice','fruit'] },
     };
 
-    // Live weather drives weather banner. Season is ignored for heat/rain —
-    // only real temperature/rain codes trigger those banners.
-    // For winter/autumn the season fallback is kept since cold is gradual.
-    let effectiveSeason = (season === 'monsoon' || season === 'summer') ? null : season;
+    // Live weather overrides month-based season
+    let effectiveSeason = season;
     let liveTag = null;
     if (typeof _liveWeather !== 'undefined' && _liveWeather) {
       if (_liveWeather.isRaining || _liveWeather.isThunder) {
         effectiveSeason = 'monsoon';
         liveTag = _liveWeather.isThunder ? `⛈️ ${Math.round(_liveWeather.temp)}°C` : `🌧️ ${Math.round(_liveWeather.temp)}°C`;
-      } else if (_liveWeather.isVeryHot) {
+      } else if ((_liveWeather.isHot || _liveWeather.isVeryHot) && (new Date().getHours() >= 10 && new Date().getHours() < 17)) {
         effectiveSeason = 'summer';
         liveTag = `🌡️ ${Math.round(_liveWeather.temp)}°C`;
       } else if (_liveWeather.isCold || _liveWeather.isChilly) {
