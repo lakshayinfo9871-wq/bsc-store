@@ -1,4 +1,4 @@
-const SHELL_CACHE='bsc-shell-v7',API_CACHE='bsc-api-v1',IMG_CACHE='bsc-img-v1';
+const SHELL_CACHE='bsc-shell-v8',API_CACHE='bsc-api-v2',IMG_CACHE='bsc-img-v1';
 
 self.addEventListener('install',e=>{e.waitUntil(self.skipWaiting());});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>![SHELL_CACHE,API_CACHE,IMG_CACHE].includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});

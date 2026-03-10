@@ -21,7 +21,18 @@
       "autoAdd": false,
       "label": "chips",
       "discountPrice": 5
-    }
+    },
+    "homeLayout": [
+      "banners",
+      "cat_rail",
+      "personalised",
+      "recently_viewed",
+      "featured",
+      "new",
+      "fresh_hub",
+      "cat_strips"
+    ],
+    "homeLayoutHidden": []
   },
   "categories": [
     {
