@@ -1,4 +1,4 @@
-const SHELL_CACHE='bsc-shell-v10',API_CACHE='bsc-api-v3',IMG_CACHE='bsc-img-v1';
+const SHELL_CACHE='bsc-shell-v11',API_CACHE='bsc-api-v3',IMG_CACHE='bsc-img-v1';
 
 self.addEventListener('install',e=>{e.waitUntil(self.skipWaiting());});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>![SHELL_CACHE,API_CACHE,IMG_CACHE].includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
@@ -63,7 +63,7 @@ self.addEventListener('fetch',e=>{
 self.addEventListener('push',e=>{
   let data={title:'BSC Store',body:'New notification',url:'/',tag:'bsc-push'};
   if(e.data){try{Object.assign(data,JSON.parse(e.data.text()));}catch{data.body=e.data.text();}}
-  e.waitUntil(self.registration.showNotification(data.title,{body:data.body,icon:'/icons/icon-192.png',badge:'/icons/icon-192.png',tag:data.tag,data:{url:data.url||'/'},vibrate:[200,100,200],actions:[{action:'open',title:'🛒 Open Store'},{action:'dismiss',title:'Dismiss'}]}));
+  e.waitUntil(self.registration.showNotification(data.title,{body:data.body,icon:'/icon-192.png',badge:'/icon-192.png',tag:data.tag,data:{url:data.url||'/'},vibrate:[200,100,200],actions:[{action:'open',title:'🛒 Open Store'},{action:'dismiss',title:'Dismiss'}]}));
 });
 
 self.addEventListener('notificationclick',e=>{

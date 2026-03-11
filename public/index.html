@@ -5442,6 +5442,8 @@ let _accSection = 'home'; // 'home'|'orders'|'passbook'
 function renderAccountHome(data) {
   _accData = data;
   _accSection = 'home';
+  // Schedule push button state refresh after DOM is rebuilt
+  setTimeout(() => updatePushBtn(), 0);
   const { customer: c, orders, udharBalance, milkAmt, milkPaid, totalLitres } = data;
   const milkDue = Math.max(0, milkAmt - milkPaid);
   const totalBalance = udharBalance + milkDue;
@@ -6238,14 +6240,40 @@ async function requestPushPermission() {
     }
     const keyBytes = _b64urlToBytes(_pushVapidKey);
 
-    // Always unsubscribe any existing subscription first — ensures fresh sub with current VAPID key
-    // This handles the case where the server VAPID key changed (old subs are invalid)
+    // Only unsubscribe existing subscription if VAPID key has changed
+    // Force-unsubscribing on every subscribe causes errors on Android
     const existingSub = await reg.pushManager.getSubscription();
     if (existingSub) {
+      // Check if applicationServerKey matches current VAPID key
+      let keyMismatch = false;
       try {
-        await fetch('/api/push/unsubscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ endpoint: existingSub.endpoint }) });
-      } catch {}
-      await existingSub.unsubscribe();
+        const existingKey = existingSub.options?.applicationServerKey;
+        if (existingKey) {
+          const existingKeyB64 = btoa(String.fromCharCode(...new Uint8Array(existingKey))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+          keyMismatch = existingKeyB64 !== _pushVapidKey;
+        }
+      } catch { keyMismatch = true; }
+      if (keyMismatch) {
+        try {
+          await fetch('/api/push/unsubscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ endpoint: existingSub.endpoint }) });
+        } catch {}
+        await existingSub.unsubscribe();
+      } else {
+        // Same key — reuse existing subscription, just re-register with server
+        _pushSubscription = existingSub;
+        let customerId = null;
+        try {
+          const tok = getMilkToken();
+          if (tok) {
+            const dr = await fetch('/api/customer/dashboard', { headers:{ Authorization:'Bearer '+tok } });
+            if (dr.ok) { const dd=await dr.json(); customerId=dd.customer?.customerId||null; }
+          }
+        } catch {}
+        await fetch('/api/push/subscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ subscription:existingSub.toJSON(), customerId }) });
+        showToast('🔔 Notifications enabled!');
+        updatePushBtn();
+        return true;
+      }
     }
 
     const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:keyBytes });
