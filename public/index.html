@@ -6237,6 +6237,17 @@ async function requestPushPermission() {
       return Uint8Array.from(atob(b64 + pad), c => c.charCodeAt(0));
     }
     const keyBytes = _b64urlToBytes(_pushVapidKey);
+
+    // Always unsubscribe any existing subscription first — ensures fresh sub with current VAPID key
+    // This handles the case where the server VAPID key changed (old subs are invalid)
+    const existingSub = await reg.pushManager.getSubscription();
+    if (existingSub) {
+      try {
+        await fetch('/api/push/unsubscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ endpoint: existingSub.endpoint }) });
+      } catch {}
+      await existingSub.unsubscribe();
+    }
+
     const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:keyBytes });
     _pushSubscription = sub;
     let customerId = null;

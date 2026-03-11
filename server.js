@@ -2480,7 +2480,7 @@ app.post('/api/admin/push/send', adminAuth, async (req, res) => {
         });
 
         if (pushRes.status === 201 || pushRes.status === 200) sent++;
-        else if (pushRes.status === 410 || pushRes.status === 404) stale.push(sub._id);
+        else if ([404, 410, 401, 403].includes(pushRes.status)) stale.push(sub._id);
         else { failed++; console.warn('Push failed:', pushRes.status, endpoint.slice(0,50)); }
       } catch(err) { failed++; console.warn('Push err:', err.message); }
     }
