@@ -2341,26 +2341,37 @@ Return up to 6 complementary product IDs as JSON array:`;
 // Generate/retrieve VAPID keys — stored in settings collection
 async function getOrCreateVapidKeys() {
   const s = await db.collection('settings').findOne({ _id: 'main' });
-  if (s?.vapid?.publicKey) return s.vapid;
 
-  // Generate P-256 key pair
-  const { publicKey: pubDer, privateKey: privDer } = crypto.generateKeyPairSync('ec', {
-    namedCurve: 'prime256v1',
-    publicKeyEncoding:  { type: 'spki',  format: 'der' },
-    privateKeyEncoding: { type: 'pkcs8', format: 'der' }
-  });
+  // Reject any stored key that isn't exactly 87 chars — clear it so we regenerate
+  if (s?.vapid?.publicKey) {
+    if (s.vapid.publicKey.length === 87) return s.vapid;
+    console.log('🔧 Clearing invalid VAPID key (length:', s.vapid.publicKey.length, ') — regenerating...');
+    await db.collection('settings').updateOne({ _id: 'main' }, { $unset: { vapid: '' } });
+  }
 
-  // Public key: uncompressed point = last 65 bytes of SPKI DER (starts with 0x04)
-  const pubRaw  = pubDer.slice(-65);
-  // Private key: raw 32-byte scalar = bytes 36-68 of PKCS8 DER
-  const privRaw = privDer.slice(36, 68);
+  // Generate P-256 key pair using JWK export — most reliable method
+  const keyPair = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+
+  // Public key: last 65 bytes of SPKI DER = uncompressed EC point (0x04 + 32 + 32)
+  const pubDer = keyPair.publicKey.export({ type: 'spki', format: 'der' });
+  const pubRaw = Buffer.from(pubDer).slice(-65);
+
+  // Private key: extract raw 32-byte scalar via JWK (avoids PKCS8 offset fragility)
+  const jwk     = keyPair.privateKey.export({ format: 'jwk' });
+  const privRaw = Buffer.from(jwk.d, 'base64');
 
   const publicKey  = pubRaw.toString('base64url');
   const privateKey = privRaw.toString('base64url');
 
+  if (publicKey.length !== 87) throw new Error('VAPID public key wrong length: ' + publicKey.length);
+
   const vapid = { publicKey, privateKey };
-  await db.collection('settings').updateOne({ _id: 'main' }, { $set: { vapid } });
-  console.log('✅ VAPID keys generated. Public key length:', publicKey.length);
+  await db.collection('settings').updateOne(
+    { _id: 'main' },
+    { $set: { vapid } },
+    { upsert: true }
+  );
+  console.log('✅ VAPID keys generated successfully. Public key length:', publicKey.length);
   return vapid;
 }
 
