@@ -6223,10 +6223,20 @@ async function requestPushPermission() {
     const reg = await navigator.serviceWorker.ready;
     if (!_pushVapidKey) {
       const r = await fetch('/api/push/vapid-public-key');
-      _pushVapidKey = (await r.json()).publicKey;
+      const vapidData = await r.json();
+      if (!r.ok || !vapidData.publicKey) {
+        showToast('Push setup error: ' + (vapidData.error || 'No VAPID key'));
+        return false;
+      }
+      _pushVapidKey = vapidData.publicKey;
     }
-    const b64 = _pushVapidKey.replace(/-/g,'+').replace(/_/g,'/');
-    const keyBytes = Uint8Array.from(atob(b64 + '='.repeat((4 - b64.length % 4) % 4)), c=>c.charCodeAt(0));
+    // Convert base64url → Uint8Array (robust conversion for VAPID keys)
+    function _b64urlToBytes(b64url) {
+      const b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+      const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - b64.length % 4);
+      return Uint8Array.from(atob(b64 + pad), c => c.charCodeAt(0));
+    }
+    const keyBytes = _b64urlToBytes(_pushVapidKey);
     const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:keyBytes });
     _pushSubscription = sub;
     let customerId = null;
