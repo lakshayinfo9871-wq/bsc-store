@@ -1642,6 +1642,32 @@ app.put('/api/admin/orders/:id', adminAuth, async (req, res) => {
       } catch (_) { /* non-critical — don't fail the order update */ }
     }
 
+    // ── PUSH: notify customer of order status change ──────────────────────────
+    if (newStatus && newStatus !== existing.status && existing.customerId) {
+      try {
+        const statusMessages = {
+          confirmed:    { emoji: '✅', text: 'Your order has been confirmed!' },
+          processing:   { emoji: '👨‍🍳', text: 'Your order is being prepared.' },
+          out_for_delivery: { emoji: '🚴', text: 'Your order is out for delivery!' },
+          delivered:    { emoji: '🎉', text: 'Your order has been delivered. Enjoy!' },
+          cancelled:    { emoji: '❌', text: 'Your order has been cancelled.' },
+        };
+        const sm = statusMessages[newStatus];
+        if (sm) {
+          sendPushToSubscribers(
+            { customerId: existing.customerId },
+            {
+              title: `${sm.emoji} Order #${orderId} ${newStatus.replace(/_/g, ' ')}`,
+              body: sm.text,
+              url: '/',
+              tag: 'order-status-' + orderId
+            }
+          ).catch(() => {});
+        }
+      } catch (_) {}
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1815,6 +1841,24 @@ app.post('/api/orders', async (req, res) => {
       order.addedToUdhar = true;
     }
     await db.collection('orders').insertOne(order);
+
+    // ── PUSH: notify admin of new order ──────────────────────────────────────
+    try {
+      const itemSummary = validatedItems.slice(0, 2).map(i => i.name).join(', ')
+        + (validatedItems.length > 2 ? ` +${validatedItems.length - 2} more` : '');
+      const location = [block, villa].filter(Boolean).join('-');
+      sendPushToSubscribers(
+        { customerId: null }, // admin subs have no customerId
+        {
+          title: `🛒 New Order #${id} — ₹${total}`,
+          body: `${customerName}${location ? ' · ' + location : ''} · ${itemSummary}`,
+          url: '/admin',
+          tag: 'new-order-' + id
+        }
+      ).catch(() => {}); // fire-and-forget, never block the response
+    } catch (_) {}
+    // ─────────────────────────────────────────────────────────────────────────
+
     res.json({ ok: true, order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2338,6 +2382,32 @@ Return up to 6 complementary product IDs as JSON array:`;
 // ── WEB PUSH NOTIFICATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ── PUSH HELPER — reusable internal function ──────────────────────────────────
+async function sendPushToSubscribers(filter, payload) {
+  try {
+    const subs = await db.collection('pushSubscriptions').find(filter).toArray();
+    if (!subs.length) return { sent: 0, failed: 0 };
+    const vapid = await getOrCreateVapidKeys();
+    const webpush = require('web-push');
+    webpush.setVapidDetails('mailto:admin@bscstore.com', vapid.publicKey, vapid.privateKey);
+    const body = JSON.stringify(payload);
+    let sent = 0, failed = 0, stale = [];
+    for (const sub of subs) {
+      try {
+        const s = sub.subscription;
+        if (!s?.endpoint || !s.keys?.auth || !s.keys?.p256dh) { stale.push(sub._id); continue; }
+        await webpush.sendNotification(s, body, { TTL: 86400 });
+        sent++;
+      } catch (err) {
+        if (err.statusCode === 404 || err.statusCode === 410) stale.push(sub._id);
+        else failed++;
+      }
+    }
+    if (stale.length) await db.collection('pushSubscriptions').deleteMany({ _id: { $in: stale } });
+    return { sent, failed };
+  } catch (e) { console.error('sendPushToSubscribers error:', e.message); return { sent: 0, failed: 0 }; }
+}
+
 // Generate/retrieve VAPID keys — stored in settings collection
 async function getOrCreateVapidKeys() {
   const s = await db.collection('settings').findOne({ _id: 'main' });
@@ -2415,39 +2485,10 @@ app.post('/api/admin/push/send', adminAuth, async (req, res) => {
     const { title, body, url, customerId } = req.body;
     if (!title || !body) return res.status(400).json({ error: 'title and body required' });
     const filter = customerId ? { customerId: parseInt(customerId) } : {};
-    const subs = await db.collection('pushSubscriptions').find(filter).toArray();
-    if (!subs.length) return res.json({ ok: true, sent: 0, message: 'No subscribers' });
-
-    const vapid = await getOrCreateVapidKeys();
-    const webpush = require('web-push');
-    webpush.setVapidDetails(
-      'mailto:admin@bscstore.com',
-      vapid.publicKey,
-      vapid.privateKey
-    );
-
-    const payload = JSON.stringify({ title, body, url: url || '/', tag: 'bsc-' + Date.now() });
-    let sent = 0, failed = 0, stale = [];
-
-    for (const sub of subs) {
-      try {
-        const s = sub.subscription;
-        if (!s?.endpoint || !s.keys?.auth || !s.keys?.p256dh) { stale.push(sub._id); continue; }
-
-        await webpush.sendNotification(s, payload, { TTL: 86400 });
-        sent++;
-      } catch (err) {
-        if (err.statusCode === 404 || err.statusCode === 410) {
-          stale.push(sub._id);
-        } else {
-          failed++;
-          console.warn('Push err:', err.statusCode, err.message?.slice(0, 100));
-        }
-      }
-    }
-
-    if (stale.length) await db.collection('pushSubscriptions').deleteMany({ _id: { $in: stale } });
-    res.json({ ok: true, sent, failed, staleRemoved: stale.length });
+    const total = await db.collection('pushSubscriptions').countDocuments(filter);
+    if (!total) return res.json({ ok: true, sent: 0, message: 'No subscribers' });
+    const result = await sendPushToSubscribers(filter, { title, body, url: url || '/', tag: 'bsc-' + Date.now() });
+    res.json({ ok: true, ...result });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

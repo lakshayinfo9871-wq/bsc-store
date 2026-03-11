@@ -1479,7 +1479,7 @@ function openCatsPage() {
   document.getElementById('fpAllCatsBody').style.display = '';
   document.getElementById('fpGrid').innerHTML = cats.map((c,i) =>
     `<div class="cats-grid-card ${getCcBg(i)}" onclick="openFP(${c.id})">
-      <div class="cats-grid-img">${c.imageUrl?`<img src="${c.imageUrl}" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:2rem">📂</span>`}</div>
+      <div class="cats-grid-img">${c.imageUrl?`<img src="${c.imageUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:2rem">📂</span>`}</div>
       <div class="cats-grid-name ${getCcBg(i)}">${c.name}</div>
     </div>`
   ).join('');
@@ -4867,7 +4867,7 @@ function renderCart() {
     const imgUrl = gv?.imageUrl || gp.imageUrl || '';
     const isFree = offerPrice === 0;
     return `<div class="ci ci-gift">
-      <div class="ci-img">${imgUrl?`<img src="${imgUrl}">`:'<span style="font-size:1.5rem">🎁</span>'}</div>
+      <div class="ci-img">${imgUrl?`<img src="${imgUrl}" loading="lazy">`:'<span style="font-size:1.5rem">🎁</span>'}</div>
       <div class="ci-info">
         <div class="ci-name">${gp.name}</div>
         <div class="ci-meta">${gv?.label||''}</div>
@@ -5442,8 +5442,6 @@ let _accSection = 'home'; // 'home'|'orders'|'passbook'
 function renderAccountHome(data) {
   _accData = data;
   _accSection = 'home';
-  // Schedule push button state refresh after DOM is rebuilt
-  setTimeout(() => updatePushBtn(), 0);
   const { customer: c, orders, udharBalance, milkAmt, milkPaid, totalLitres } = data;
   const milkDue = Math.max(0, milkAmt - milkPaid);
   const totalBalance = udharBalance + milkDue;
@@ -6153,7 +6151,7 @@ function _renderAiUpsell(suggestions) {
     const imgUrl = dv.imageUrl||p.imageUrl||'';
     const inCart = !!cart[cartKey(p.id,dv.id)];
     return `<div class="upsell-card">
-      <div class="upsell-card-img">${imgUrl?`<img src="${imgUrl}">`:'<span style="font-size:1.1rem">📦</span>'}</div>
+      <div class="upsell-card-img">${imgUrl?`<img src="${imgUrl}" loading="lazy">`:'<span style="font-size:1.1rem">📦</span>'}</div>
       <div class="upsell-card-name">${p.name}</div>
       <div class="upsell-card-price">₹${pr}</div>
       <button class="upsell-add-btn ${inCart?'added':''}" id="uadd${p.id}" onclick="upsellAdd(${p.id})" ${inCart?'disabled':''}>
@@ -6240,40 +6238,14 @@ async function requestPushPermission() {
     }
     const keyBytes = _b64urlToBytes(_pushVapidKey);
 
-    // Only unsubscribe existing subscription if VAPID key has changed
-    // Force-unsubscribing on every subscribe causes errors on Android
+    // Always unsubscribe any existing subscription first — ensures fresh sub with current VAPID key
+    // This handles the case where the server VAPID key changed (old subs are invalid)
     const existingSub = await reg.pushManager.getSubscription();
     if (existingSub) {
-      // Check if applicationServerKey matches current VAPID key
-      let keyMismatch = false;
       try {
-        const existingKey = existingSub.options?.applicationServerKey;
-        if (existingKey) {
-          const existingKeyB64 = btoa(String.fromCharCode(...new Uint8Array(existingKey))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-          keyMismatch = existingKeyB64 !== _pushVapidKey;
-        }
-      } catch { keyMismatch = true; }
-      if (keyMismatch) {
-        try {
-          await fetch('/api/push/unsubscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ endpoint: existingSub.endpoint }) });
-        } catch {}
-        await existingSub.unsubscribe();
-      } else {
-        // Same key — reuse existing subscription, just re-register with server
-        _pushSubscription = existingSub;
-        let customerId = null;
-        try {
-          const tok = getMilkToken();
-          if (tok) {
-            const dr = await fetch('/api/customer/dashboard', { headers:{ Authorization:'Bearer '+tok } });
-            if (dr.ok) { const dd=await dr.json(); customerId=dd.customer?.customerId||null; }
-          }
-        } catch {}
-        await fetch('/api/push/subscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ subscription:existingSub.toJSON(), customerId }) });
-        showToast('🔔 Notifications enabled!');
-        updatePushBtn();
-        return true;
-      }
+        await fetch('/api/push/unsubscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ endpoint: existingSub.endpoint }) });
+      } catch {}
+      await existingSub.unsubscribe();
     }
 
     const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:keyBytes });
