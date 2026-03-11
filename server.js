@@ -2419,75 +2419,36 @@ app.post('/api/admin/push/send', adminAuth, async (req, res) => {
     if (!subs.length) return res.json({ ok: true, sent: 0, message: 'No subscribers' });
 
     const vapid = await getOrCreateVapidKeys();
-    const payload = JSON.stringify({ title, body, url: url||'/', tag: 'bsc-'+Date.now() });
-    const { webcrypto } = require('crypto');
+    const webpush = require('web-push');
+    webpush.setVapidDetails(
+      'mailto:admin@bscstore.com',
+      vapid.publicKey,
+      vapid.privateKey
+    );
+
+    const payload = JSON.stringify({ title, body, url: url || '/', tag: 'bsc-' + Date.now() });
     let sent = 0, failed = 0, stale = [];
 
     for (const sub of subs) {
       try {
         const s = sub.subscription;
-        if (!s.keys?.auth || !s.keys?.p256dh) { stale.push(sub._id); continue; }
+        if (!s?.endpoint || !s.keys?.auth || !s.keys?.p256dh) { stale.push(sub._id); continue; }
 
-        const endpoint = s.endpoint;
-        const origin = new URL(endpoint).origin;
-        const now = Math.floor(Date.now()/1000);
-
-        // Build VAPID JWT
-        const jwtHeader  = Buffer.from(JSON.stringify({typ:'JWT',alg:'ES256'})).toString('base64url');
-        const jwtPayload = Buffer.from(JSON.stringify({aud:origin,exp:now+43200,sub:'mailto:admin@bscstore.com'})).toString('base64url');
-        const sigInput = `${jwtHeader}.${jwtPayload}`;
-
-        const privKeyBytes = Buffer.from(vapid.privateKey.replace(/-/g,'+').replace(/_/g,'/'), 'base64');
-        const privKey = await webcrypto.subtle.importKey('raw', privKeyBytes, {name:'ECDSA',namedCurve:'P-256'}, false, ['sign']);
-        const sig = await webcrypto.subtle.sign({name:'ECDSA',hash:'SHA-256'}, privKey, Buffer.from(sigInput));
-        const jwt = `${sigInput}.${Buffer.from(sig).toString('base64url')}`;
-
-        // Encrypt payload (RFC 8291 / aes128gcm)
-        const serverECDH = await webcrypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'}, true, ['deriveKey','deriveBits']);
-        const serverPubRaw = Buffer.from(await webcrypto.subtle.exportKey('raw', serverECDH.publicKey));
-
-        const clientPubKey = await webcrypto.subtle.importKey('raw',
-          Buffer.from(s.keys.p256dh.replace(/-/g,'+').replace(/_/g,'/'),'base64'),
-          {name:'ECDH',namedCurve:'P-256'}, false, []);
-        const authBytes = Buffer.from(s.keys.auth.replace(/-/g,'+').replace(/_/g,'/'),'base64');
-
-        const sharedBits = await webcrypto.subtle.deriveBits({name:'ECDH',public:clientPubKey}, serverECDH.privateKey, 256);
-        const salt = webcrypto.getRandomValues(new Uint8Array(16));
-
-        const ikm    = await webcrypto.subtle.importKey('raw', sharedBits, 'HKDF', false, ['deriveBits']);
-        const prk    = await webcrypto.subtle.deriveBits({name:'HKDF',hash:'SHA-256',salt:authBytes,info:Buffer.from('Content-Encoding: auth\0')}, ikm, 256);
-        const prkKey = await webcrypto.subtle.importKey('raw', prk, 'HKDF', false, ['deriveBits']);
-
-        const clientPubRaw = Buffer.from(s.keys.p256dh.replace(/-/g,'+').replace(/_/g,'/'),'base64');
-        const keyInfo   = Buffer.concat([Buffer.from('Content-Encoding: aes128gcm\0'), Buffer.alloc(1), Buffer.from([0x41]), serverPubRaw, Buffer.from([0x41]), clientPubRaw]);
-        const nonceInfo = Buffer.concat([Buffer.from('Content-Encoding: nonce\0'), Buffer.alloc(1)]);
-
-        const cekBits   = await webcrypto.subtle.deriveBits({name:'HKDF',hash:'SHA-256',salt,info:keyInfo},   prkKey, 128);
-        const nonceBits = await webcrypto.subtle.deriveBits({name:'HKDF',hash:'SHA-256',salt,info:nonceInfo}, prkKey, 96);
-
-        const cek = await webcrypto.subtle.importKey('raw', cekBits, 'AES-GCM', false, ['encrypt']);
-        const ciphertext = await webcrypto.subtle.encrypt({name:'AES-GCM',iv:nonceBits,tagLength:128}, cek,
-          Buffer.concat([Buffer.from(payload), Buffer.from([2])]));
-
-        const recordSize = Buffer.alloc(4); recordSize.writeUInt32BE(4096);
-        const header = Buffer.concat([Buffer.from(salt), recordSize, Buffer.from([serverPubRaw.length]), serverPubRaw]);
-        const body2send = Buffer.concat([header, Buffer.from(ciphertext)]);
-
-        const pushRes = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Authorization': `vapid t=${jwt},k=${vapid.publicKey}`, 'Content-Type': 'application/octet-stream', 'Content-Encoding': 'aes128gcm', 'TTL': '86400' },
-          body: body2send
-        });
-
-        if (pushRes.status === 201 || pushRes.status === 200) sent++;
-        else if ([404, 410, 401, 403].includes(pushRes.status)) stale.push(sub._id);
-        else { failed++; console.warn('Push failed:', pushRes.status, endpoint.slice(0,50)); }
-      } catch(err) { failed++; console.warn('Push err:', err.message); }
+        await webpush.sendNotification(s, payload, { TTL: 86400 });
+        sent++;
+      } catch (err) {
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          stale.push(sub._id);
+        } else {
+          failed++;
+          console.warn('Push err:', err.statusCode, err.message?.slice(0, 100));
+        }
+      }
     }
 
     if (stale.length) await db.collection('pushSubscriptions').deleteMany({ _id: { $in: stale } });
-    res.json({ ok:true, sent, failed, staleRemoved: stale.length });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+    res.json({ ok: true, sent, failed, staleRemoved: stale.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── SERVE PAGES ───────────────────────────────────────────────────────────────
