@@ -5408,7 +5408,7 @@ function _doPlaceOrder(method) {
   const items=Object.entries(cart).map(([k,qty]) => {
     const { pid, vid } = parseKey(k);
     const p=prods.find(x=>x.id===pid); const v=p?getVariant(p,vid):null;
-    return p&&v ? { productId:p.id, variantId:vid, name:p.name, variant:v.label, qty, price:getPrice(v.priceTiers,qty) } : null;
+    return p&&v ? { productId:p.id, variantId:vid, name:p.name, variant:v.label, qty, price:getPrice(v.priceTiers,qty), mrp: v.mrp || null } : null;
   }).filter(Boolean);
 
   const cfg=giftCfg();

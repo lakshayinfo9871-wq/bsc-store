@@ -1795,7 +1795,7 @@ app.post('/api/orders', async (req, res) => {
       let serverPrice = tiers[0]?.price || 0;
       for (const tier of tiers) { if (item.qty >= tier.minQty) serverPrice = tier.price; }
       recalcTotal += serverPrice * item.qty;
-      validatedItems.push({ ...item, price: serverPrice });
+      validatedItems.push({ ...item, price: serverPrice, mrp: variant?.mrp || null });
     }
     // Handle free gift pricing from settings
     const settings = await db.collection('settings').findOne({ _id: 'main' });
