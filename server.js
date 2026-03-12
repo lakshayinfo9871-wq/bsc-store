@@ -2573,35 +2573,50 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'adm
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ── START ─────────────────────────────────────────────────────────────────────
-connectDB().then(async () => {
-  // ── AUTO-FILL KEYWORDS on startup ────────────────────────────────────────
-  // Runs once: fills keywords + searchTokens for any product that has none
-  try {
-    const col      = db.collection('products');
-    const products = await col.find({
-      $or: [{ keywords: { $exists: false } }, { keywords: { $size: 0 } }, { keywords: [] }]
-    }, { projection: { _id: 1, name: 1, brand: 1 } }).toArray();
+// ── START: Always start HTTP server first, then connect DB ──────────────────
+// This prevents Render from killing the process if MongoDB is slow to wake up
 
-    if (products.length > 0) {
-      console.log(`🔑 Auto-generating keywords for ${products.length} products...`);
-      let count = 0;
-      for (const p of products) {
-        const keywords     = autoGenerateKeywords(p.name, p.brand);
-        const searchTokens = buildSearchTokens({ name: p.name, brand: p.brand, keywords });
-        await col.updateOne({ _id: p._id }, { $set: { keywords, searchTokens } });
-        count++;
-      }
-      console.log(`✅ Keywords generated for ${count} products`);
-    }
-  } catch (e) {
-    console.error('⚠️ Keyword auto-fill error (non-fatal):', e.message);
-  }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n✅ BSC Store running at http://localhost:${PORT}`);
-    console.log(`🔧 Admin panel: http://localhost:${PORT}/admin`);
-  });
-}).catch(err => {
-  console.error('❌ Failed to connect to MongoDB:', err);
-  process.exit(1);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n✅ BSC Store HTTP server running at http://localhost:${PORT}`);
+  console.log(`🔧 Admin panel: http://localhost:${PORT}/admin`);
+  console.log(`⏳ Connecting to MongoDB...`);
+  startDB();
 });
+
+async function startDB(attempt = 1) {
+  const MAX_ATTEMPTS = 5;
+  try {
+    await connectDB();
+    // ── AUTO-FILL KEYWORDS on startup ──────────────────────────────────────
+    try {
+      const col      = db.collection('products');
+      const products = await col.find({
+        $or: [{ keywords: { $exists: false } }, { keywords: { $size: 0 } }, { keywords: [] }]
+      }, { projection: { _id: 1, name: 1, brand: 1 } }).toArray();
+      if (products.length > 0) {
+        console.log(`🔑 Auto-generating keywords for ${products.length} products...`);
+        let count = 0;
+        for (const p of products) {
+          const keywords     = autoGenerateKeywords(p.name, p.brand);
+          const searchTokens = buildSearchTokens({ name: p.name, brand: p.brand, keywords });
+          await col.updateOne({ _id: p._id }, { $set: { keywords, searchTokens } });
+          count++;
+        }
+        console.log(`✅ Keywords generated for ${count} products`);
+      }
+    } catch (e) {
+      console.error('⚠️ Keyword auto-fill error (non-fatal):', e.message);
+    }
+  } catch (err) {
+    console.error(`❌ MongoDB connection attempt ${attempt} failed:`, err.message);
+    if (attempt < MAX_ATTEMPTS) {
+      const delay = attempt * 5000; // 5s, 10s, 15s, 20s back-off
+      console.log(`🔄 Retrying in ${delay/1000}s... (attempt ${attempt+1}/${MAX_ATTEMPTS})`);
+      setTimeout(() => startDB(attempt + 1), delay);
+    } else {
+      console.error('❌ All MongoDB connection attempts failed. Server is running but DB is unavailable.');
+      console.error('   Check: MONGO_URI env var, Atlas cluster status, and IP whitelist (0.0.0.0/0).');
+      // Do NOT call process.exit — keep server alive so Render doesn't restart-loop
+    }
+  }
+}
