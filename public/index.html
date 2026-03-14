@@ -272,6 +272,20 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 /* ══════════════════════ SCROLL AREA ══════════════════════ */
 .scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:100px;}
 
+/* Horizontal-only scroll containers: let vertical swipes bubble up to .scroll */
+.pstrip,
+.cat-tabs,
+.cat-rail-track,
+.rv-scroll,
+.upsell-scroll,
+.deals-carousel-track,
+.deals-carousel-outer,
+.acc-tabs,
+.fp-filter-bar,
+.cat-right {
+  touch-action: pan-x;
+}
+
 
 /* ══════════════════════ BANNER ══════════════════════ */
 .banner-wrap{padding:14px 14px 0;}
@@ -1654,6 +1668,10 @@ function goHome() {
   renderHome(); setNav('bn0');
 }
 function openCatsPage() {
+  document.getElementById('milkPage')?.classList.remove('open');
+  document.getElementById('searchPage')?.classList.remove('open');
+  document.getElementById('ctxPage')?.classList.remove('open');
+  document.getElementById('dealsPage')?.classList.remove('open');
   setNav('bn1');
   document.getElementById('fpTitle').textContent = 'All Categories';
   document.getElementById('fpFilterBar').style.display = 'none';
@@ -5518,6 +5536,12 @@ function closeSuccess() { document.getElementById('success').classList.remove('s
 
 // ── ACCOUNT PAGE ─────────────────────────────────────────────────────────────
 function openMilkPage() {
+  // Close every other overlay page — milkPage is earlier in DOM than fpage/searchPage
+  // (all z-index:240), so they would paint over it if left open.
+  document.getElementById('fpage')?.classList.remove('open');
+  document.getElementById('searchPage')?.classList.remove('open');
+  document.getElementById('ctxPage')?.classList.remove('open');
+  document.getElementById('dealsPage')?.classList.remove('open');
   setNav('bn3');
   document.getElementById('milkPage').classList.add('open');
   renderAccount();
@@ -6539,6 +6563,48 @@ function togglePushNotifications() {
   else requestPushPermission();
 }
 
+
+// ── TOPBAR VERTICAL SCROLL PASSTHROUGH ───────────────────────────────────────
+// The topbar is a flex sibling of .scroll (not inside it), so touches starting
+// on the topbar never reach .scroll. We detect vertical swipes on the topbar
+// and manually scroll the main content area.
+(function initTopbarScrollPassthrough() {
+  const topbar = document.getElementById('topbar');
+  const scroller = document.getElementById('scroll');
+  if (!topbar || !scroller) return;
+
+  let startX = 0, startY = 0, startScrollTop = 0;
+
+  topbar.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    startScrollTop = scroller.scrollTop;
+  }, { passive: true });
+
+  topbar.addEventListener('touchmove', e => {
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    // Only forward if gesture is more vertical than horizontal
+    if (Math.abs(dy) > Math.abs(dx)) {
+      scroller.scrollTop = startScrollTop - dy;
+    }
+  }, { passive: true });
+})();
+
+// ── KEEP-ALIVE HEARTBEAT ──────────────────────────────────────────────────────
+// Pings /health every 8 min while the app tab is open.
+// Acts as a second layer alongside UptimeRobot — free, zero dependencies.
+(function initHeartbeat() {
+  const INTERVAL = 8 * 60 * 1000; // 8 minutes
+  async function beat() {
+    try { await fetch('/health'); } catch {} // silent — just keeps Render awake
+  }
+  setInterval(beat, INTERVAL);
+  // Also ping once on visibility restore (user switches back to tab)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') beat();
+  });
+})();
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 init();
