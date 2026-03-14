@@ -133,7 +133,7 @@ img{display:block;max-width:100%;}
   animation:spNameIn .4s ease .7s forwards;
 }
 
-.fpage,.acc-page{transform:translateX(100%);opacity:0;transition:transform .35s cubic-bezier(.22,.61,.36,1),opacity .25s;position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;}
+.fpage,.acc-page{transform:translateX(100%);opacity:0;transition:transform .35s cubic-bezier(.22,.61,.36,1),opacity .25s;position:fixed;inset:0;z-index:240;background:var(--bg);display:flex;flex-direction:column;}
 .fpage.open,.acc-page.open{transform:translateX(0);opacity:1;}
 
 /* ── PRESS FEEDBACK (mobile spring) ── */
@@ -168,24 +168,20 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
   /* Reserve full height so layout doesn't jump */
 }
 
-/* The collapsible part: logo row + search bar */
+/* The collapsible part: logo row + search bar — ALWAYS VISIBLE (no collapse) */
 .topbar-collapse{
   overflow:hidden;
-  /* Height is controlled by JS via max-height for smooth animation */
-  max-height:200px; /* more than actual height — allows smooth transition */
-  transition:max-height .28s cubic-bezier(.4,0,.2,1),
-             opacity .22s ease,
-             padding .28s cubic-bezier(.4,0,.2,1);
+  max-height:200px;
   padding:0 16px;
   padding-top:max(env(safe-area-inset-top),0px);
   opacity:1;
-  will-change:max-height,opacity;
 }
+/* Disable collapse — header is permanently fixed */
 .topbar-collapse.collapsed{
-  max-height:0;
-  opacity:0;
-  padding-top:0;
-  padding-bottom:0;
+  max-height:200px !important;
+  opacity:1 !important;
+  padding-top:max(env(safe-area-inset-top),0px) !important;
+  padding-bottom:unset !important;
 }
 
 /* Category tabs — always visible below the collapsible part */
@@ -615,7 +611,7 @@ button,.cat-card,.pcard,.ck-pay-card,.bn-item,.acc-quick-btn,.filter-chip,.month
 .fp-head{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:max(env(safe-area-inset-top,10px),10px);background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
 .back-btn{width:36px;height:36px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--text);flex-shrink:0;}
 .fp-title{font-size:.96rem;font-weight:800;letter-spacing:-.3px;}
-.fp-body{flex:1;overflow-y:auto;padding:14px;}
+.fp-body{flex:1;overflow-y:auto;padding:14px;padding-bottom:80px;}
 .fp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
 
 /* ══════════════════════ BLINKIT SPLIT-PANEL CATEGORY PAGE ══════════════════════ */
@@ -861,7 +857,7 @@ select.ck-inp option{background:var(--bg2);}
 .ck-place-amt{font-size:1rem;font-weight:900;background:rgba(0,0,0,.12);padding:4px 12px;border-radius:9px;}
 
 /* ══════════════════════ BOTTOM NAV ══════════════════════ */
-.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -4px 20px rgba(0,0,0,.4);}
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:260;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -4px 20px rgba(0,0,0,.4);}
 .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:.55rem .3rem;cursor:pointer;color:var(--text3);transition:color .15s;}
 .bn-item.active{color:var(--green);}
 .bn-item .ni{font-size:1.2rem;line-height:1;}
@@ -1195,7 +1191,7 @@ select.ck-inp option{background:var(--bg2);}
       <div class="search-wrap" style="position:relative;flex:1;margin:0 10px;">
         <div class="search-bar">
           <span class="search-icon">🔍</span>
-          <input id="searchInput" placeholder="" oninput="onSearch(this.value);showSearchSugg(this.value);_syncPHOverlay(this.value)" onfocus="clearAnimatedPH();expandHeader();showSearchSugg(this.value)" onblur="startAnimatedPH();setTimeout(hideSearchSugg,180)">
+          <input id="searchInput" placeholder="" oninput="onSearch(this.value);showSearchSugg(this.value);_syncPHOverlay(this.value)" onfocus="clearAnimatedPH();openSearchPage(this.value)" onblur="startAnimatedPH();setTimeout(hideSearchSugg,180)">
         <span id="phOverlay" class="ph-overlay"></span>
           <span id="searchClear" style="color:var(--text3);cursor:pointer;font-size:.8rem;display:none" onclick="clearSearch()">✕</span>
         </div>
@@ -1247,9 +1243,19 @@ select.ck-inp option{background:var(--bg2);}
   <div class="fp-body" id="fpAllCatsBody" style="display:none"><div class="cats-grid-page" id="fpGrid"></div></div>
 </div>
 <div class="fpage" id="searchPage">
-  <div class="fp-head">
+  <div class="fp-head" style="gap:8px;padding:10px 12px;padding-top:max(env(safe-area-inset-top,10px),10px);">
     <button class="back-btn" onclick="closeSearch()">&#8592;</button>
-    <span class="fp-title">Search Results</span>
+    <div style="flex:1;display:flex;align-items:center;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:0 12px;gap:8px;height:40px;transition:border-color .2s;" id="spSearchBar">
+      <span style="font-size:.95rem;flex-shrink:0;">🔍</span>
+      <input id="searchPageInput"
+        style="flex:1;background:none;border:none;outline:none;font-size:.9rem;font-weight:500;color:var(--text);font-family:'Inter',sans-serif;min-width:0;"
+        placeholder="Search products…"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        oninput="onSearchFromPage(this.value)"
+        onfocus="document.getElementById('spSearchBar').style.borderColor='var(--green)'"
+        onblur="document.getElementById('spSearchBar').style.borderColor='var(--border)'">
+      <span id="spClear" style="color:var(--text3);cursor:pointer;font-size:.8rem;display:none;flex-shrink:0;" onclick="clearSearchPage()">✕</span>
+    </div>
   </div>
   <div class="fp-body"><div class="fp-grid" id="searchGrid"></div></div>
 </div>
@@ -1361,6 +1367,9 @@ function saveCart() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart))
 function loadCart() { try { const s = localStorage.getItem(CART_KEY); if(s) cart = JSON.parse(s)||{}; } catch(e){} }
 let giftState = { injected:false, claimed:false, prevUnlocked:false };
 let bIdx=0, bTimer=null;
+// Search state — declared early so closeSearch() can safely reference before its let declaration
+let _lastSearchQ = '';
+let searchTimer = null;
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function getVariant(p, vid) {
@@ -1634,7 +1643,14 @@ function setNav(id) {
 function goHome() {
   document.querySelectorAll('.ctab')[0]?.classList.add('active');
   document.querySelectorAll('.ctab').forEach((t,i)=>{ if(i>0) t.classList.remove('active'); });
-  closeFP(); closeSearch(); document.getElementById('milkPage')?.classList.remove('open');
+  closeFP(); closeSearch();
+  document.getElementById('milkPage')?.classList.remove('open');
+  // Clear topbar search input
+  const inp = document.getElementById('searchInput');
+  if (inp) inp.value = '';
+  const clearBtn = document.getElementById('searchClear');
+  if (clearBtn) clearBtn.style.display = 'none';
+  startAnimatedPH();
   renderHome(); setNav('bn0');
 }
 function openCatsPage() {
@@ -1652,7 +1668,15 @@ function openCatsPage() {
   document.getElementById('fpage').classList.add('open');
 }
 function closeFP() { document.getElementById('fpage')?.classList.remove('open'); setNav('bn0'); }
-function closeSearch() { document.getElementById('searchPage')?.classList.remove('open'); }
+function closeSearch() {
+  document.getElementById('searchPage')?.classList.remove('open');
+  // Clear both inputs so next open is clean
+  const spInput = document.getElementById('searchPageInput');
+  if (spInput) spInput.value = '';
+  const spClear = document.getElementById('spClear');
+  if (spClear) spClear.style.display = 'none';
+  _lastSearchQ = '';
+}
 
 // ── HOME ──────────────────────────────────────────────────────────────────────
 function getCcBg(i) { return 'cc-bg-' + (i % 8); }
@@ -3662,8 +3686,8 @@ function _renderCtxGrid(list) {
 
 function renderHome() {
   // Always merge saved layout with full default so new sections (cat_rail etc) always appear
-  const _def = ['banners','cat_rail','personalised','recently_viewed','featured','new','fresh_hub','cat_strips'];
-  const _retired = new Set(['categories','deals']);
+  const _def = ['banners','cat_rail','deals','personalised','recently_viewed','featured','new','fresh_hub','cat_strips'];
+  const _retired = new Set(['categories']);
   const _saved = (settings.homeLayout || []).filter(id => !_retired.has(id));
   const layout = _saved.length ? [..._saved, ..._def.filter(id => !_saved.includes(id))] : _def;
   const hidden = new Set(settings.homeLayoutHidden || []);
@@ -4704,8 +4728,7 @@ function renderSearchResults(results, query, expandedTerms) {
   grid.innerHTML = synonymHint + results.map((p,i)=>pCard(p,i)).join('');
 }
 
-let searchTimer = null;
-let _lastSearchQ = '';
+// searchTimer and _lastSearchQ declared at top of globals
 
 async function onSearch(q) {
   const clearBtn = document.getElementById('searchClear');
@@ -4718,12 +4741,20 @@ async function onSearch(q) {
     return;
   }
 
+  // Open search page and sync the in-page input
+  if (!document.getElementById('searchPage').classList.contains('open')) {
+    document.getElementById('searchPage').classList.add('open');
+    document.getElementById('fpage').classList.remove('open');
+  }
+  const spInput = document.getElementById('searchPageInput');
+  if (spInput && spInput.value !== q) spInput.value = q;
+  const spClear = document.getElementById('spClear');
+  if (spClear) spClear.style.display = q ? 'inline' : 'none';
+
   // Instant client-side results while server responds
   const clientResults = clientSmartSearch(q.toLowerCase());
   if (q !== _lastSearchQ) {
     renderSearchResults(clientResults, q, clientExpandQuery(q.toLowerCase()));
-    document.getElementById('searchPage').classList.add('open');
-    document.getElementById('fpage').classList.remove('open');
     _lastSearchQ = q;
   }
 
@@ -4731,16 +4762,37 @@ async function onSearch(q) {
   searchTimer = setTimeout(async () => {
     try {
       const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-      if (!r.ok) return; // silently fall back to client results
+      if (!r.ok) return;
       const data = await r.json();
-      // Only update if query hasn't changed while we waited
-      if (document.getElementById('searchInput')?.value === q) {
+      if (document.getElementById('searchInput')?.value === q ||
+          document.getElementById('searchPageInput')?.value === q) {
         renderSearchResults(data.results, data.query, data.expandedTerms);
       }
     } catch {
-      // Network error — client results already showing, nothing to do
+      // Network error — client results already showing
     }
   }, 300);
+}
+
+function onSearchFromPage(q) {
+  // Keep topbar input in sync when typing inside the search page
+  const topInput = document.getElementById('searchInput');
+  if (topInput && topInput.value !== q) topInput.value = q;
+  const clearBtn = document.getElementById('searchClear');
+  if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+  const spClear = document.getElementById('spClear');
+  if (spClear) spClear.style.display = q ? 'inline' : 'none';
+  onSearch(q);
+}
+
+function clearSearchPage() {
+  const spInput = document.getElementById('searchPageInput');
+  if (spInput) { spInput.value = ''; spInput.focus(); }
+  const spClear = document.getElementById('spClear');
+  if (spClear) spClear.style.display = 'none';
+  clearSearch();
+  // Reopen empty search page so user can type again
+  document.getElementById('searchPage').classList.add('open');
 }
 function clearSearch() {
   const inp = document.getElementById('searchInput');
@@ -4749,6 +4801,24 @@ function clearSearch() {
   if (clearBtn) clearBtn.style.display = 'none';
   closeSearch();
   startAnimatedPH();
+}
+
+// Opens the search full page and hands focus to the in-page input
+function openSearchPage(existingQuery) {
+  const page = document.getElementById('searchPage');
+  const spInput = document.getElementById('searchPageInput');
+  if (!page || !spInput) return;
+  page.classList.add('open');
+  document.getElementById('fpage')?.classList.remove('open');
+  // Sync any already-typed value
+  if (existingQuery) {
+    spInput.value = existingQuery;
+    onSearch(existingQuery);
+  }
+  // Small delay so the page slide animation starts before focusing
+  setTimeout(() => { spInput.focus(); spInput.setSelectionRange(spInput.value.length, spInput.value.length); }, 60);
+  // Blur the topbar input (it's now hidden behind the page)
+  document.getElementById('searchInput')?.blur();
 }
 
 // ── PRODUCT DETAIL MODAL ──────────────────────────────────────────────────────
@@ -6062,6 +6132,7 @@ function openDealsPage(minPct) {
   document.getElementById('dealsPage').classList.add('open');
   document.getElementById('fpage').classList.remove('open');
   document.getElementById('searchPage').classList.remove('open');
+  document.getElementById('ctxPage')?.classList.remove('open');
 }
 
 function closeDealsPage() {
