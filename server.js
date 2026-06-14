@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { MongoClient } = require('mongodb');
+const cron = require('node-cron');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,6 +54,25 @@ setInterval(() => {
 
 app.use(express.json({ limit: '500kb' })); // #4: reduced from 10mb
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── HEALTH CHECK (for UptimeRobot keep-alive ping) ────────────────────────────
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    db: db ? 'connected' : 'connecting',
+    uptime: Math.floor(process.uptime()),
+    ts: new Date().toISOString()
+  });
+});
+
+// ── DB-READY GUARD ────────────────────────────────────────────────────────────
+// Prevents crashes when API is called before MongoDB finishes connecting
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/') && !db) {
+    return res.status(503).json({ error: 'Server is starting up. Please try again in a few seconds.' });
+  }
+  next();
+});
 
 // ── MONGODB ───────────────────────────────────────────────────────────────────
 let db;
@@ -557,12 +577,11 @@ const SYNONYMS = {
   burfi:        ['barfi', 'milk burfi', 'sweets'],
   ladoo:        ['laddoo', 'besan ladoo', 'sweets'],
   laddoo:       ['ladoo', 'sweets'],
-  halwa:        ['semolina halwa', 'sooji halwa', 'gajar halwa', 'sweets'],
+  halwa:        ['semolina halwa', 'sooji halwa', 'atta halwa', 'gajar halwa', 'sweets'],
   gulab:        ['gulab jamun', 'rose', 'gulab water'],
   'gulab jamun':['gulab', 'sweets', 'jamun'],
   rasgulla:     ['rossogolla', 'sweets', 'chhena sweets'],
   kheer:        ['rice pudding', 'payasam', 'doodh chawal'],
-  halwa:        ['sooji halwa', 'atta halwa', 'gajar halwa'],
   chocolate:    ['choclate', 'choco', 'dark chocolate', 'milk chocolate'],
   choclate:     ['chocolate', 'choco'],
   toffee:       ['candy', 'taffy', 'sweet', 'lollipop'],
@@ -621,7 +640,7 @@ const SYNONYMS = {
   'dish wash':  ['utensil cleaner', 'bartan sabun', 'dishwash'],
   dishwash:     ['dish wash', 'bartan cleaner', 'vim'],
   'bartan sabun':['dish wash', 'utensil soap'],
-  vim:          ['dish wash', 'dishwash', 'bartan cleaner'],
+  vim:          ['dish wash', 'dishwash', 'bartan cleaner', 'utensil cleaner'],
   broom:        ['jhadu', 'sweeper', 'floor broom'],
   jhadu:        ['broom', 'sweeper'],
   mop:          ['pocha', 'floor cleaner', 'floor mop'],
@@ -744,7 +763,6 @@ const SYNONYMS = {
   'surf excel': ['detergent', 'surf', 'washing powder'],
   ariel:        ['detergent', 'washing powder'],
   tide:         ['detergent', 'washing powder'],
-  vim:          ['dish wash', 'bartan cleaner'],
   lizol:        ['floor cleaner', 'disinfectant'],
 
   // ── MISC FOOD ────────────────────────────────────────────────────────────
@@ -1226,7 +1244,7 @@ app.get('/api/admin/settings', adminAuth, async (req, res) => {
 });
 app.put('/api/admin/settings', adminAuth, async (req, res) => {
   try {
-    const { newPassword, shopStatus, ...rest } = req.body;
+    const { newPassword, shopStatus, _id, ...rest } = req.body; // strip _id — MongoDB immutable field
     const update = { ...rest };
     if (newPassword) update.adminPassword = sha256(newPassword);
     // Handle shopStatus as a merged sub-object or dot-notation key
@@ -1593,9 +1611,10 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
       const todayEnd   = new Date(istEndOfDay.getTime()  - IST_OFFSET_MS);
       filter.createdAt = { $gte: todayStart.toISOString(), $lte: todayEnd.toISOString() };
     } else if (req.query.from || req.query.to) {
+      // ⚠️  Treat from/to as IST dates (same as "today" filter above) — subtract 5h30m to get UTC
       filter.createdAt = {};
-      if (req.query.from) filter.createdAt.$gte = new Date(req.query.from + 'T00:00:00.000Z').toISOString();
-      if (req.query.to)   filter.createdAt.$lte = new Date(req.query.to   + 'T23:59:59.999Z').toISOString();
+      if (req.query.from) filter.createdAt.$gte = new Date(new Date(req.query.from + 'T00:00:00.000Z').getTime() - IST_OFFSET_MS).toISOString();
+      if (req.query.to)   filter.createdAt.$lte = new Date(new Date(req.query.to   + 'T23:59:59.999Z').getTime() - IST_OFFSET_MS).toISOString();
     }
     res.json(await db.collection('orders').find(filter).sort({ createdAt: -1 }).toArray());
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1751,6 +1770,11 @@ app.post('/api/orders', async (req, res) => {
   try {
     const { customerName, phone, block, villa, note, items, freeGift, paymentMethod } = req.body;
     if (!customerName || !phone || !items?.length) return res.status(400).json({ error: 'Missing fields' });
+    // ── PHONE VALIDATION ─────────────────────────────────────────────────────
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+    if (!/^\d{10}$/.test(cleanPhone)) return res.status(400).json({ error: 'Invalid phone number. Please enter a 10-digit mobile number.' });
+    // ── NAME VALIDATION ──────────────────────────────────────────────────────
+    if (customerName.trim().length < 2) return res.status(400).json({ error: 'Please enter your full name.' });
 
     // ── SHOP OPEN/CLOSED CHECK ────────────────────────────────────────────────
     const storeSettings = await db.collection('settings').findOne({ _id: 'main' });
@@ -1796,6 +1820,24 @@ app.post('/api/orders', async (req, res) => {
       for (const tier of tiers) { if (item.qty >= tier.minQty) serverPrice = tier.price; }
       recalcTotal += serverPrice * item.qty;
       validatedItems.push({ ...item, price: serverPrice, mrp: variant?.mrp || null });
+
+      // ── LOW-STOCK PUSH ALERT to admin ────────────────────────────────────────
+      if (typeof product.stockQuantity === 'number') {
+        const newQty = product.stockQuantity - item.qty;
+        const threshold = typeof product.lowStockThreshold === 'number' ? product.lowStockThreshold : 5;
+        if (newQty >= 0 && newQty <= threshold) {
+          sendPushToSubscribers(
+            { customerId: null }, // admin subscriptions
+            {
+              title: `⚠️ Low Stock: ${product.name}`,
+              body: `Only ${newQty} unit(s) left. Restock soon.`,
+              url: '/admin',
+              tag: 'lowstock-' + product.id
+            }
+          ).catch(() => {}); // fire-and-forget, never block the order
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────────
     }
     // Handle free gift pricing from settings
     const settings = await db.collection('settings').findOne({ _id: 'main' });
@@ -2003,6 +2045,7 @@ app.post('/api/admin/milk/logs', adminAuth, async (req, res) => {
       if (logItems) doc.items = logItems;
       await db.collection('milkLogs').insertOne(doc);
     }
+    if (totalQty > 0) scheduleMilkSummarySend(cid, date);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2028,6 +2071,7 @@ app.post('/api/admin/milk/bulk-mark', adminAuth, async (req, res) => {
         };
         if (sub.defaultItems && sub.defaultItems.length) doc.items = sub.defaultItems;
         await db.collection('milkLogs').insertOne(doc);
+        scheduleMilkSummarySend(sub.customerId, date);
         marked++;
       }
     }
@@ -2110,6 +2154,176 @@ app.put('/api/admin/milk/settings', adminAuth, async (req, res) => {
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── WHATSAPP CLOUD API AUTOMATION (Free tier) ─────────────────────────────────
+// Env vars needed (set on Render):
+//   WHATSAPP_TOKEN            - permanent System User access token
+//   WHATSAPP_PHONE_NUMBER_ID  - from Meta App > WhatsApp > API Setup
+//   WHATSAPP_API_VERSION      - optional, defaults to v21.0
+//   UPI_ID                    - your UPI ID, e.g. yourname@upi
+//   UPI_QR_URL                - public HTTPS image URL of your UPI QR code
+//   AUTO_PAUSE_UNPAID         - 'true' to auto-pause unpaid subscriptions
+// ═══════════════════════════════════════════════════════════════════════════════
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN || '';
+const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+const WHATSAPP_API_VERSION = process.env.WHATSAPP_API_VERSION || 'v21.0';
+const UPI_ID = process.env.UPI_ID || '';
+const UPI_QR_URL = process.env.UPI_QR_URL || '';
+
+// Converts a stored phone number to WhatsApp international format (default India +91)
+function toWaNumber(phone) {
+  if (!phone) return null;
+  let p = String(phone).replace(/\D/g, '');
+  if (p.length === 10) p = '91' + p;
+  else if (p.length === 11 && p.startsWith('0')) p = '91' + p.slice(1);
+  return p;
+}
+
+// Sends a pre-approved WhatsApp template message via Cloud API. Fails silently
+// (logs only) so a messaging error never breaks admin actions.
+async function sendWhatsAppTemplate(toPhone, templateName, components, languageCode = 'en') {
+  const to = toWaNumber(toPhone);
+  if (!to || !WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+    console.warn(`WhatsApp send skipped (missing phone/credentials) for ${templateName} -> ${toPhone}`);
+    return { skipped: true };
+  }
+  try {
+    const resp = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp', to, type: 'template',
+        template: { name: templateName, language: { code: languageCode }, components }
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok) console.error(`WhatsApp send failed (${templateName} -> ${to}):`, JSON.stringify(data));
+    return data;
+  } catch (e) {
+    console.error(`WhatsApp send error (${templateName} -> ${to}):`, e.message);
+    return { error: e.message };
+  }
+}
+
+// Computes a customer's running monthly due (totalBilled - totalPaid) for a given month
+async function getCustomerMonthlyDue(customerId, month) {
+  const settings = await db.collection('settings').findOne({ _id: 'main' });
+  const sub = await db.collection('milkSubscriptions').findOne({ customerId });
+  const logs = await db.collection('milkLogs').find({ customerId, month }).toArray();
+  const payments = await db.collection('milkPayments').find({ customerId, month }).toArray();
+  const totalBilled = logs.reduce((s, l) => {
+    if (l.items && l.items.length) {
+      return s + l.items.reduce((is, i) => is + parseFloat(i.qty || 0) * parseFloat(i.price || 0), 0);
+    }
+    return s + l.qty * (l.price || sub?.pricePerLitre || settings.milkPrice || 60);
+  }, 0);
+  const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+  return parseFloat((totalBilled - totalPaid).toFixed(2));
+}
+
+// Human-readable summary of a day's milk delivery, e.g. "Full Cream 1L, Toned 0.5L"
+function describeMilkLog(log) {
+  if (log.items && log.items.length) return log.items.map(i => `${i.type} ${i.qty}L`).join(', ');
+  return `${log.qty}L`;
+}
+
+// ── DELIVERY-TRIGGERED MILK SUMMARY ───────────────────────────────────────────
+// A couple of minutes after the admin marks milk delivered for a customer,
+// sends that customer their `milk_daily_summary` (today's items/qty + running
+// monthly due). The short delay lets the admin fix a mistaken entry before the
+// message goes out.
+function scheduleMilkSummarySend(customerId, date, delayMs = 2 * 60 * 1000) {
+  setTimeout(async () => {
+    try {
+      if (!db) return;
+      const log = await db.collection('milkLogs').findOne({ customerId, date });
+      if (!log) return; // entry was removed/zeroed before the delay elapsed
+      const c = await db.collection('customers').findOne({ customerId });
+      if (!c || !c.phone) return;
+      const month = date.slice(0, 7);
+      const due = await getCustomerMonthlyDue(customerId, month);
+      await sendWhatsAppTemplate(c.phone, 'milk_daily_summary', [
+        { type: 'body', parameters: [
+          { type: 'text', text: c.name || 'Customer' },
+          { type: 'text', text: date },
+          { type: 'text', text: describeMilkLog(log) },
+          { type: 'text', text: String(due) }
+        ]}
+      ]);
+      console.log(`Milk summary sent to customer ${customerId} for ${date}`);
+    } catch (e) {
+      console.error('Milk summary send error:', e.message);
+    }
+  }, delayMs);
+}
+
+// ── MID-MONTH PAYMENT REMINDER (15th of every month, 7:00 PM IST) ─────────────
+// Sends `milk_payment_reminder` (UPI ID + QR) to every active customer with an
+// outstanding due for the current month. Requires that template to be approved
+// by Meta first (template_details/SKILL not yet submitted — see chat notes).
+cron.schedule('0 19 15 * *', async () => {
+  if (!db) return;
+  try {
+    const month = new Date().toISOString().slice(0, 7);
+    const subs = await db.collection('milkSubscriptions').find({ status: 'active' }).toArray();
+    const customerIds = subs.map(s => s.customerId);
+    const customers = await db.collection('customers').find({ customerId: { $in: customerIds } }).toArray();
+    const custMap = {};
+    customers.forEach(c => { custMap[c.customerId] = c; });
+
+    for (const sub of subs) {
+      const c = custMap[sub.customerId];
+      if (!c || !c.phone) continue;
+      const due = await getCustomerMonthlyDue(sub.customerId, month);
+      if (due <= 0) continue;
+      await sendWhatsAppTemplate(c.phone, 'milk_payment_reminder', [
+        { type: 'body', parameters: [
+          { type: 'text', text: c.name || 'Customer' },
+          { type: 'text', text: String(due) },
+          { type: 'text', text: UPI_ID }
+        ]}
+      ]);
+    }
+    console.log(`Mid-month payment reminders sent for ${month}`);
+  } catch (e) {
+    console.error('Payment reminder cron error:', e.message);
+  }
+}, { timezone: 'Asia/Kolkata' });
+
+// ── AUTO-PAUSE UNPAID SUBSCRIPTIONS (20th of every month, 8:00 AM IST) ────────
+// Only runs if AUTO_PAUSE_UNPAID=true. Gives a 5-day grace period after the
+// mid-month reminder, then pauses milk delivery for anyone still with a due,
+// and sends one final reminder explaining why delivery has stopped.
+cron.schedule('0 8 20 * *', async () => {
+  if (!db || process.env.AUTO_PAUSE_UNPAID !== 'true') return;
+  try {
+    const month = new Date().toISOString().slice(0, 7);
+    const subs = await db.collection('milkSubscriptions').find({ status: 'active' }).toArray();
+    for (const sub of subs) {
+      const due = await getCustomerMonthlyDue(sub.customerId, month);
+      if (due > 0) {
+        await db.collection('milkSubscriptions').updateOne(
+          { customerId: sub.customerId },
+          { $set: { status: 'paused', pausedFrom: new Date().toISOString().slice(0, 10), pausedUntil: null, pausedReason: 'unpaid_due' } }
+        );
+        const c = await db.collection('customers').findOne({ customerId: sub.customerId });
+        if (c && c.phone) {
+          await sendWhatsAppTemplate(c.phone, 'milk_payment_reminder', [
+            { type: 'body', parameters: [
+              { type: 'text', text: c.name || 'Customer' },
+              { type: 'text', text: String(due) },
+              { type: 'text', text: UPI_ID }
+            ]}
+          ]);
+        }
+        console.log(`Paused milk subscription for customer ${sub.customerId} (unpaid due: ${due})`);
+      }
+    }
+  } catch (e) {
+    console.error('Auto-pause cron error:', e.message);
+  }
+}, { timezone: 'Asia/Kolkata' });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ── MIGRATION UTILITY ─────────────────────────────────────────────────────────
@@ -2336,6 +2550,118 @@ app.get('/api/customer/ledger/months', customerAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── ANALYTICS  (Feature: revenue, top products, daily breakdown)
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /api/admin/analytics?range=7d|30d|1d
+app.get('/api/admin/analytics', adminAuth, async (req, res) => {
+  try {
+    const range = req.query.range || '7d';
+    const days  = range === '30d' ? 30 : range === '1d' ? 1 : 7;
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const nowIST   = new Date(Date.now() + IST_OFFSET_MS);
+    const startUTC = new Date(nowIST.getTime() - days * 24 * 60 * 60 * 1000 - IST_OFFSET_MS).toISOString();
+
+    const [allOrders, products, totalCustomers] = await Promise.all([
+      db.collection('orders').find({ createdAt: { $gte: startUTC } }).toArray(),
+      db.collection('products').find({ disabled: { $ne: true } }).toArray(),
+      db.collection('customers').countDocuments({ deleted: { $ne: true } }),
+    ]);
+
+    const paidOrders     = allOrders.filter(o => o.status !== 'cancelled');
+    const cancelledCount = allOrders.length - paidOrders.length;
+    const totalRevenue   = parseFloat(paidOrders.reduce((s, o) => s + (o.total || 0), 0).toFixed(2));
+    const avgOrder       = paidOrders.length ? parseFloat((totalRevenue / paidOrders.length).toFixed(2)) : 0;
+
+    // Revenue + order count per IST day
+    const revenueByDay = {};
+    paidOrders.forEach(o => {
+      const day = new Date(new Date(o.createdAt).getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
+      if (!revenueByDay[day]) revenueByDay[day] = { revenue: 0, orders: 0 };
+      revenueByDay[day].revenue = parseFloat((revenueByDay[day].revenue + o.total).toFixed(2));
+      revenueByDay[day].orders++;
+    });
+
+    // Top products by revenue
+    const prodMap = {};
+    paidOrders.forEach(o => {
+      (o.items || []).filter(i => !i.isFreeGift).forEach(i => {
+        if (!prodMap[i.productId]) prodMap[i.productId] = { name: i.name, qty: 0, revenue: 0 };
+        prodMap[i.productId].qty     += i.qty;
+        prodMap[i.productId].revenue += parseFloat((i.qty * i.price).toFixed(2));
+      });
+    });
+    const topProducts = Object.entries(prodMap)
+      .map(([id, d]) => ({ productId: parseInt(id), ...d, revenue: parseFloat(d.revenue.toFixed(2)) }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    // Payment method breakdown
+    const paymentBreakdown = {};
+    paidOrders.forEach(o => {
+      const m = o.paymentMethod || 'cod';
+      paymentBreakdown[m] = (paymentBreakdown[m] || 0) + 1;
+    });
+
+    // Low stock count
+    const lowStockCount = products.filter(p =>
+      typeof p.stockQuantity === 'number' && p.stockQuantity <= (p.lowStockThreshold ?? 5)
+    ).length;
+
+    res.json({
+      range, days,
+      totalOrders: paidOrders.length,
+      cancelledOrders: cancelledCount,
+      totalRevenue,
+      avgOrderValue: avgOrder,
+      totalProducts: products.length,
+      lowStockCount,
+      totalCustomers,
+      revenueByDay,
+      topProducts,
+      paymentBreakdown,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── CSV EXPORT  (Feature: download orders as spreadsheet)
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /api/admin/export/orders.csv?from=YYYY-MM-DD&to=YYYY-MM-DD&status=delivered
+app.get('/api/admin/export/orders.csv', adminAuth, async (req, res) => {
+  try {
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const filter = {};
+    if (req.query.from) filter.createdAt = { $gte: new Date(new Date(req.query.from + 'T00:00:00.000Z').getTime() - IST_OFFSET_MS).toISOString() };
+    if (req.query.to)   filter.createdAt = { ...(filter.createdAt || {}), $lte: new Date(new Date(req.query.to + 'T23:59:59.999Z').getTime() - IST_OFFSET_MS).toISOString() };
+    if (req.query.status) filter.status  = req.query.status;
+
+    const orders = await db.collection('orders').find(filter).sort({ createdAt: -1 }).toArray();
+
+    const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [
+      ['Order ID', 'Date (IST)', 'Customer', 'Phone', 'Block', 'Villa', 'Items', 'Free Gift', 'Total (Rs)', 'Payment', 'Status', 'Note']
+    ];
+    orders.forEach(o => {
+      const dateIST = new Date(new Date(o.createdAt).getTime() + IST_OFFSET_MS)
+        .toISOString().replace('T', ' ').slice(0, 16);
+      const itemsStr = (o.items || []).filter(i => !i.isFreeGift)
+        .map(i => `${i.name} x${i.qty} @${i.price}`).join('; ');
+      rows.push([
+        o.id, dateIST, o.customerName || '', o.phone || '',
+        o.block || '', o.villa || '', itemsStr,
+        o.freeGift || '', (+o.total).toFixed(2),
+        o.paymentMethod || 'cod', o.status, o.note || ''
+      ]);
+    });
+
+    const csv = rows.map(r => r.map(escape).join(',')).join('\r\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="orders-${new Date().toISOString().slice(0,10)}.csv"`);
+    res.send('\uFEFF' + csv); // UTF-8 BOM so Excel opens correctly
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ── AI CROSS-SELL
